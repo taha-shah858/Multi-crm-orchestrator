@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Users,
   PhoneCall,
@@ -113,24 +113,7 @@ const recentActivity = [
 ];
 
 export default function HomeDashboard() {
-  const [isAuthorized, setIsAuthorized] = useState(false);
-
-  useEffect(() => {
-    const auth = localStorage.getItem("multicrm_auth");
-    if (!auth) {
-      window.location.href = "/login";
-    } else {
-      setIsAuthorized(true);
-    }
-  }, []);
-
-  if (!isAuthorized) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-primary-cyan font-mono text-xs">
-        Verifying Security Credentials...
-      </div>
-    );
-  }
+  const router = useRouter();
 
   return (
     <div className="space-y-8">
@@ -149,7 +132,7 @@ export default function HomeDashboard() {
           <button
             onClick={() => {
               localStorage.removeItem("multicrm_auth");
-              window.location.href = "/login";
+              router.push("/login");
             }}
             className="px-3 py-2 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs font-mono text-rose-400 hover:bg-rose-500/20 transition-all flex items-center gap-1.5 cursor-pointer shadow-inner"
           >
