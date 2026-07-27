@@ -122,7 +122,7 @@ export default function Sidebar() {
           {!isCollapsed && (
             <div className="overflow-hidden">
               <p className="text-xs font-medium text-slate-200 truncate">
-                Zenith Agent
+                Agent
               </p>
               <p className="text-[10px] text-slate-500 font-mono truncate">
                 Top Tier Sales
