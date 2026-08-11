@@ -1,16 +1,16 @@
 @import "tailwindcss";
 
 @theme {
-  /* Zenith CRM Orchestrator Palette Specs */
-  --color-zenith-base: #0b0f19;
-  --color-zenith-surface: #121827;
-  --color-zenith-card: #161e2e;
-  --color-zenith-inner: #0f1420;
+  /* Multi-CRM Orchestrator Palette Specs (Mapped to dynamic variables) */
+  --color-crm-base: var(--crm-base, #0b0f19);
+  --color-crm-surface: var(--crm-surface, #121827);
+  --color-crm-card: var(--crm-card, #161e2e);
+  --color-crm-inner: var(--crm-inner, #0f1420);
 
-  /* Zenith Accents */
-  --color-primary-cyan: #00f2ff;
-  --color-secondary-pink: #ff00e5;
-  --color-tertiary-purple: #7c3aed;
+  /* Multi-CRM Accents */
+  --color-primary-cyan: var(--primary-cyan, #00f2ff);
+  --color-secondary-pink: var(--secondary-pink, #ff00e5);
+  --color-tertiary-purple: var(--tertiary-purple, #7c3aed);
 
   /* Typography Specs */
   --font-sans: var(--font-geist-sans), "Inter", system-ui, -apple-system,
@@ -20,126 +20,197 @@
 
 :root {
   color-scheme: dark;
+
+  /* Default Obsidian Robotic Factory Baseline */
+  --crm-base: #0b0f19;
+  --crm-surface: #121827;
+  --crm-card: #161e2e;
+  --crm-inner: #0f1420;
+
+  --primary-cyan: #00f2ff;
+  --secondary-pink: #ff00e5;
+  --tertiary-purple: #7c3aed;
+}
+
+/* ==========================================================================
+   THEME PRESET CLASSES (Controlled by your Floating Widget / ThemeContext)
+   ========================================================================== */
+
+.theme-obsidian {
+  --crm-base: #0b0f19;
+  --crm-surface: #121827;
+  --crm-card: #161e2e;
+  --crm-inner: #0f1420;
+  --primary-cyan: #00f2ff;
+  --secondary-pink: #ff00e5;
+  --tertiary-purple: #7c3aed;
+}
+
+.theme-matrix {
+  --crm-base: #020804;
+  --crm-surface: #051a0c;
+  --crm-card: #092612;
+  --crm-inner: #031006;
+  --primary-cyan: #00ff66;
+  --secondary-pink: #00ccff;
+  --tertiary-purple: #10b981;
+}
+
+.theme-plasma {
+  --crm-base: #0f0518;
+  --crm-surface: #1d092c;
+  --crm-card: #270c3d;
+  --crm-inner: #150624;
+  --primary-cyan: #ff007f;
+  --secondary-pink: #7928ca;
+  --tertiary-purple: #ffb800;
 }
 
 body {
   margin: 0;
-  background-color: #0b0f19;
+  background-color: var(--color-crm-base);
   color: #f8fafc;
   font-family: var(--font-sans);
   overflow-x: hidden;
   min-height: 100vh;
-}
-
-/* Ambient Canvas Background Glow Layer */
-.ambient-bg {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background: radial-gradient(
-      circle at 15% 20%,
-      rgba(124, 58, 237, 0.15) 0%,
-      transparent 45%
-    ),
-    radial-gradient(
-      circle at 85% 75%,
-      rgba(255, 0, 229, 0.12) 0%,
-      transparent 50%
-    ),
-    radial-gradient(
-      circle at 50% 50%,
-      rgba(0, 242, 255, 0.08) 0%,
-      transparent 60%
-    );
+  transition: background-color 0.4s ease, color 0.4s ease;
 }
 
 /* ==========================================================================
-   1. GLOBAL AUTOMATIC OVERRIDES (Skins all existing Tailwind cards app-wide)
+   CUSTOM SCROLLBARS (Preserved for Dashboard Polish)
    ========================================================================== */
-
-/* Outer Chassis Cards (#121827 Obsidian + Top Cyan Rim) */
-.glass-panel,
-main div[class*="rounded-2xl"],
-main div[class*="rounded-3xl"],
-div[class*="bg-slate-900"],
-div[class*="bg-slate-950"],
-div[class*="bg-slate-900/"] {
-  background-color: rgba(18, 24, 39, 0.94) !important;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(0, 242, 255, 0.22) !important;
-  border-top-color: rgba(0, 242, 255, 0.45) !important;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.95),
-    0 0 20px 0 rgba(0, 242, 255, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.1) !important;
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-/* Inner Nested Blocks (#0F1420 Pitch Obsidian to block network bleed) */
-.glass-card-inner,
-main div[class*="rounded-2xl"] div[class*="rounded-xl"],
-main div[class*="rounded-2xl"] div[class*="rounded-lg"],
-div[class*="bg-slate-900/"] div[class*="bg-"],
-div[class*="bg-slate-950"] div[class*="bg-"] {
-  background-color: #0f1420 !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.5) !important;
+::-webkit-scrollbar-track {
+  background: var(--color-crm-base);
+}
+
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-primary-cyan) 20%, transparent);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--color-primary-cyan) 40%, transparent);
+}
+
+/* ==========================================================================
+   SECURE GLASSMORPHISM SYSTEM (Additive Refactor)
+   ========================================================================== */
+
+/* Outer Chassis Panels */
+.glass-panel {
+  background-color: color-mix(
+    in srgb,
+    var(--color-crm-surface) 94%,
+    transparent
+  ) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid
+    color-mix(in srgb, var(--color-primary-cyan) 22%, transparent);
+  border-top-color: color-mix(
+    in srgb,
+    var(--color-primary-cyan) 45%,
+    transparent
+  );
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.95),
+    0 0 20px 0 color-mix(in srgb, var(--color-primary-cyan) 8%, transparent),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+  transition: background-color 0.4s ease, border-color 0.4s ease,
+    box-shadow 0.4s ease;
+}
+
+/* Inner Nested Blocks */
+.glass-card-inner {
+  background-color: var(--color-crm-inner);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.5);
   transition: all 0.2s ease-in-out;
 }
 
-/* Hover States for Inner Cards */
-.glass-card-inner:hover,
-main div[class*="rounded-2xl"] div[class*="rounded-xl"]:hover {
-  border-color: rgba(0, 242, 255, 0.4) !important;
-  background-color: #141c2d !important;
-  box-shadow: 0 0 15px 0 rgba(0, 242, 255, 0.12),
-    inset 0 2px 4px 0 rgba(0, 0, 0, 0.5) !important;
+.glass-card-inner:hover {
+  border-color: color-mix(in srgb, var(--color-primary-cyan) 40%, transparent);
+  background-color: color-mix(
+    in srgb,
+    var(--color-primary-cyan) 8%,
+    var(--color-crm-surface)
+  );
+  box-shadow: 0 0 15px 0
+      color-mix(in srgb, var(--color-primary-cyan) 12%, transparent),
+    inset 0 2px 4px 0 rgba(0, 0, 0, 0.5);
 }
 
 /* ==========================================================================
-   2. ZENITH UTILITY & BUTTON CLASSES
+   MULTI-CRM UTILITY & BUTTON CLASSES
    ========================================================================== */
 
-/* Primary Zenith Gradient Button (#00F2FF -> #FF00E5) */
-.btn-zenith-primary {
-  background: linear-gradient(90deg, #00f2ff 0%, #ff00e5 100%) !important;
-  color: #ffffff !important;
-  font-family: var(--font-mono, monospace) !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.08em !important;
-  text-transform: uppercase !important;
-  border: none !important;
-  box-shadow: 0 0 25px rgba(0, 242, 255, 0.4) !important;
-  transition: all 0.2s ease-in-out !important;
+/* Primary Multi-CRM Gradient Button */
+.btn-multicrm-primary {
+  background: linear-gradient(
+    90deg,
+    var(--color-primary-cyan) 0%,
+    var(--color-secondary-pink) 100%
+  );
+  color: #ffffff;
+  font-family: var(--font-mono, monospace);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: none;
+  box-shadow: 0 0 25px
+    color-mix(in srgb, var(--color-primary-cyan) 40%, transparent);
+  transition: all 0.2s ease-in-out;
 }
 
-.btn-zenith-primary:hover {
-  filter: brightness(1.15) !important;
-  box-shadow: 0 0 35px rgba(255, 0, 229, 0.6) !important;
+.btn-multicrm-primary:hover {
+  filter: brightness(1.15);
+  box-shadow: 0 0 35px
+    color-mix(in srgb, var(--color-secondary-pink) 60%, transparent);
   transform: translateY(-1px);
 }
 
-/* Secondary Zenith Outlined Button */
-.btn-zenith-outlined {
-  background: rgba(15, 20, 32, 0.8) !important;
-  color: #00f2ff !important;
-  border: 1px solid rgba(0, 242, 255, 0.4) !important;
-  font-family: var(--font-mono, monospace) !important;
-  transition: all 0.2s ease-in-out !important;
+/* Secondary Multi-CRM Outlined Button */
+.btn-multicrm-outlined {
+  background: color-mix(in srgb, var(--color-crm-inner) 80%, transparent);
+  color: var(--color-primary-cyan);
+  border: 1px solid
+    color-mix(in srgb, var(--color-primary-cyan) 40%, transparent);
+  font-family: var(--font-mono, monospace);
+  transition: all 0.2s ease-in-out;
 }
 
-.btn-zenith-outlined:hover {
-  background: rgba(0, 242, 255, 0.1) !important;
-  border-color: #00f2ff !important;
-  box-shadow: 0 0 15px rgba(0, 242, 255, 0.2) !important;
+.btn-multicrm-outlined:hover {
+  background: color-mix(in srgb, var(--color-primary-cyan) 10%, transparent);
+  border-color: var(--color-primary-cyan);
+  box-shadow: 0 0 15px
+    color-mix(in srgb, var(--color-primary-cyan) 20%, transparent);
 }
 
 /* Section Monospaced Labels */
-.label-zenith,
+.label-multicrm,
 .font-technical {
   font-family: var(--font-mono, monospace);
-  color: #00f2ff;
+  color: var(--color-primary-cyan);
   font-size: 0.75rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   font-weight: 600;
+}
+
+/* Danger / Terminate Multi-CRM Button */
+.btn-multicrm-danger {
+  background: rgba(244, 63, 94, 0.1);
+  border: 1px solid rgba(244, 63, 94, 0.3);
+  color: #fb7185;
+  font-family: var(--font-mono, monospace);
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-multicrm-danger:hover {
+  background: rgba(244, 63, 94, 0.25);
+  border-color: rgba(244, 63, 94, 0.5);
 }

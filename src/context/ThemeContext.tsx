@@ -1,0 +1,139 @@
+"tsx";
+"use client";
+
+import React, { createContext, useContext, useEffect, useState } from "react";
+
+export interface ThemeColors {
+  crmBase: string;
+  crmSurface: string;
+  crmCard: string;
+  crmInner: string;
+  primaryCyan: string;
+  secondaryPink: string;
+  tertiaryPurple: string;
+}
+
+export interface ThemeDefinition {
+  name: string;
+  label: string;
+  colors: ThemeColors;
+}
+
+export const THEME_PRESETS: Record<string, ThemeDefinition> = {
+  obsidian: {
+    name: "obsidian",
+    label: "Obsidian Factory (Default)",
+    colors: {
+      crmBase: "#0b0f19",
+      crmSurface: "#121827",
+      crmCard: "#161e2e",
+      crmInner: "#0f1420",
+      primaryCyan: "#00f2ff",
+      secondaryPink: "#ff00e5",
+      tertiaryPurple: "#7c3aed",
+    },
+  },
+  matrix: {
+    name: "matrix",
+    label: "Matrix Terminal",
+    colors: {
+      crmBase: "#020617",
+      crmSurface: "#090d16",
+      crmCard: "#0f172a",
+      crmInner: "#020617",
+      primaryCyan: "#10b981",
+      secondaryPink: "#06b6d4",
+      tertiaryPurple: "#3b82f6",
+    },
+  },
+  plasma: {
+    name: "plasma",
+    label: "Solar Plasma",
+    colors: {
+      crmBase: "#0f0715",
+      crmSurface: "#180e24",
+      crmCard: "#221333",
+      crmInner: "#120a1c",
+      primaryCyan: "#ff9e00",
+      secondaryPink: "#ff0055",
+      tertiaryPurple: "#9d00ff",
+    },
+  },
+};
+
+interface ThemeContextType {
+  currentTheme: string;
+  setTheme: (themeName: string) => void;
+  colors: ThemeColors;
+  updateColor: (key: keyof ThemeColors, value: string) => void;
+  presets: typeof THEME_PRESETS;
+}
+
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const [currentTheme, setCurrentTheme] = useState<string>("obsidian");
+  const [colors, setColors] = useState<ThemeColors>(
+    THEME_PRESETS.obsidian.colors
+  );
+
+  // Load saved theme preference on mount
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("multi_crm_theme");
+    if (savedTheme && THEME_PRESETS[savedTheme]) {
+      setCurrentTheme(savedTheme);
+      setColors(THEME_PRESETS[savedTheme].colors);
+    }
+  }, []);
+
+  // Apply CSS custom properties to the document root whenever colors change
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty("--crm-base", colors.crmBase);
+    root.style.setProperty("--crm-surface", colors.crmSurface);
+    root.style.setProperty("--crm-card", colors.crmCard);
+    root.style.setProperty("--crm-inner", colors.crmInner);
+    root.style.setProperty("--primary-cyan", colors.primaryCyan);
+    root.style.setProperty("--secondary-pink", colors.secondaryPink);
+    root.style.setProperty("--tertiary-purple", colors.tertiaryPurple);
+  }, [colors]);
+
+  const setTheme = (themeName: string) => {
+    if (THEME_PRESETS[themeName]) {
+      setCurrentTheme(themeName);
+      setColors(THEME_PRESETS[themeName].colors);
+      localStorage.setItem("multi_crm_theme", themeName);
+    }
+  };
+
+  const updateColor = (key: keyof ThemeColors, value: string) => {
+    setColors((prev) => {
+      const updated = { ...prev, [key]: value };
+      return updated;
+    });
+    // Switch to custom tracking state if user manually tweaks individual colors
+    setCurrentTheme("custom");
+  };
+
+  return (
+    <ThemeContext.Provider
+      value={{
+        currentTheme,
+        setTheme,
+        colors,
+        updateColor,
+        presets: THEME_PRESETS,
+      }}
+    >
+      {children}
+    </ThemeContext.Provider>
+  );
+}
+
+export function useTheme() {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error("useTheme must be used within a ThemeProvider");
+  }
+  return context;
+}
