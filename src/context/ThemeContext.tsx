@@ -52,6 +52,19 @@ export const THEME_PRESETS: Record<string, ThemeDefinition> = {
       crmTextMuted: "#64748b",
     },
   },
+  light: {
+    name: "light",
+    label: "Lumina Clean (Light Mode)",
+    colors: {
+      crmBase: "#f8fafc",
+      crmSurface: "#ffffff",
+      crmCard: "#f1f5f9",
+      crmInner: "#e2e8f0",
+      primaryCyan: "#0284c7",
+      secondaryPink: "#db2777",
+      tertiaryPurple: "#7c3aed",
+    },
+  },
   matrix: {
     name: "matrix",
     label: "Matrix Terminal",
@@ -121,7 +134,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     root.style.setProperty("--tertiary-purple", colors.tertiaryPurple);
     root.style.setProperty("--crm-text", colors.crmText);
     root.style.setProperty("--crm-text-muted", colors.crmTextMuted);
-  }, [colors]);
+
+    // Apply color-scheme and data-theme attribute
+    const isLight = currentTheme === "light" || currentTheme === "lumina";
+    root.style.colorScheme = isLight ? "light" : "dark";
+    root.setAttribute("data-theme", currentTheme);
+  }, [colors, currentTheme]);
 
   const setTheme = (themeName: string) => {
     if (THEME_PRESETS[themeName]) {

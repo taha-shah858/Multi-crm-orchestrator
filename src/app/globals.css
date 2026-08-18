@@ -50,6 +50,16 @@
   --tertiary-purple: #7c3aed;
 }
 
+.theme-light {
+  --crm-base: #f8fafc;
+  --crm-surface: #ffffff;
+  --crm-card: #f1f5f9;
+  --crm-inner: #e2e8f0;
+  --primary-cyan: #0284c7;
+  --secondary-pink: #db2777;
+  --tertiary-purple: #7c3aed;
+}
+
 .theme-matrix {
   --crm-base: #020804;
   --crm-surface: #051a0c;
