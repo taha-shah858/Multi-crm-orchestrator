@@ -1,0 +1,422 @@
+{
+  "communities": {
+    "0": [
+      "src_app_auth_login_page",
+      "src_app_auth_login_page_loginpage",
+      "src_app_auth_signup_page",
+      "src_app_auth_signup_page_signuppage",
+      "src_app_dashboard_calendar_page",
+      "src_app_dashboard_calendar_page_calendarevent",
+      "src_app_dashboard_calendar_page_calendarpage",
+      "src_app_dashboard_calendar_page_daysofweek",
+      "src_app_dashboard_calendar_page_sampleevents",
+      "src_app_dashboard_calendar_page_timeslots",
+      "src_app_dashboard_copilot_page",
+      "src_app_dashboard_copilot_page_bantstate",
+      "src_app_dashboard_copilot_page_brands",
+      "src_app_dashboard_copilot_page_chatmessage",
+      "src_app_dashboard_copilot_page_copilotpage",
+      "src_app_dashboard_copilot_page_initialbant",
+      "src_app_dashboard_copilot_page_initialmessages",
+      "src_app_dashboard_copilot_page_target_crms",
+      "src_app_dashboard_leads_page",
+      "src_app_dashboard_leads_page_initialleads",
+      "src_app_dashboard_leads_page_lead",
+      "src_app_dashboard_leads_page_leadspage",
+      "src_app_dashboard_telemetry_page",
+      "src_app_dashboard_telemetry_page_brandperformancerecord",
+      "src_app_dashboard_telemetry_page_brandprofitabilityhub",
+      "src_app_dashboard_telemetry_page_initialbranddata",
+      "src_app_dashboard_timeline_page",
+      "src_app_dashboard_timeline_page_fielddiff",
+      "src_app_dashboard_timeline_page_mockevents",
+      "src_app_dashboard_timeline_page_timelineevent",
+      "src_app_dashboard_timeline_page_timelinepage",
+      "src_components_ui_multicrmcard",
+      "src_components_ui_multicrmcard_multicrmcard",
+      "src_components_ui_multicrmcard_multicrmcardprops",
+      "src_components_ui_multicrmcard_multicrminnerpanel",
+      "src_components_ui_multicrmcard_multicrmtag"
+    ],
+    "1": [
+      "clsx",
+      "framer_motion",
+      "lucide_react",
+      "next",
+      "package_dependencies",
+      "package_dependencies_clsx",
+      "package_dependencies_framer_motion",
+      "package_dependencies_lucide_react",
+      "package_dependencies_next",
+      "package_dependencies_react",
+      "package_dependencies_react_dom",
+      "package_dependencies_recharts",
+      "package_dependencies_tailwind_merge",
+      "package_dependencies_three",
+      "package_dependencies_types_three",
+      "react",
+      "react_dom",
+      "recharts",
+      "tailwind_merge",
+      "three",
+      "types_three"
+    ],
+    "2": [
+      "ref_dom",
+      "ref_dom_iterable",
+      "ref_esnext",
+      "tsconfig_compileroptions",
+      "tsconfig_compileroptions_allowjs",
+      "tsconfig_compileroptions_baseurl",
+      "tsconfig_compileroptions_esmoduleinterop",
+      "tsconfig_compileroptions_incremental",
+      "tsconfig_compileroptions_isolatedmodules",
+      "tsconfig_compileroptions_jsx",
+      "tsconfig_compileroptions_lib",
+      "tsconfig_compileroptions_module",
+      "tsconfig_compileroptions_moduleresolution",
+      "tsconfig_compileroptions_noemit",
+      "tsconfig_compileroptions_paths",
+      "tsconfig_compileroptions_plugins",
+      "tsconfig_compileroptions_resolvejsonmodule",
+      "tsconfig_compileroptions_skiplibcheck",
+      "tsconfig_compileroptions_strict",
+      "tsconfig_compileroptions_target"
+    ],
+    "3": [
+      "eslint",
+      "eslint_config_next",
+      "package_devdependencies",
+      "package_devdependencies_eslint",
+      "package_devdependencies_eslint_config_next",
+      "package_devdependencies_tailwindcss",
+      "package_devdependencies_tailwindcss_postcss",
+      "package_devdependencies_types_node",
+      "package_devdependencies_types_react",
+      "package_devdependencies_types_react_dom",
+      "package_devdependencies_typescript",
+      "tailwindcss",
+      "tailwindcss_postcss",
+      "types_node",
+      "types_react",
+      "types_react_dom",
+      "typescript"
+    ],
+    "4": [
+      "src_app_dashboard_page",
+      "src_app_dashboard_page_homedashboard",
+      "src_app_dashboard_page_initialcrmstatuses",
+      "src_app_dashboard_page_recentactivity",
+      "src_app_dashboard_page_stats",
+      "src_components_advancedwidget",
+      "src_components_advancedwidget_advancedwidget",
+      "src_components_advancedwidget_mainview",
+      "src_components_advancedwidget_themesubview",
+      "src_components_glasscard",
+      "src_components_glasscard_glasscard",
+      "src_components_glasscard_glasscardprops",
+      "src_components_metricwidget",
+      "src_components_metricwidget_metricwidget",
+      "src_components_metricwidget_metricwidgetprops",
+      "src_context_themecontext_usetheme"
+    ],
+    "5": [
+      "src_app_layout",
+      "src_app_layout_metadata",
+      "src_app_layout_rootlayout",
+      "src_components_clientlayoutwrapper",
+      "src_components_clientlayoutwrapper_clientlayoutwrapper",
+      "src_components_particlewavebackground_particlewavebackground",
+      "src_components_sidebar",
+      "src_components_sidebar_navigation",
+      "src_components_sidebar_sidebar",
+      "src_context_themecontext",
+      "src_context_themecontext_theme_presets",
+      "src_context_themecontext_themecolors",
+      "src_context_themecontext_themecontext",
+      "src_context_themecontext_themecontexttype",
+      "src_context_themecontext_themedefinition",
+      "src_context_themecontext_themeprovider"
+    ],
+    "6": [
+      "src_components_particlewavebackground",
+      "src_components_particlewavebackground_aurorashader",
+      "src_components_ui_particlebrainbackground",
+      "src_components_ui_particlebrainbackground_particlebrainbackground",
+      "src_config_spatialmap",
+      "src_config_spatialmap_default_coordinates",
+      "src_config_spatialmap_route_spatial_map",
+      "src_config_spatialmap_spatialcoordinates",
+      "src_context_spatialcontext",
+      "src_context_spatialcontext_spatialcontext",
+      "src_context_spatialcontext_spatialcontexttype",
+      "src_context_spatialcontext_spatialprovider",
+      "src_context_spatialcontext_usespatial"
+    ],
+    "7": [
+      "ref_mts",
+      "ref_next_dev_types_ts",
+      "ref_next_env_d_ts",
+      "ref_next_types_ts",
+      "ref_node_modules",
+      "ref_ts",
+      "ref_tsx",
+      "tsconfig",
+      "tsconfig_exclude",
+      "tsconfig_include"
+    ],
+    "8": [
+      "architecture_backend",
+      "architecture_data_layer",
+      "architecture_frontend",
+      "architecture_integration_layer",
+      "architecture_md",
+      "architectureessentials_md",
+      "crm_adapter_interface",
+      "prod_md",
+      "unified_data_model"
+    ],
+    "9": [
+      "package",
+      "package_name",
+      "package_private",
+      "package_scripts",
+      "package_scripts_build",
+      "package_scripts_dev",
+      "package_scripts_lint",
+      "package_scripts_start",
+      "package_version"
+    ],
+    "10": [
+      "src_app_dashboard_dialer_page",
+      "src_app_dashboard_dialer_page_brandintegrations",
+      "src_app_dashboard_dialer_page_calltranscript",
+      "src_app_dashboard_dialer_page_fieldmapping",
+      "src_app_dashboard_dialer_page_initialmappings",
+      "src_app_dashboard_dialer_page_initialtranscripts",
+      "src_app_dashboard_dialer_page_recentcalls",
+      "src_app_dashboard_dialer_page_smartdialerpage"
+    ],
+    "11": [
+      "src_app_dashboard_integrations_page",
+      "src_app_dashboard_integrations_page_appitem",
+      "src_app_dashboard_integrations_page_categories",
+      "src_app_dashboard_integrations_page_iconmap",
+      "src_app_dashboard_integrations_page_initialapps",
+      "src_app_dashboard_integrations_page_integrationsappcenter"
+    ],
+    "12": [
+      "src_components_ui_tiltcard",
+      "src_components_ui_tiltcard_tiltcard",
+      "src_components_ui_tiltcard_tiltcardprops"
+    ],
+    "13": [
+      "src_middleware",
+      "src_middleware_config",
+      "src_middleware_middleware"
+    ],
+    "14": [
+      "eslint_config",
+      "eslint_config_eslintconfig"
+    ],
+    "15": [
+      "next_config",
+      "next_config_nextconfig"
+    ],
+    "16": [
+      "postcss_config",
+      "postcss_config_config"
+    ],
+    "17": [
+      "src_app_dashboard_multi_crm_page",
+      "src_app_dashboard_multi_crm_page_multicrmpage"
+    ],
+    "18": [
+      "src_components_ui_ambientbackground",
+      "src_components_ui_ambientbackground_ambientbackground"
+    ],
+    "19": [
+      "agents_md"
+    ],
+    "20": [
+      "gemini_md"
+    ],
+    "21": [
+      "public_bg_network_jpg"
+    ],
+    "22": [
+      "readme_md"
+    ]
+  },
+  "cohesion": {
+    "0": 0.08095238095238096,
+    "1": 0.09523809523809523,
+    "2": 0.1,
+    "3": 0.11764705882352941,
+    "4": 0.175,
+    "5": 0.16666666666666666,
+    "6": 0.24358974358974358,
+    "7": 0.2,
+    "8": 0.3055555555555556,
+    "9": 0.2222222222222222,
+    "10": 0.25,
+    "11": 0.3333333333333333,
+    "12": 0.6666666666666666,
+    "13": 0.6666666666666666,
+    "14": 1.0,
+    "15": 1.0,
+    "16": 1.0,
+    "17": 1.0,
+    "18": 1.0,
+    "19": 1.0,
+    "20": 1.0,
+    "21": 1.0,
+    "22": 1.0
+  },
+  "gods": [
+    {
+      "id": "tsconfig_compileroptions",
+      "label": "compilerOptions",
+      "degree": 17
+    },
+    {
+      "id": "src_components_ui_multicrmcard_multicrmcard",
+      "label": "MultiCrmCard()",
+      "degree": 10
+    },
+    {
+      "id": "src_components_ui_multicrmcard_multicrminnerpanel",
+      "label": "MultiCrmInnerPanel()",
+      "degree": 7
+    },
+    {
+      "id": "src_components_ui_multicrmcard_multicrmtag",
+      "label": "MultiCrmTag()",
+      "degree": 7
+    },
+    {
+      "id": "tsconfig_include",
+      "label": "include",
+      "degree": 7
+    },
+    {
+      "id": "architecture_md",
+      "label": "System Architecture",
+      "degree": 7
+    },
+    {
+      "id": "package_scripts",
+      "label": "scripts",
+      "degree": 5
+    },
+    {
+      "id": "src_components_glasscard_glasscard",
+      "label": "GlassCard()",
+      "degree": 4
+    },
+    {
+      "id": "tsconfig_compileroptions_lib",
+      "label": "lib",
+      "degree": 4
+    },
+    {
+      "id": "src_config_spatialmap_route_spatial_map",
+      "label": "ROUTE_SPATIAL_MAP",
+      "degree": 4
+    }
+  ],
+  "surprises": [
+    {
+      "source": "Architecture Essentials",
+      "target": "System Architecture",
+      "source_files": [
+        "ArchitectureEssentials.md",
+        "Architecture.md"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "semantically_similar_to",
+      "why": "connects across different repos/directories; semantically similar concepts with no structural link; peripheral node `Architecture Essentials` unexpectedly reaches hub `System Architecture`"
+    },
+    {
+      "source": "Product Requirements Document",
+      "target": "System Architecture",
+      "source_files": [
+        "Prod.md",
+        "Architecture.md"
+      ],
+      "confidence": "INFERRED",
+      "relation": "references",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; peripheral node `Product Requirements Document` unexpectedly reaches hub `System Architecture`"
+    },
+    {
+      "source": "Integration Layer",
+      "target": "CRMAdapter Interface",
+      "source_files": [
+        "Architecture.md",
+        "ArchitectureEssentials.md"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "why": "connects across different repos/directories"
+    },
+    {
+      "source": "SpatialContextType",
+      "target": "SpatialCoordinates",
+      "source_files": [
+        "src/context/SpatialContext.tsx",
+        "src/config/spatialMap.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "why": "cross-file semantic connection"
+    },
+    {
+      "source": "AdvancedWidget()",
+      "target": "useTheme()",
+      "source_files": [
+        "src/components/AdvancedWidget.tsx",
+        "src/context/ThemeContext.tsx"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "cross-file semantic connection"
+    }
+  ],
+  "questions": [
+    {
+      "type": "bridge_node",
+      "question": "Why does `MultiCrmCard()` connect `MultiCrmCard.tsx` to `dialer/page.tsx`, `(dashboard)/page.tsx`?",
+      "why": "High betweenness centrality (0.043) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `dependencies` connect `dependencies` to `package.json`?",
+      "why": "High betweenness centrality (0.035) - this node is a cross-community bridge."
+    },
+    {
+      "type": "isolated_nodes",
+      "question": "What connects `CalendarEvent`, `BantState`, `ChatMessage` to the rest of the system?",
+      "why": "102 weakly-connected nodes found - possible documentation gaps or missing edges."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `MultiCrmCard.tsx` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.08095238095238096 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `dependencies` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.09523809523809523 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `compilerOptions` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.1 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `devDependencies` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.11764705882352941 - nodes in this community are weakly interconnected."
+    }
+  ]
+}
