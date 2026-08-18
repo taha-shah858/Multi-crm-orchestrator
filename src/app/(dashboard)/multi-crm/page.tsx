@@ -14,16 +14,16 @@ export default function MultiCrmPage() {
   return (
     <div className="relative z-10 p-6 md:p-10 max-w-7xl mx-auto min-h-[85vh] flex flex-col justify-between pointer-events-none">
       {/* Top Minimalist Header Bar */}
-      <div className="flex items-center justify-between bg-slate-900/40 backdrop-blur-2xl border border-white/10 px-6 py-4 rounded-2xl shadow-2xl pointer-events-auto">
+      <div className="flex items-center justify-between bg-crm-inner/40 backdrop-blur-2xl border border-crm-border-strong px-6 py-4 rounded-2xl shadow-2xl pointer-events-auto">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.2)]">
             <Sparkles className="w-5 h-5 animate-pulse" />
           </div>
           <div>
-            <h1 className="text-lg md:text-xl font-bold text-slate-100 tracking-tight">
+            <h1 className="text-lg md:text-xl font-bold text-crm-text tracking-tight">
               Multi-CRM Orchestrator
             </h1>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-crm-text-muted">
               Autonomous data pipelines & multi-tenant synchronization.
             </p>
           </div>

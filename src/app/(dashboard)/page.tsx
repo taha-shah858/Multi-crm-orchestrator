@@ -189,20 +189,21 @@ export default function HomeDashboard() {
   };
 
   return (
-    <div className="space-y-8 relative">
+    <div className="space-y-10 relative">
       {/* 1. Page Header & Live Integration Health Strip */}
       <div className="flex flex-col gap-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-2 border-b border-crm-border pb-6">
           <div>
-            <p className="text-xs font-mono text-cyan-400">
-              Tuesday, August 11, 2026
+            <div className="flex items-center gap-3">
+              <Activity className="w-6 h-6 text-primary-cyan animate-pulse" />
+              <h1 className="text-3xl font-bold tracking-tight text-crm-text font-sans tracking-tight">
+                Global Operations Hub
+              </h1>
+            </div>
+            <p className="text-sm text-crm-text-muted font-mono mt-2 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              Multi-CRM Aggregation Engine Active
             </p>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-100 flex items-center gap-2 mt-0.5">
-              Good morning, Muhammad
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                v2.4 Orchestrator
-              </span>
-            </h1>
           </div>
 
           <div className="flex items-center gap-2.5">
@@ -236,7 +237,7 @@ export default function HomeDashboard() {
         </div>
 
         {/* Global Command Bar & Health Status Pills */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-2.5 rounded-2xl bg-slate-950/80 border border-slate-800/80 backdrop-blur-md">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-2.5 rounded-2xl bg-crm-base/80 border border-crm-border backdrop-blur-md">
           <div className="relative flex-1 max-w-md">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
             <input
@@ -244,9 +245,9 @@ export default function HomeDashboard() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search leads across CRMs or type commands..."
-              className="w-full bg-slate-900/90 border border-slate-800 rounded-xl pl-8 pr-12 py-1.5 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/50 font-mono transition-all"
+              className="w-full bg-crm-inner/90 border border-crm-border rounded-xl pl-8 pr-12 py-1.5 text-xs text-crm-text placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/50 font-mono transition-all"
             />
-            <kbd className="absolute right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded bg-slate-800 text-[10px] font-mono text-slate-400 border border-slate-700/60 flex items-center gap-0.5">
+            <kbd className="absolute right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded bg-crm-surface text-[10px] font-mono text-crm-text-muted border border-crm-border/60 flex items-center gap-0.5">
               <Command className="w-2.5 h-2.5" /> K
             </kbd>
           </div>
@@ -255,17 +256,17 @@ export default function HomeDashboard() {
             {crmStatuses.map((crm) => (
               <div
                 key={crm.id}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 text-[11px] font-mono shrink-0"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-crm-inner border border-crm-border text-[11px] font-mono shrink-0"
               >
                 <span
                   className={`w-1.5 h-1.5 rounded-full ${crm.color} ${
                     crm.isSyncing ? "animate-pulse" : ""
                   }`}
                 />
-                <span className="text-slate-400">
+                <span className="text-crm-text-muted">
                   {crm.name.split(" ")[0]}:
                 </span>
-                <span className="text-slate-200">{crm.status}</span>
+                <span className="text-crm-text">{crm.status}</span>
               </div>
             ))}
           </div>
@@ -281,7 +282,7 @@ export default function HomeDashboard() {
               <h3 className="text-xs font-semibold text-purple-200">
                 AI Executive Daily Brief
               </h3>
-              <p className="text-xs text-slate-300 mt-0.5">
+              <p className="text-xs text-crm-text-muted mt-0.5">
                 3 calls scheduled today • 12 high-intent leads pending
                 bi-directional sync validation across Salesforce & HubSpot.
               </p>
@@ -309,10 +310,10 @@ export default function HomeDashboard() {
 
       {/* 3. ClickUp-Style Focus Queue ("My LineUp") */}
       <GlassCard className="space-y-4" glowColor="rgba(6, 182, 212, 0.12)">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="flex items-center justify-between border-b border-crm-border pb-3">
           <div className="flex items-center gap-2">
             <Pin className="w-4 h-4 text-cyan-400 rotate-45" />
-            <h2 className="text-sm font-semibold text-slate-200">
+            <h2 className="text-sm font-semibold text-crm-text">
               Focus Queue LineUp
             </h2>
             <span className="px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 text-[10px] font-mono">
@@ -325,13 +326,13 @@ export default function HomeDashboard() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <MultiCrmInnerPanel className="bg-slate-950/70 border-slate-800 hover:border-cyan-500/40 transition-all flex flex-col justify-between gap-3">
+          <MultiCrmInnerPanel className="bg-crm-base/70 border-crm-border hover:border-cyan-500/40 transition-all flex flex-col justify-between gap-3">
             <div className="flex items-start justify-between">
               <div>
                 <span className="text-[10px] font-mono text-cyan-400 uppercase tracking-wider">
                   Salesforce • Enterprise Lead
                 </span>
-                <h3 className="text-xs font-semibold text-slate-100 mt-0.5">
+                <h3 className="text-xs font-semibold text-crm-text mt-0.5">
                   Acme Corp Expansion ($45k)
                 </h3>
               </div>
@@ -339,7 +340,7 @@ export default function HomeDashboard() {
                 Score 94
               </span>
             </div>
-            <div className="flex items-center justify-between text-[11px] font-mono border-t border-slate-800/60 pt-2 text-slate-400">
+            <div className="flex items-center justify-between text-[11px] font-mono border-t border-crm-border/60 pt-2 text-crm-text-muted">
               <span>Sarah Jenkins</span>
               <button className="text-cyan-400 hover:text-cyan-300 flex items-center gap-0.5 cursor-pointer">
                 Action <ArrowUpRight className="w-3 h-3" />
@@ -347,13 +348,13 @@ export default function HomeDashboard() {
             </div>
           </MultiCrmInnerPanel>
 
-          <MultiCrmInnerPanel className="bg-slate-950/70 border-slate-800 hover:border-purple-500/40 transition-all flex flex-col justify-between gap-3">
+          <MultiCrmInnerPanel className="bg-crm-base/70 border-crm-border hover:border-purple-500/40 transition-all flex flex-col justify-between gap-3">
             <div className="flex items-start justify-between">
               <div>
                 <span className="text-[10px] font-mono text-purple-400 uppercase tracking-wider">
                   HubSpot • Schema Sync
                 </span>
-                <h3 className="text-xs font-semibold text-slate-100 mt-0.5">
+                <h3 className="text-xs font-semibold text-crm-text mt-0.5">
                   Field Mapping Mismatch
                 </h3>
               </div>
@@ -361,7 +362,7 @@ export default function HomeDashboard() {
                 Urgent
               </span>
             </div>
-            <div className="flex items-center justify-between text-[11px] font-mono border-t border-slate-800/60 pt-2 text-slate-400">
+            <div className="flex items-center justify-between text-[11px] font-mono border-t border-crm-border/60 pt-2 text-crm-text-muted">
               <span>custom_phone_field</span>
               <button className="text-purple-400 hover:text-purple-300 flex items-center gap-0.5 cursor-pointer">
                 Resolve <ArrowUpRight className="w-3 h-3" />
@@ -369,13 +370,13 @@ export default function HomeDashboard() {
             </div>
           </MultiCrmInnerPanel>
 
-          <MultiCrmInnerPanel className="bg-slate-950/70 border-slate-800 hover:border-amber-500/40 transition-all flex flex-col justify-between gap-3">
+          <MultiCrmInnerPanel className="bg-crm-base/70 border-crm-border hover:border-amber-500/40 transition-all flex flex-col justify-between gap-3">
             <div className="flex items-start justify-between">
               <div>
                 <span className="text-[10px] font-mono text-amber-400 uppercase tracking-wider">
                   Zoho • Follow-up
                 </span>
-                <h3 className="text-xs font-semibold text-slate-100 mt-0.5">
+                <h3 className="text-xs font-semibold text-crm-text mt-0.5">
                   Nexus Systems Demo Review
                 </h3>
               </div>
@@ -383,7 +384,7 @@ export default function HomeDashboard() {
                 Pending Call
               </span>
             </div>
-            <div className="flex items-center justify-between text-[11px] font-mono border-t border-slate-800/60 pt-2 text-slate-400">
+            <div className="flex items-center justify-between text-[11px] font-mono border-t border-crm-border/60 pt-2 text-crm-text-muted">
               <span>David Miller</span>
               <button className="text-amber-400 hover:text-amber-300 flex items-center gap-0.5 cursor-pointer">
                 Call <ArrowUpRight className="w-3 h-3" />
@@ -397,26 +398,26 @@ export default function HomeDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Call Schedule Widget */}
         <GlassCard className="space-y-4" glowColor="rgba(6, 182, 212, 0.15)">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div className="flex items-center justify-between border-b border-crm-border pb-3">
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-cyan-400" />
-              <h2 className="text-sm font-semibold text-slate-200">
+              <h2 className="text-sm font-semibold text-crm-text">
                 Today's Call Schedule
               </h2>
             </div>
-            <span className="text-[11px] font-mono text-slate-400">
+            <span className="text-[11px] font-mono text-crm-text-muted">
               3 Meetings
             </span>
           </div>
 
           <div className="space-y-2.5">
-            <MultiCrmInnerPanel className="flex items-center justify-between bg-slate-950/60 border-slate-800">
+            <MultiCrmInnerPanel className="flex items-center justify-between bg-crm-base/60 border-crm-border">
               <div className="flex items-center gap-3">
                 <span className="text-xs font-mono text-cyan-400 font-medium w-16">
                   09:00 AM
                 </span>
                 <div>
-                  <p className="text-xs font-medium text-slate-200">
+                  <p className="text-xs font-medium text-crm-text">
                     Q2 Strategy Sync — Acme Corp
                   </p>
                   <p className="text-[10px] text-slate-500 font-mono">
@@ -429,13 +430,13 @@ export default function HomeDashboard() {
               </button>
             </MultiCrmInnerPanel>
 
-            <MultiCrmInnerPanel className="flex items-center justify-between bg-slate-950/60 border-slate-800">
+            <MultiCrmInnerPanel className="flex items-center justify-between bg-crm-base/60 border-crm-border">
               <div className="flex items-center gap-3">
-                <span className="text-xs font-mono text-slate-400 font-medium w-16">
+                <span className="text-xs font-mono text-crm-text-muted font-medium w-16">
                   10:30 AM
                 </span>
                 <div>
-                  <p className="text-xs font-medium text-slate-200">
+                  <p className="text-xs font-medium text-crm-text">
                     HubSpot Technical Onboarding
                   </p>
                   <p className="text-[10px] text-slate-500 font-mono">
@@ -443,7 +444,7 @@ export default function HomeDashboard() {
                   </p>
                 </div>
               </div>
-              <button className="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-400 text-[11px] font-mono">
+              <button className="px-2.5 py-1 rounded-lg bg-crm-surface text-crm-text-muted text-[11px] font-mono">
                 Upcoming
               </button>
             </MultiCrmInnerPanel>
@@ -452,21 +453,21 @@ export default function HomeDashboard() {
 
         {/* Actionable Tasks Widget */}
         <GlassCard className="space-y-4" glowColor="rgba(168, 85, 247, 0.15)">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div className="flex items-center justify-between border-b border-crm-border pb-3">
             <div className="flex items-center gap-2">
               <CheckSquare className="w-4 h-4 text-purple-400" />
-              <h2 className="text-sm font-semibold text-slate-200">
+              <h2 className="text-sm font-semibold text-crm-text">
                 Actionable Tasks
               </h2>
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex items-center bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[10px] font-mono">
+              <div className="flex items-center bg-crm-base p-0.5 rounded-lg border border-crm-border text-[10px] font-mono">
                 <button
                   onClick={() => setTaskFilter("open")}
                   className={`px-2 py-0.5 rounded ${
                     taskFilter === "open"
                       ? "bg-purple-500/20 text-purple-300"
-                      : "text-slate-400"
+                      : "text-crm-text-muted"
                   }`}
                 >
                   Open
@@ -476,7 +477,7 @@ export default function HomeDashboard() {
                   className={`px-2 py-0.5 rounded ${
                     taskFilter === "completed"
                       ? "bg-purple-500/20 text-purple-300"
-                      : "text-slate-400"
+                      : "text-crm-text-muted"
                   }`}
                 >
                   Completed
@@ -489,14 +490,14 @@ export default function HomeDashboard() {
           </div>
 
           <div className="space-y-2.5">
-            <MultiCrmInnerPanel className="flex items-center justify-between bg-slate-950/60 border-slate-800">
+            <MultiCrmInnerPanel className="flex items-center justify-between bg-crm-base/60 border-crm-border">
               <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
-                  className="rounded border-slate-700 text-purple-500 focus:ring-0 cursor-pointer"
+                  className="rounded border-crm-border text-purple-500 focus:ring-0 cursor-pointer"
                 />
                 <div>
-                  <p className="text-xs font-medium text-slate-200">
+                  <p className="text-xs font-medium text-crm-text">
                     Map Custom Fields for Zoho CRM Integration
                   </p>
                   <p className="text-[10px] text-slate-500 font-mono">
@@ -509,14 +510,14 @@ export default function HomeDashboard() {
               </span>
             </MultiCrmInnerPanel>
 
-            <MultiCrmInnerPanel className="flex items-center justify-between bg-slate-950/60 border-slate-800">
+            <MultiCrmInnerPanel className="flex items-center justify-between bg-crm-base/60 border-crm-border">
               <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
-                  className="rounded border-slate-700 text-purple-500 focus:ring-0 cursor-pointer"
+                  className="rounded border-crm-border text-purple-500 focus:ring-0 cursor-pointer"
                 />
                 <div>
-                  <p className="text-xs font-medium text-slate-200">
+                  <p className="text-xs font-medium text-crm-text">
                     Verify AI Sentiment Score on Sarah Jenkins Record
                   </p>
                   <p className="text-[10px] text-slate-500 font-mono">
@@ -534,14 +535,14 @@ export default function HomeDashboard() {
 
       {/* 5. Workspace Operational Data Grid & Super Agents Dock */}
       <GlassCard className="space-y-4" glowColor="rgba(6, 182, 212, 0.15)">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
-          <div className="flex items-center gap-1.5 bg-slate-950/80 p-1 rounded-xl border border-slate-800">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-crm-border pb-4">
+          <div className="flex items-center gap-1.5 bg-crm-base/80 p-1 rounded-xl border border-crm-border">
             <button
               onClick={() => setActiveView("table")}
               className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all cursor-pointer ${
                 activeView === "table"
                   ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
-                  : "text-slate-400 hover:text-slate-200"
+                  : "text-crm-text-muted hover:text-crm-text"
               }`}
             >
               ≡ Unified Table
@@ -551,7 +552,7 @@ export default function HomeDashboard() {
               className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all cursor-pointer ${
                 activeView === "board"
                   ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
-                  : "text-slate-400 hover:text-slate-200"
+                  : "text-crm-text-muted hover:text-crm-text"
               }`}
             >
               ☵ Pipeline Board
@@ -561,7 +562,7 @@ export default function HomeDashboard() {
               className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all cursor-pointer ${
                 activeView === "agents"
                   ? "bg-purple-500/20 text-purple-300 border border-purple-500/40"
-                  : "text-slate-400 hover:text-slate-200"
+                  : "text-crm-text-muted hover:text-crm-text"
               }`}
             >
               ✦ Super Agents
@@ -569,7 +570,7 @@ export default function HomeDashboard() {
           </div>
 
           <div className="flex items-center gap-2">
-            <select className="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none font-mono">
+            <select className="bg-crm-base border border-crm-border rounded-xl px-2.5 py-1.5 text-xs text-crm-text-muted focus:outline-none font-mono">
               <option>Filter by CRM: All</option>
               <option>Salesforce</option>
               <option>HubSpot</option>
@@ -577,7 +578,7 @@ export default function HomeDashboard() {
             </select>
             <button
               onClick={handleOpenAddModal}
-              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-mono border border-slate-700/60 cursor-pointer"
+              className="px-3 py-1.5 rounded-xl bg-crm-surface hover:bg-slate-700 text-crm-text text-xs font-mono border border-crm-border/60 cursor-pointer"
             >
               + Add Lead
             </button>
@@ -588,7 +589,7 @@ export default function HomeDashboard() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-slate-800/80 text-slate-400 font-mono">
+                <tr className="border-b border-crm-border text-crm-text-muted font-mono">
                   <th className="pb-3 font-normal">Lead Entity</th>
                   <th className="pb-3 font-normal">Origin CRM</th>
                   <th className="pb-3 font-normal">AI Score</th>
@@ -597,32 +598,32 @@ export default function HomeDashboard() {
                   <th className="pb-3 font-normal text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/40 text-slate-200">
-                <tr className="hover:bg-slate-800/30 transition-all">
+              <tbody className="divide-y divide-slate-800/40 text-crm-text">
+                <tr className="hover:bg-crm-surface/30 transition-all">
                   <td className="py-3 font-medium flex items-center gap-2">
                     <div className="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-[10px] font-bold">
                       SJ
                     </div>
                     <div>
-                      <p className="text-slate-100">Sarah Jenkins</p>
+                      <p className="text-crm-text">Sarah Jenkins</p>
                       <p className="text-[10px] text-slate-500 font-mono">
                         Acme Corp
                       </p>
                     </div>
                   </td>
-                  <td className="py-3 font-mono text-slate-400">Salesforce</td>
+                  <td className="py-3 font-mono text-crm-text-muted">Salesforce</td>
                   <td className="py-3 font-mono">
                     <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                       92 / 100
                     </span>
                   </td>
-                  <td className="py-3 font-mono text-slate-400">
+                  <td className="py-3 font-mono text-crm-text-muted">
                     <span className="flex items-center gap-1.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />{" "}
                       Synced
                     </span>
                   </td>
-                  <td className="py-3 text-slate-400 font-mono text-[11px]">
+                  <td className="py-3 text-crm-text-muted font-mono text-[11px]">
                     Qualified by Copilot
                   </td>
                   <td className="py-3 text-right">
@@ -631,31 +632,31 @@ export default function HomeDashboard() {
                     </button>
                   </td>
                 </tr>
-                <tr className="hover:bg-slate-800/30 transition-all">
+                <tr className="hover:bg-crm-surface/30 transition-all">
                   <td className="py-3 font-medium flex items-center gap-2">
                     <div className="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-[10px] font-bold">
                       DM
                     </div>
                     <div>
-                      <p className="text-slate-100">David Miller</p>
+                      <p className="text-crm-text">David Miller</p>
                       <p className="text-[10px] text-slate-500 font-mono">
                         Nexus Systems
                       </p>
                     </div>
                   </td>
-                  <td className="py-3 font-mono text-slate-400">HubSpot</td>
+                  <td className="py-3 font-mono text-crm-text-muted">HubSpot</td>
                   <td className="py-3 font-mono">
                     <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
                       68 / 100
                     </span>
                   </td>
-                  <td className="py-3 font-mono text-slate-400">
+                  <td className="py-3 font-mono text-crm-text-muted">
                     <span className="flex items-center gap-1.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />{" "}
                       Syncing
                     </span>
                   </td>
-                  <td className="py-3 text-slate-400 font-mono text-[11px]">
+                  <td className="py-3 text-crm-text-muted font-mono text-[11px]">
                     Twilio Call Logged
                   </td>
                   <td className="py-3 text-right">
@@ -671,14 +672,14 @@ export default function HomeDashboard() {
 
         {activeView === "agents" && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-            <div className="p-4 rounded-xl bg-slate-950/60 border border-purple-500/30 space-y-2">
+            <div className="p-4 rounded-xl bg-crm-base/60 border border-purple-500/30 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-purple-300">
                   Onboarding Agent
                 </span>
                 <span className="w-2 h-2 rounded-full bg-emerald-400" />
               </div>
-              <p className="text-[11px] text-slate-400 leading-relaxed">
+              <p className="text-[11px] text-crm-text-muted leading-relaxed">
                 Triggers sequences across HubSpot and updates Salesforce records
                 automatically.
               </p>
@@ -687,14 +688,14 @@ export default function HomeDashboard() {
               </button>
             </div>
 
-            <div className="p-4 rounded-xl bg-slate-950/60 border border-cyan-500/30 space-y-2">
+            <div className="p-4 rounded-xl bg-crm-base/60 border border-cyan-500/30 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-cyan-300">
                   Field Sync Auditor
                 </span>
                 <span className="w-2 h-2 rounded-full bg-emerald-400" />
               </div>
-              <p className="text-[11px] text-slate-400 leading-relaxed">
+              <p className="text-[11px] text-crm-text-muted leading-relaxed">
                 Scans custom field mappings across all connected CRMs to detect
                 schema mismatches.
               </p>
@@ -715,10 +716,10 @@ export default function HomeDashboard() {
         >
           <div className="flex items-center justify-between border-b border-cyan-500/15 pb-4">
             <div>
-              <h2 className="text-sm font-semibold text-slate-200">
+              <h2 className="text-sm font-semibold text-crm-text">
                 Connected CRM Clusters
               </h2>
-              <p className="text-xs text-slate-400 font-mono">
+              <p className="text-xs text-crm-text-muted font-mono">
                 Active multi-instance data bridges
               </p>
             </div>
@@ -743,7 +744,7 @@ export default function HomeDashboard() {
                 onClick={handleOpenAddModal}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-200 group-hover:text-cyan-300 transition-colors">
+                  <span className="text-xs font-semibold text-crm-text group-hover:text-cyan-300 transition-colors">
                     {crm.name}
                   </span>
                   <div className="flex items-center gap-1.5">
@@ -752,13 +753,13 @@ export default function HomeDashboard() {
                         crm.isSyncing ? "animate-pulse" : ""
                       }`}
                     />
-                    <span className="text-[10px] font-mono text-slate-400">
+                    <span className="text-[10px] font-mono text-crm-text-muted">
                       {crm.status}
                     </span>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-xs font-mono text-slate-400 pt-2 border-t border-slate-800/60">
+                <div className="flex items-center justify-between text-xs font-mono text-crm-text-muted pt-2 border-t border-crm-border/60">
                   <span>{crm.count}</span>
                   <span className="text-slate-500 flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-slate-600" />
@@ -770,14 +771,14 @@ export default function HomeDashboard() {
           </div>
 
           {/* Deduplication Mini Banner */}
-          <MultiCrmInnerPanel className="flex items-center justify-between border-cyan-500/30 bg-slate-900/50">
+          <MultiCrmInnerPanel className="flex items-center justify-between border-cyan-500/30 bg-crm-inner/50">
             <div className="flex items-center gap-3">
               <TrendingUp className="w-5 h-5 text-cyan-400" />
               <div>
-                <p className="text-xs font-medium text-slate-200">
+                <p className="text-xs font-medium text-crm-text">
                   Automated Lead Deduplication Active
                 </p>
-                <p className="text-[11px] text-slate-400 font-mono">
+                <p className="text-[11px] text-crm-text-muted font-mono">
                   Merged 142 duplicate entries across CRMs in the last 24h.
                 </p>
               </div>
@@ -790,10 +791,10 @@ export default function HomeDashboard() {
         <GlassCard className="space-y-6" glowColor="rgba(168, 85, 247, 0.18)">
           <div className="flex items-center justify-between border-b border-cyan-500/15 pb-4">
             <div>
-              <h2 className="text-sm font-semibold text-slate-200">
+              <h2 className="text-sm font-semibold text-crm-text">
                 Live Stream Engine
               </h2>
-              <p className="text-xs text-slate-400 font-mono">
+              <p className="text-xs text-crm-text-muted font-mono">
                 Real-time system event feed
               </p>
             </div>
@@ -809,21 +810,21 @@ export default function HomeDashboard() {
               return (
                 <MultiCrmInnerPanel
                   key={act.id}
-                  className="flex items-start gap-3 hover:border-cyan-500/40 transition-all bg-slate-900/50"
+                  className="flex items-start gap-3 hover:border-cyan-500/40 transition-all bg-crm-inner/50"
                 >
-                  <div className="p-2 rounded-lg bg-slate-950 shrink-0 mt-0.5 border border-slate-800">
+                  <div className="p-2 rounded-lg bg-crm-base shrink-0 mt-0.5 border border-crm-border">
                     <Icon className={`w-3.5 h-3.5 ${act.iconColor}`} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <p className="text-xs font-medium text-slate-200 truncate">
+                      <p className="text-xs font-medium text-crm-text truncate">
                         {act.title}
                       </p>
                       <span className="text-[10px] font-mono text-slate-500 shrink-0">
                         {act.time}
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+                    <p className="text-[11px] text-crm-text-muted mt-1 line-clamp-2 leading-relaxed">
                       {act.desc}
                     </p>
                   </div>
@@ -836,25 +837,25 @@ export default function HomeDashboard() {
 
       {/* 7. Glassmorphic Add CRM Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-slate-900/90 border border-cyan-500/30 rounded-2xl p-6 shadow-2xl shadow-cyan-500/10 space-y-6 relative">
-            <div className="flex items-center justify-between border-b border-slate-800/80 pb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-crm-base/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-crm-inner/90 border border-cyan-500/30 rounded-2xl p-6 shadow-2xl shadow-cyan-500/10 space-y-6 relative">
+            <div className="flex items-center justify-between border-b border-crm-border pb-4">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
                   <ShieldCheck className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-100">
+                  <h3 className="text-sm font-semibold text-crm-text">
                     Onboard New CRM Bridge
                   </h3>
-                  <p className="text-[11px] text-slate-400 font-mono">
+                  <p className="text-[11px] text-crm-text-muted font-mono">
                     Configure API handshake & sync permissions
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsAddModalOpen(false)}
-                className="text-slate-400 hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-800/60 transition-all cursor-pointer"
+                className="text-crm-text-muted hover:text-crm-text p-1.5 rounded-lg hover:bg-crm-surface/60 transition-all cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -862,13 +863,13 @@ export default function HomeDashboard() {
 
             <form onSubmit={handleConnectNewCrm} className="space-y-4">
               <div>
-                <label className="text-xs font-mono text-slate-300 mb-1.5 block">
+                <label className="text-xs font-mono text-crm-text-muted mb-1.5 block">
                   Select CRM Platform
                 </label>
                 <select
                   value={selectedProvider}
                   onChange={(e) => setSelectedProvider(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500/50 font-sans"
+                  className="w-full bg-crm-base border border-crm-border rounded-xl px-3 py-2 text-xs text-crm-text focus:outline-none focus:border-cyan-500/50 font-sans"
                 >
                   <option value="Salesforce Enterprise">
                     Salesforce Enterprise
@@ -885,7 +886,7 @@ export default function HomeDashboard() {
               </div>
 
               <div>
-                <label className="text-xs font-mono text-slate-300 mb-1.5 block">
+                <label className="text-xs font-mono text-crm-text-muted mb-1.5 block">
                   Instance Alias (Optional)
                 </label>
                 <div className="relative">
@@ -895,13 +896,13 @@ export default function HomeDashboard() {
                     value={customName}
                     onChange={(e) => setCustomName(e.target.value)}
                     placeholder={`e.g. ${selectedProvider} Production`}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500/50"
+                    className="w-full bg-crm-base border border-crm-border rounded-xl pl-9 pr-3 py-2 text-xs text-crm-text placeholder:text-slate-600 focus:outline-none focus:border-cyan-500/50"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-mono text-slate-300 mb-1.5 block">
+                <label className="text-xs font-mono text-crm-text-muted mb-1.5 block">
                   API Key / OAuth Secret
                 </label>
                 <div className="relative">
@@ -912,16 +913,16 @@ export default function HomeDashboard() {
                     value={apiKey}
                     onChange={(e) => setApiKey(e.target.value)}
                     placeholder="e.g. key_live_994a02f..."
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500/50 font-mono"
+                    className="w-full bg-crm-base border border-crm-border rounded-xl pl-9 pr-3 py-2 text-xs text-crm-text placeholder:text-slate-600 focus:outline-none focus:border-cyan-500/50 font-mono"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800/80">
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-crm-border">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-3.5 py-2 rounded-xl text-xs text-slate-400 hover:text-slate-200 transition-all cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl text-xs text-crm-text-muted hover:text-crm-text transition-all cursor-pointer"
                 >
                   Cancel
                 </button>

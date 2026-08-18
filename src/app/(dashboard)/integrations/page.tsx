@@ -217,7 +217,7 @@ export default function IntegrationsAppCenter() {
     return (
       <div
         key={app.id}
-        className="bg-slate-950/70 border border-slate-800/90 rounded-2xl backdrop-blur-md hover:border-slate-700/80 transition-all flex flex-col justify-between p-4 space-y-4 shadow-lg shadow-black/40 group relative"
+        className="bg-crm-base/70 border border-crm-border/90 rounded-2xl backdrop-blur-md hover:border-crm-border/80 transition-all flex flex-col justify-between p-4 space-y-4 shadow-lg shadow-black/40 group relative"
       >
         <div className="space-y-3">
           {/* Card Header */}
@@ -227,7 +227,7 @@ export default function IntegrationsAppCenter() {
                 <AppIcon className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-xs font-semibold text-slate-100">
+                <h3 className="text-xs font-semibold text-crm-text">
                   {app.name}
                 </h3>
                 <span className="text-[10px] font-mono text-slate-500">
@@ -241,43 +241,43 @@ export default function IntegrationsAppCenter() {
                 <CheckCircle2 className="w-3 h-3" /> Live Feed
               </span>
             ) : (
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-900 text-slate-500 border border-slate-800">
+              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-crm-inner text-slate-500 border border-crm-border">
                 Inactive
               </span>
             )}
           </div>
 
-          <p className="text-[11px] text-slate-400 leading-relaxed">
+          <p className="text-[11px] text-crm-text-muted leading-relaxed">
             {app.desc}
           </p>
 
           {/* Output Tag */}
-          <div className="p-2 rounded-lg bg-slate-900/90 border border-slate-800/80 flex items-center gap-2 text-[10px] font-mono text-slate-300">
+          <div className="p-2 rounded-lg bg-crm-inner/90 border border-crm-border flex items-center gap-2 text-[10px] font-mono text-crm-text-muted">
             <History className="w-3 h-3 text-cyan-400 shrink-0" />
             <span className="truncate">
-              <strong className="text-slate-400">Timeline:</strong>{" "}
+              <strong className="text-crm-text-muted">Timeline:</strong>{" "}
               {app.timelineOutput}
             </span>
           </div>
         </div>
 
         {/* Actions */}
-        <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between">
+        <div className="pt-3 border-t border-crm-border flex items-center justify-between">
           {isConnected ? (
             <>
-              <span className="text-[10px] font-mono text-slate-400 truncate max-w-35">
+              <span className="text-[10px] font-mono text-crm-text-muted truncate max-w-35">
                 {app.account}
               </span>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleDisconnect(app.id)}
-                  className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-rose-500/10 text-slate-400 hover:text-rose-400 border border-slate-800 hover:border-rose-500/20 text-[11px] font-mono transition-all cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg bg-crm-inner hover:bg-rose-500/10 text-crm-text-muted hover:text-rose-400 border border-crm-border hover:border-rose-500/20 text-[11px] font-mono transition-all cursor-pointer"
                 >
                   Disconnect
                 </button>
                 <button
                   title="Configure sync rules"
-                  className="p-1.5 rounded-lg bg-slate-900 text-slate-400 hover:text-cyan-300 border border-slate-800 cursor-pointer"
+                  className="p-1.5 rounded-lg bg-crm-inner text-crm-text-muted hover:text-cyan-300 border border-crm-border cursor-pointer"
                 >
                   <SlidersHorizontal className="w-3.5 h-3.5" />
                 </button>
@@ -318,13 +318,13 @@ export default function IntegrationsAppCenter() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-100 flex items-center gap-2">
+          <h1 className="text-2xl font-bold tracking-tight text-crm-text flex items-center gap-2">
             Timeline Feed Connectors
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
               <Sparkles className="w-3 h-3" /> Auto-Chronological Stream
             </span>
           </h1>
-          <p className="text-xs text-slate-400 font-mono mt-1">
+          <p className="text-xs text-crm-text-muted font-mono mt-1">
             Connect CRMs, email inboxes, and calendar apps via secure single
             sign-on to assemble your unified lead activity timeline.
           </p>
@@ -332,13 +332,13 @@ export default function IntegrationsAppCenter() {
 
         {/* Global Search */}
         <div className="relative w-full sm:w-80">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-crm-text-muted" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search CRMs, email, or calendars..."
-            className="w-full bg-slate-900/90 border border-slate-800 rounded-xl pl-8 pr-4 py-1.5 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/50 font-mono transition-all"
+            className="w-full bg-crm-inner/90 border border-crm-border rounded-xl pl-8 pr-4 py-1.5 text-xs text-crm-text placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/50 font-mono transition-all"
           />
         </div>
       </div>
@@ -346,8 +346,8 @@ export default function IntegrationsAppCenter() {
       {/* Main Grid: Sidebar + Sub-dashboard Content */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* DATA SOURCES SIDEBAR */}
-        <div className="lg:col-span-1 space-y-1 p-3 h-fit bg-slate-950/70 border border-slate-800/90 rounded-2xl backdrop-blur-md shadow-lg shadow-black/40">
-          <div className="px-3 py-2 text-[10px] font-mono uppercase tracking-wider text-slate-500 border-b border-slate-800/80 mb-1">
+        <div className="lg:col-span-1 space-y-1 p-3 h-fit bg-crm-base/70 border border-crm-border/90 rounded-2xl backdrop-blur-md shadow-lg shadow-black/40">
+          <div className="px-3 py-2 text-[10px] font-mono uppercase tracking-wider text-slate-500 border-b border-crm-border mb-1">
             Data Sources
           </div>
 
@@ -361,7 +361,7 @@ export default function IntegrationsAppCenter() {
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-mono transition-all cursor-pointer ${
                   isActive
                     ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold shadow-[0_0_15px_rgba(6,182,212,0.15)]"
-                    : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/60"
+                    : "text-crm-text-muted hover:text-crm-text hover:bg-crm-inner/60"
                 }`}
               >
                 <Icon
@@ -378,13 +378,13 @@ export default function IntegrationsAppCenter() {
         {/* MAIN FEED WITH DISTINCT HEADINGS */}
         <div className="lg:col-span-3 space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-200 font-mono flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-crm-text font-mono flex items-center gap-2">
               <History className="w-4 h-4 text-cyan-400" />
               {categories.find((c) => c.id === selectedCategory)?.label} (
               {filteredApps.length})
             </h2>
             <span className="text-[11px] font-mono text-slate-500 flex items-center gap-1">
-              <Clock className="w-3 h-3 text-slate-400" /> Real-time activity
+              <Clock className="w-3 h-3 text-crm-text-muted" /> Real-time activity
               ordering
             </span>
           </div>
@@ -392,9 +392,9 @@ export default function IntegrationsAppCenter() {
           {/* SECTION 1: CRM PLATFORMS */}
           {crmApps.length > 0 && (
             <div className="space-y-3">
-              <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2">
+              <div className="flex items-center gap-2 border-b border-crm-border pb-2">
                 <Building2 className="w-4 h-4 text-cyan-400" />
-                <h3 className="text-xs font-semibold tracking-wider text-slate-300 font-mono uppercase">
+                <h3 className="text-xs font-semibold tracking-wider text-crm-text-muted font-mono uppercase">
                   CRM Platforms ({crmApps.length})
                 </h3>
               </div>
@@ -407,9 +407,9 @@ export default function IntegrationsAppCenter() {
           {/* SECTION 2: WORK & COMMUNICATION APPS */}
           {workApps.length > 0 && (
             <div className="space-y-3">
-              <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2">
+              <div className="flex items-center gap-2 border-b border-crm-border pb-2">
                 <Layers className="w-4 h-4 text-cyan-400" />
-                <h3 className="text-xs font-semibold tracking-wider text-slate-300 font-mono uppercase">
+                <h3 className="text-xs font-semibold tracking-wider text-crm-text-muted font-mono uppercase">
                   Communication & Work Apps ({workApps.length})
                 </h3>
               </div>
@@ -420,7 +420,7 @@ export default function IntegrationsAppCenter() {
           )}
 
           {filteredApps.length === 0 && (
-            <div className="py-12 text-center font-mono text-xs text-slate-500 bg-slate-950/40 rounded-2xl border border-slate-800/60">
+            <div className="py-12 text-center font-mono text-xs text-slate-500 bg-crm-base/40 rounded-2xl border border-crm-border/60">
               No integrations found matching active category or query.
             </div>
           )}
@@ -428,23 +428,23 @@ export default function IntegrationsAppCenter() {
       </div>
 
       {/* Footer Banner */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-slate-950/70 border border-slate-800/90 rounded-2xl backdrop-blur-md shadow-lg shadow-black/40">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-crm-base/70 border border-crm-border/90 rounded-2xl backdrop-blur-md shadow-lg shadow-black/40">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div>
-            <h4 className="text-xs font-semibold text-slate-200">
+            <h4 className="text-xs font-semibold text-crm-text">
               Automatic Chronological Aggregation
             </h4>
-            <p className="text-[11px] text-slate-400 font-mono">
+            <p className="text-[11px] text-crm-text-muted font-mono">
               Events from CRMs, Gmail, and Calendly are timestamped and appended
               sequentially to lead activity feeds.
             </p>
           </div>
         </div>
 
-        <button className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-mono text-slate-300 transition-all cursor-pointer shrink-0">
+        <button className="px-3.5 py-1.5 rounded-xl bg-crm-inner hover:bg-crm-surface border border-crm-border text-xs font-mono text-crm-text-muted transition-all cursor-pointer shrink-0">
           Preview Lead Timeline View →
         </button>
       </div>

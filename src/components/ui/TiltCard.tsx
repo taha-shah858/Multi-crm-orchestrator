@@ -72,7 +72,7 @@ export function TiltCard({
         transformStyle: "preserve-3d",
       }}
       /* Baseline theme updated: High contrast bg, top-lit border, deep black drop shadow */
-      className={`relative overflow-hidden rounded-2xl bg-slate-900/80 backdrop-blur-md border border-slate-800/80 border-t-slate-700/60 shadow-2xl shadow-black/60 hover:border-slate-700/80 transition-colors ${className}`}
+      className={`relative overflow-hidden rounded-2xl bg-crm-inner/80 backdrop-blur-md border border-crm-border border-t-slate-700/60 shadow-2xl shadow-black/60 hover:border-crm-border/80 transition-colors ${className}`}
       {...props}
     >
       {/* 1. Specular Glare / Light Sweep Across Card Surface */}

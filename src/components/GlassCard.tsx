@@ -67,10 +67,10 @@ export default function GlassCard({
           "color-mix(in srgb, var(--color-crm-surface, #020617) 45%, transparent)",
         ...style, // Merges custom inline styles passed from parent components
       }}
-      className={`relative overflow-hidden rounded-2xl border border-white/10 p-6 backdrop-blur-xl shadow-2xl ${
+      className={`relative overflow-hidden rounded-2xl border border-crm-border-strong p-6 backdrop-blur-xl shadow-2xl transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] active:scale-[0.99] cursor-pointer ${
         isHovered
           ? "shadow-[0_0_25px_color-mix(in_srgb,var(--color-primary-cyan)_15%,transparent)] border-primary-cyan/40"
-          : "shadow-black/60 border-white/10"
+          : "shadow-black/60 border-crm-border-strong"
       } ${className}`}
       {...props}
     >

@@ -248,7 +248,7 @@ export default function LeadsPage() {
   });
 
   return (
-    <div className="space-y-6 text-slate-100 font-sans">
+    <div className="space-y-6 text-crm-text font-sans">
       {!selectedLead ? (
         <div className="space-y-6">
           {/* Header */}
@@ -256,19 +256,19 @@ export default function LeadsPage() {
             <div>
               <div className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-primary-cyan" />
-                <h1 className="text-2xl font-bold tracking-tight text-slate-100">
+                <h1 className="text-2xl font-bold tracking-tight text-crm-text">
                   Unified Lead Directory
                 </h1>
               </div>
-              <p className="text-xs text-slate-400 font-mono mt-1">
+              <p className="text-xs text-crm-text-muted font-mono mt-1">
                 Aggregated cross-CRM records with real-time AI scoring, source
                 lineage tracking, and live routing.
               </p>
             </div>
 
             <div className="flex items-center gap-3">
-              <button className="px-4 py-2 rounded-xl bg-crm-surface border border-primary-cyan/30 text-xs font-mono text-slate-300 hover:text-white hover:border-primary-cyan/60 transition-all flex items-center gap-2 shadow-inner cursor-pointer">
-                <Download className="w-3.5 h-3.5 text-slate-400" />
+              <button className="px-4 py-2 rounded-xl bg-crm-surface border border-primary-cyan/30 text-xs font-mono text-crm-text-muted hover:text-white hover:border-primary-cyan/60 transition-all flex items-center gap-2 shadow-inner cursor-pointer">
+                <Download className="w-3.5 h-3.5 text-crm-text-muted" />
                 Export CSV
               </button>
               <button
@@ -283,8 +283,8 @@ export default function LeadsPage() {
 
           {/* SLIDER / DIVERSE SETTINGS & CUSTOMIZATION TOOLBAR */}
           <MultiCrmCard className="p-4 space-y-3">
-            <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
-              <span className="text-xs font-mono font-bold text-slate-300 flex items-center gap-2">
+            <div className="flex items-center justify-between border-b border-crm-border-strong pb-2.5">
+              <span className="text-xs font-mono font-bold text-crm-text-muted flex items-center gap-2">
                 <Settings2 className="w-4 h-4 text-primary-cyan" /> Lead
                 Customization & Control Hub
               </span>
@@ -298,19 +298,19 @@ export default function LeadsPage() {
               <div className="flex items-center gap-4 min-w-max">
                 {/* Search Box */}
                 <div className="relative w-64">
-                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Search className="w-3.5 h-3.5 text-crm-text-muted absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     placeholder="Search leads, companies..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-crm-inner border border-white/10 rounded-xl pl-9 pr-3 py-1.5 text-xs font-mono text-slate-200 placeholder-slate-500 focus:outline-none focus:border-primary-cyan/50"
+                    className="w-full bg-crm-inner border border-crm-border-strong rounded-xl pl-9 pr-3 py-1.5 text-xs font-mono text-crm-text placeholder-slate-500 focus:outline-none focus:border-primary-cyan/50"
                   />
                 </div>
 
                 {/* CRM Filter Selector */}
-                <div className="flex items-center gap-1.5 bg-crm-inner p-1 rounded-xl border border-white/10">
-                  <span className="text-[11px] font-mono text-slate-400 px-2 flex items-center gap-1">
+                <div className="flex items-center gap-1.5 bg-crm-inner p-1 rounded-xl border border-crm-border-strong">
+                  <span className="text-[11px] font-mono text-crm-text-muted px-2 flex items-center gap-1">
                     <Database className="w-3 h-3 text-primary-cyan" /> Source:
                   </span>
                   {["All", "Salesforce", "HubSpot", "Zoho", "Pipedrive"].map(
@@ -321,7 +321,7 @@ export default function LeadsPage() {
                         className={`px-2.5 py-1 rounded-lg text-xs font-mono transition-all cursor-pointer ${
                           selectedCrm === crm
                             ? "bg-primary-cyan/20 text-primary-cyan border border-primary-cyan/40 font-semibold"
-                            : "text-slate-400 hover:text-slate-200"
+                            : "text-crm-text-muted hover:text-crm-text"
                         }`}
                       >
                         {crm}
@@ -331,8 +331,8 @@ export default function LeadsPage() {
                 </div>
 
                 {/* Score Slider Control */}
-                <div className="flex items-center gap-3 bg-crm-inner px-3 py-1.5 rounded-xl border border-white/10">
-                  <span className="text-[11px] font-mono text-slate-400 flex items-center gap-1">
+                <div className="flex items-center gap-3 bg-crm-inner px-3 py-1.5 rounded-xl border border-crm-border-strong">
+                  <span className="text-[11px] font-mono text-crm-text-muted flex items-center gap-1">
                     <Sparkles className="w-3 h-3 text-secondary-pink" /> Min
                     Score:
                   </span>
@@ -352,15 +352,15 @@ export default function LeadsPage() {
 
                 {/* Quick Quick Actions & Display Options */}
                 <div className="flex items-center gap-2">
-                  <button className="px-3 py-1.5 rounded-xl bg-crm-inner border border-white/10 text-xs font-mono text-slate-300 hover:text-white hover:border-white/30 flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
+                  <button className="px-3 py-1.5 rounded-xl bg-crm-inner border border-crm-border-strong text-xs font-mono text-crm-text-muted hover:text-white hover:border-white/30 flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
                     <Layers className="w-3.5 h-3.5 text-purple-400" /> Group by
                     Origin
                   </button>
-                  <button className="px-3 py-1.5 rounded-xl bg-crm-inner border border-white/10 text-xs font-mono text-slate-300 hover:text-white hover:border-white/30 flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
+                  <button className="px-3 py-1.5 rounded-xl bg-crm-inner border border-crm-border-strong text-xs font-mono text-crm-text-muted hover:text-white hover:border-white/30 flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
                     <RefreshCw className="w-3.5 h-3.5 text-emerald-400" /> Force
                     Sync All
                   </button>
-                  <button className="px-3 py-1.5 rounded-xl bg-crm-inner border border-white/10 text-xs font-mono text-slate-300 hover:text-white hover:border-white/30 flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
+                  <button className="px-3 py-1.5 rounded-xl bg-crm-inner border border-crm-border-strong text-xs font-mono text-crm-text-muted hover:text-white hover:border-white/30 flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
                     <Eye className="w-3.5 h-3.5 text-amber-400" /> Column
                     Visibility
                   </button>
@@ -374,7 +374,7 @@ export default function LeadsPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-white/10 bg-crm-inner/50 text-[11px] font-mono text-slate-400">
+                  <tr className="border-b border-crm-border-strong bg-crm-inner/50 text-[11px] font-mono text-crm-text-muted">
                     <th className="p-3.5">
                       <input
                         type="checkbox"
@@ -413,7 +413,7 @@ export default function LeadsPage() {
                             {lead.id}
                           </span>
                         </div>
-                        <div className="text-slate-400 text-[11px] flex items-center gap-1 mt-0.5">
+                        <div className="text-crm-text-muted text-[11px] flex items-center gap-1 mt-0.5">
                           <Building2 className="w-3 h-3 text-slate-500" />{" "}
                           {lead.company} • {lead.title}
                         </div>
@@ -426,7 +426,7 @@ export default function LeadsPage() {
                             {lead.crmSource}
                           </MultiCrmTag>
                           <span
-                            className="text-[10px] text-slate-400 truncate max-w-35"
+                            className="text-[10px] text-crm-text-muted truncate max-w-35"
                             title={lead.pulledFrom}
                           >
                             {lead.pulledFrom}
@@ -436,7 +436,7 @@ export default function LeadsPage() {
 
                       {/* Sync Timestamp */}
                       <td className="py-4 px-4">
-                        <div className="text-slate-300 text-[11px]">
+                        <div className="text-crm-text-muted text-[11px]">
                           {lead.pulledAt}
                         </div>
                         <span
@@ -453,7 +453,7 @@ export default function LeadsPage() {
                       {/* Rating & Score */}
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-2">
-                          <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] text-slate-300">
+                          <span className="px-2 py-0.5 rounded bg-white/5 border border-crm-border-strong text-[10px] text-crm-text-muted">
                             {lead.rating}
                           </span>
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 font-bold">
@@ -464,7 +464,7 @@ export default function LeadsPage() {
 
                       {/* Status */}
                       <td className="py-4 px-4">
-                        <span className="px-2.5 py-1 rounded-full text-[10px] bg-crm-inner text-slate-300 border border-white/10">
+                        <span className="px-2.5 py-1 rounded-full text-[10px] bg-crm-inner text-crm-text-muted border border-crm-border-strong">
                           {lead.status}
                         </span>
                       </td>
@@ -476,7 +476,7 @@ export default function LeadsPage() {
                       >
                         <button
                           onClick={() => setSelectedLead(lead)}
-                          className="p-2 rounded-lg bg-crm-inner hover:bg-crm-surface text-primary-cyan transition-all border border-white/10 cursor-pointer"
+                          className="p-2 rounded-lg bg-crm-inner hover:bg-crm-surface text-primary-cyan transition-all border border-crm-border-strong cursor-pointer"
                           title="View Full Profile"
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
@@ -488,7 +488,7 @@ export default function LeadsPage() {
               </table>
             </div>
 
-            <div className="p-4 border-t border-white/10 bg-crm-inner/30 flex items-center justify-between text-xs font-mono text-slate-400">
+            <div className="p-4 border-t border-crm-border-strong bg-crm-inner/30 flex items-center justify-between text-xs font-mono text-crm-text-muted">
               <span>
                 Showing {filteredLeads.length} of {leads.length} records
               </span>
@@ -505,22 +505,22 @@ export default function LeadsPage() {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setSelectedLead(null)}
-                className="p-2 rounded-xl bg-crm-inner border border-white/10 hover:border-primary-cyan/50 text-slate-300 hover:text-primary-cyan transition-all cursor-pointer"
+                className="p-2 rounded-xl bg-crm-inner border border-crm-border-strong hover:border-primary-cyan/50 text-crm-text-muted hover:text-primary-cyan transition-all cursor-pointer"
               >
                 <ArrowLeft className="w-4 h-4" />
               </button>
               <div>
                 <div className="flex items-center gap-2">
-                  <h1 className="text-lg font-bold text-slate-100">
+                  <h1 className="text-lg font-bold text-crm-text">
                     {selectedLead.name}
                   </h1>
                   <MultiCrmTag variant={selectedLead.variant}>
                     {selectedLead.crmSource}
                   </MultiCrmTag>
                 </div>
-                <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                <p className="text-[11px] text-crm-text-muted font-mono mt-0.5">
                   Pulled via{" "}
-                  <strong className="text-slate-200">
+                  <strong className="text-crm-text">
                     {selectedLead.pulledFrom}
                   </strong>{" "}
                   on {selectedLead.pulledAt}
@@ -532,7 +532,7 @@ export default function LeadsPage() {
               <button className="px-3.5 py-1.5 rounded-xl bg-primary-cyan/20 border border-primary-cyan/40 text-primary-cyan flex items-center gap-1.5 cursor-pointer">
                 <Send className="w-3.5 h-3.5" /> Direct Email
               </button>
-              <button className="px-3.5 py-1.5 rounded-xl bg-crm-inner border border-white/10 text-slate-300 flex items-center gap-1.5 cursor-pointer">
+              <button className="px-3.5 py-1.5 rounded-xl bg-crm-inner border border-crm-border-strong text-crm-text-muted flex items-center gap-1.5 cursor-pointer">
                 <Edit3 className="w-3.5 h-3.5" /> Edit Record
               </button>
             </div>
@@ -541,7 +541,7 @@ export default function LeadsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* Left Panel */}
             <MultiCrmCard className="lg:col-span-4 p-5 space-y-4">
-              <h3 className="text-xs font-mono font-bold text-slate-300 uppercase tracking-wider border-b border-white/10 pb-2">
+              <h3 className="text-xs font-mono font-bold text-crm-text-muted uppercase tracking-wider border-b border-crm-border-strong pb-2">
                 Origin & Pull Details
               </h3>
 
@@ -550,7 +550,7 @@ export default function LeadsPage() {
                   <span className="text-slate-500 text-[10px] block">
                     Source CRM Platform
                   </span>
-                  <span className="text-slate-200 font-semibold">
+                  <span className="text-crm-text font-semibold">
                     {selectedLead.crmSource}
                   </span>
                 </div>
@@ -566,7 +566,7 @@ export default function LeadsPage() {
                   <span className="text-slate-500 text-[10px] block">
                     Pulled Timestamp
                   </span>
-                  <span className="text-slate-200">
+                  <span className="text-crm-text">
                     {selectedLead.pulledAt}
                   </span>
                 </div>
@@ -582,13 +582,13 @@ export default function LeadsPage() {
 
               <MultiCrmInnerPanel className="space-y-3 p-3 font-mono text-xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400">AI Score</span>
+                  <span className="text-crm-text-muted">AI Score</span>
                   <span className="text-purple-400 font-bold">
                     {selectedLead.score}/100
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400">Lead Rating</span>
+                  <span className="text-crm-text-muted">Lead Rating</span>
                   <span className="text-amber-400 font-bold">
                     {selectedLead.rating}
                   </span>
@@ -598,8 +598,8 @@ export default function LeadsPage() {
 
             {/* Right Main Details Panel */}
             <MultiCrmCard className="lg:col-span-8 p-6 space-y-6">
-              <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                <h3 className="text-xs font-mono font-bold text-slate-200 uppercase tracking-wider">
+              <div className="flex items-center justify-between border-b border-crm-border-strong pb-3">
+                <h3 className="text-xs font-mono font-bold text-crm-text uppercase tracking-wider">
                   Complete Lead Profile
                 </h3>
                 <span className="text-xs text-slate-500 font-mono">
@@ -612,7 +612,7 @@ export default function LeadsPage() {
                   <span className="text-slate-500 block text-[10px]">
                     Full Name
                   </span>
-                  <span className="text-slate-100 font-medium">
+                  <span className="text-crm-text font-medium">
                     {selectedLead.name}
                   </span>
                 </div>
@@ -620,19 +620,19 @@ export default function LeadsPage() {
                   <span className="text-slate-500 block text-[10px]">
                     Job Title
                   </span>
-                  <span className="text-slate-200">{selectedLead.title}</span>
+                  <span className="text-crm-text">{selectedLead.title}</span>
                 </div>
                 <div>
                   <span className="text-slate-500 block text-[10px]">
                     Company
                   </span>
-                  <span className="text-slate-200">{selectedLead.company}</span>
+                  <span className="text-crm-text">{selectedLead.company}</span>
                 </div>
                 <div>
                   <span className="text-slate-500 block text-[10px]">
                     Industry
                   </span>
-                  <span className="text-slate-200">
+                  <span className="text-crm-text">
                     {selectedLead.industry}
                   </span>
                 </div>
@@ -648,7 +648,7 @@ export default function LeadsPage() {
                   <span className="text-slate-500 block text-[10px]">
                     Phone / Mobile
                   </span>
-                  <span className="text-slate-200">
+                  <span className="text-crm-text">
                     {selectedLead.phone} / {selectedLead.mobile}
                   </span>
                 </div>
@@ -656,7 +656,7 @@ export default function LeadsPage() {
                   <span className="text-slate-500 block text-[10px]">
                     Annual Revenue
                   </span>
-                  <span className="text-slate-200">
+                  <span className="text-crm-text">
                     {selectedLead.annualRevenue}
                   </span>
                 </div>
@@ -676,19 +676,19 @@ export default function LeadsPage() {
               </div>
 
               <MultiCrmInnerPanel className="p-4 space-y-2">
-                <span className="text-slate-400 font-mono text-xs font-bold block">
+                <span className="text-crm-text-muted font-mono text-xs font-bold block">
                   Address & Location
                 </span>
-                <p className="text-xs font-mono text-slate-300">
+                <p className="text-xs font-mono text-crm-text-muted">
                   {selectedLead.address}
                 </p>
               </MultiCrmInnerPanel>
 
               <MultiCrmInnerPanel className="p-4 space-y-2">
-                <span className="text-slate-400 font-mono text-xs font-bold block">
+                <span className="text-crm-text-muted font-mono text-xs font-bold block">
                   Description / Notes
                 </span>
-                <p className="text-xs font-mono text-slate-300">
+                <p className="text-xs font-mono text-crm-text-muted">
                   {selectedLead.description}
                 </p>
               </MultiCrmInnerPanel>
@@ -701,20 +701,20 @@ export default function LeadsPage() {
       {showCreateModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <MultiCrmCard className="w-full max-w-2xl p-6 space-y-6 relative border border-primary-cyan/40 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+            <div className="flex items-center justify-between border-b border-crm-border-strong pb-3">
               <div>
-                <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                <h2 className="text-lg font-bold text-crm-text flex items-center gap-2">
                   <Plus className="w-5 h-5 text-primary-cyan" /> Add New Lead
                   Record
                 </h2>
-                <p className="text-xs text-slate-400 font-mono mt-0.5">
+                <p className="text-xs text-crm-text-muted font-mono mt-0.5">
                   Populate complete enterprise fields and map target CRM
                   destination.
                 </p>
               </div>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="text-slate-400 hover:text-slate-100 p-1 cursor-pointer"
+                className="text-crm-text-muted hover:text-crm-text p-1 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -731,7 +731,7 @@ export default function LeadsPage() {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-slate-400 block mb-1">
+                    <label className="text-crm-text-muted block mb-1">
                       Full Name *
                     </label>
                     <input
@@ -742,11 +742,11 @@ export default function LeadsPage() {
                       onChange={(e) =>
                         setNewLead({ ...newLead, name: e.target.value })
                       }
-                      className="w-full bg-crm-inner border border-white/10 rounded-xl p-2 text-slate-200 focus:outline-none focus:border-primary-cyan"
+                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2 text-crm-text focus:outline-none focus:border-primary-cyan"
                     />
                   </div>
                   <div>
-                    <label className="text-slate-400 block mb-1">
+                    <label className="text-crm-text-muted block mb-1">
                       Job Title
                     </label>
                     <input
@@ -756,11 +756,11 @@ export default function LeadsPage() {
                       onChange={(e) =>
                         setNewLead({ ...newLead, title: e.target.value })
                       }
-                      className="w-full bg-crm-inner border border-white/10 rounded-xl p-2 text-slate-200 focus:outline-none focus:border-primary-cyan"
+                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2 text-crm-text focus:outline-none focus:border-primary-cyan"
                     />
                   </div>
                   <div>
-                    <label className="text-slate-400 block mb-1">
+                    <label className="text-crm-text-muted block mb-1">
                       Company Name
                     </label>
                     <input
@@ -770,11 +770,11 @@ export default function LeadsPage() {
                       onChange={(e) =>
                         setNewLead({ ...newLead, company: e.target.value })
                       }
-                      className="w-full bg-crm-inner border border-white/10 rounded-xl p-2 text-slate-200 focus:outline-none focus:border-primary-cyan"
+                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2 text-crm-text focus:outline-none focus:border-primary-cyan"
                     />
                   </div>
                   <div>
-                    <label className="text-slate-400 block mb-1">
+                    <label className="text-crm-text-muted block mb-1">
                       Lead Owner
                     </label>
                     <input
@@ -783,7 +783,7 @@ export default function LeadsPage() {
                       onChange={(e) =>
                         setNewLead({ ...newLead, leadOwner: e.target.value })
                       }
-                      className="w-full bg-crm-inner border border-white/10 rounded-xl p-2 text-slate-200 focus:outline-none focus:border-primary-cyan"
+                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2 text-crm-text focus:outline-none focus:border-primary-cyan"
                     />
                   </div>
                 </div>
@@ -796,7 +796,7 @@ export default function LeadsPage() {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
-                    <label className="text-slate-400 block mb-1">Email</label>
+                    <label className="text-crm-text-muted block mb-1">Email</label>
                     <input
                       type="email"
                       placeholder="s.jenkins@acme.com"
@@ -804,11 +804,11 @@ export default function LeadsPage() {
                       onChange={(e) =>
                         setNewLead({ ...newLead, email: e.target.value })
                       }
-                      className="w-full bg-crm-inner border border-white/10 rounded-xl p-2 text-slate-200 focus:outline-none focus:border-primary-cyan"
+                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2 text-crm-text focus:outline-none focus:border-primary-cyan"
                     />
                   </div>
                   <div>
-                    <label className="text-slate-400 block mb-1">Phone</label>
+                    <label className="text-crm-text-muted block mb-1">Phone</label>
                     <input
                       type="text"
                       placeholder="+1 (555) 000-0000"
@@ -816,11 +816,11 @@ export default function LeadsPage() {
                       onChange={(e) =>
                         setNewLead({ ...newLead, phone: e.target.value })
                       }
-                      className="w-full bg-crm-inner border border-white/10 rounded-xl p-2 text-slate-200 focus:outline-none focus:border-primary-cyan"
+                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2 text-crm-text focus:outline-none focus:border-primary-cyan"
                     />
                   </div>
                   <div>
-                    <label className="text-slate-400 block mb-1">Mobile</label>
+                    <label className="text-crm-text-muted block mb-1">Mobile</label>
                     <input
                       type="text"
                       placeholder="+1 (555) 000-0000"
@@ -828,12 +828,12 @@ export default function LeadsPage() {
                       onChange={(e) =>
                         setNewLead({ ...newLead, mobile: e.target.value })
                       }
-                      className="w-full bg-crm-inner border border-white/10 rounded-xl p-2 text-slate-200 focus:outline-none focus:border-primary-cyan"
+                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2 text-crm-text focus:outline-none focus:border-primary-cyan"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="text-slate-400 block mb-1">
+                  <label className="text-crm-text-muted block mb-1">
                     Full Address
                   </label>
                   <input
@@ -843,7 +843,7 @@ export default function LeadsPage() {
                     onChange={(e) =>
                       setNewLead({ ...newLead, address: e.target.value })
                     }
-                    className="w-full bg-crm-inner border border-white/10 rounded-xl p-2 text-slate-200 focus:outline-none focus:border-primary-cyan"
+                    className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2 text-crm-text focus:outline-none focus:border-primary-cyan"
                   />
                 </div>
               </MultiCrmInnerPanel>
@@ -856,7 +856,7 @@ export default function LeadsPage() {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
-                    <label className="text-slate-400 block mb-1">
+                    <label className="text-crm-text-muted block mb-1">
                       CRM Platform
                     </label>
                     <select
@@ -867,7 +867,7 @@ export default function LeadsPage() {
                           crmSource: e.target.value as Lead["crmSource"],
                         })
                       }
-                      className="w-full bg-crm-inner border border-white/10 rounded-xl p-2 text-slate-200 focus:outline-none focus:border-primary-cyan"
+                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2 text-crm-text focus:outline-none focus:border-primary-cyan"
                     >
                       <option value="Salesforce">Salesforce</option>
                       <option value="HubSpot">HubSpot</option>
@@ -876,7 +876,7 @@ export default function LeadsPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="text-slate-400 block mb-1">
+                    <label className="text-crm-text-muted block mb-1">
                       Lead Source
                     </label>
                     <select
@@ -884,7 +884,7 @@ export default function LeadsPage() {
                       onChange={(e) =>
                         setNewLead({ ...newLead, leadSource: e.target.value })
                       }
-                      className="w-full bg-crm-inner border border-white/10 rounded-xl p-2 text-slate-200 focus:outline-none focus:border-primary-cyan"
+                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2 text-crm-text focus:outline-none focus:border-primary-cyan"
                     >
                       <option value="Cold Call">Cold Call</option>
                       <option value="Advertisement">Advertisement</option>
@@ -894,7 +894,7 @@ export default function LeadsPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="text-slate-400 block mb-1">Rating</label>
+                    <label className="text-crm-text-muted block mb-1">Rating</label>
                     <select
                       value={newLead.rating}
                       onChange={(e) =>
@@ -903,7 +903,7 @@ export default function LeadsPage() {
                           rating: e.target.value as Lead["rating"],
                         })
                       }
-                      className="w-full bg-crm-inner border border-white/10 rounded-xl p-2 text-slate-200 focus:outline-none focus:border-primary-cyan"
+                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2 text-crm-text focus:outline-none focus:border-primary-cyan"
                     >
                       <option value="Hot">Hot</option>
                       <option value="Warm">Warm</option>
@@ -914,7 +914,7 @@ export default function LeadsPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
                   <div>
-                    <label className="text-slate-400 block mb-1">
+                    <label className="text-crm-text-muted block mb-1">
                       Industry
                     </label>
                     <input
@@ -924,11 +924,11 @@ export default function LeadsPage() {
                       onChange={(e) =>
                         setNewLead({ ...newLead, industry: e.target.value })
                       }
-                      className="w-full bg-crm-inner border border-white/10 rounded-xl p-2 text-slate-200 focus:outline-none focus:border-primary-cyan"
+                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2 text-crm-text focus:outline-none focus:border-primary-cyan"
                     />
                   </div>
                   <div>
-                    <label className="text-slate-400 block mb-1">
+                    <label className="text-crm-text-muted block mb-1">
                       Annual Revenue
                     </label>
                     <input
@@ -941,7 +941,7 @@ export default function LeadsPage() {
                           annualRevenue: e.target.value,
                         })
                       }
-                      className="w-full bg-crm-inner border border-white/10 rounded-xl p-2 text-slate-200 focus:outline-none focus:border-primary-cyan"
+                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2 text-crm-text focus:outline-none focus:border-primary-cyan"
                     />
                   </div>
                 </div>
@@ -949,7 +949,7 @@ export default function LeadsPage() {
 
               {/* Description */}
               <div>
-                <label className="text-slate-400 block mb-1">
+                <label className="text-crm-text-muted block mb-1">
                   Notes / Description
                 </label>
                 <textarea
@@ -959,16 +959,16 @@ export default function LeadsPage() {
                   onChange={(e) =>
                     setNewLead({ ...newLead, description: e.target.value })
                   }
-                  className="w-full bg-crm-inner border border-white/10 rounded-xl p-2 text-slate-200 focus:outline-none focus:border-primary-cyan"
+                  className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2 text-crm-text focus:outline-none focus:border-primary-cyan"
                 />
               </div>
 
               {/* Actions */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
+              <div className="flex justify-end gap-3 pt-4 border-t border-crm-border-strong">
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 rounded-xl bg-crm-inner text-slate-400 hover:text-slate-200 cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-crm-inner text-crm-text-muted hover:text-crm-text cursor-pointer"
                 >
                   Cancel
                 </button>

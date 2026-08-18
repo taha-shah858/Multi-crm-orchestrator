@@ -289,17 +289,17 @@ export default function TimelinePage() {
   );
 
   return (
-    <div className="space-y-6 font-sans text-slate-100 relative">
+    <div className="space-y-6 font-sans text-crm-text relative">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <GitCommit className="w-5 h-5 text-primary-cyan" />
-            <h1 className="text-2xl font-bold tracking-tight text-slate-100">
+            <h1 className="text-2xl font-bold tracking-tight text-crm-text">
               Aggregation Timeline
             </h1>
           </div>
-          <p className="text-xs text-slate-400 font-mono mt-1">
+          <p className="text-xs text-crm-text-muted font-mono mt-1">
             Real-time multi-CRM event stream, automated AI actions, and field
             conflict logs.
           </p>
@@ -312,7 +312,7 @@ export default function TimelinePage() {
             className={`px-3 py-1.5 rounded-xl border transition-all flex items-center gap-2 cursor-pointer ${
               isLiveIngestion
                 ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-                : "bg-crm-inner border-white/10 text-slate-400"
+                : "bg-crm-inner border-crm-border-strong text-crm-text-muted"
             }`}
           >
             <Radio
@@ -326,7 +326,7 @@ export default function TimelinePage() {
           <button
             onClick={handleRefreshStream}
             disabled={isRefreshing}
-            className="p-2 rounded-xl bg-crm-surface border border-primary-cyan/30 text-slate-300 hover:text-white hover:border-primary-cyan/60 transition-all cursor-pointer shadow-inner"
+            className="p-2 rounded-xl bg-crm-surface border border-primary-cyan/30 text-crm-text-muted hover:text-white hover:border-primary-cyan/60 transition-all cursor-pointer shadow-inner"
             title="Refresh Timeline Feed"
           >
             <RefreshCw
@@ -342,10 +342,10 @@ export default function TimelinePage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <MultiCrmCard className="p-3.5 flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-mono text-slate-400 block uppercase">
+            <span className="text-[10px] font-mono text-crm-text-muted block uppercase">
               Total Ingested
             </span>
-            <span className="text-lg font-bold font-mono text-slate-100">
+            <span className="text-lg font-bold font-mono text-crm-text">
               {totalEvents} Events
             </span>
           </div>
@@ -354,7 +354,7 @@ export default function TimelinePage() {
 
         <MultiCrmCard className="p-3.5 flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-mono text-slate-400 block uppercase">
+            <span className="text-[10px] font-mono text-crm-text-muted block uppercase">
               Sync Success Rate
             </span>
             <span className="text-lg font-bold font-mono text-emerald-400">
@@ -366,7 +366,7 @@ export default function TimelinePage() {
 
         <MultiCrmCard className="p-3.5 flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-mono text-slate-400 block uppercase">
+            <span className="text-[10px] font-mono text-crm-text-muted block uppercase">
               Avg Sync Latency
             </span>
             <span className="text-lg font-bold font-mono text-secondary-pink">
@@ -378,10 +378,10 @@ export default function TimelinePage() {
 
         <MultiCrmCard className="p-3.5 flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-mono text-slate-400 block uppercase">
+            <span className="text-[10px] font-mono text-crm-text-muted block uppercase">
               Active Connectors
             </span>
-            <span className="text-lg font-bold font-mono text-slate-100">
+            <span className="text-lg font-bold font-mono text-crm-text">
               6 Platforms
             </span>
           </div>
@@ -391,8 +391,8 @@ export default function TimelinePage() {
 
       {/* Controls & Filter Hub */}
       <MultiCrmCard className="p-4 space-y-3">
-        <div className="flex items-center justify-between border-b border-white/10 pb-2.5 font-mono text-xs">
-          <span className="font-bold text-slate-300 flex items-center gap-2">
+        <div className="flex items-center justify-between border-b border-crm-border-strong pb-2.5 font-mono text-xs">
+          <span className="font-bold text-crm-text-muted flex items-center gap-2">
             <Filter className="w-3.5 h-3.5 text-primary-cyan" /> Stream Controls
             & Filtering
           </span>
@@ -404,13 +404,13 @@ export default function TimelinePage() {
         <div className="flex flex-col lg:flex-row items-center justify-between gap-4 font-mono text-xs">
           {/* Search */}
           <div className="relative w-full lg:w-72">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-3.5 h-3.5 text-crm-text-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Search event, entity, ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-crm-inner border border-white/10 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-primary-cyan/50 shadow-inner"
+              className="w-full bg-crm-inner border border-crm-border-strong rounded-xl pl-9 pr-4 py-2 text-xs text-crm-text placeholder-slate-500 focus:outline-none focus:border-primary-cyan/50 shadow-inner"
             />
           </div>
 
@@ -434,7 +434,7 @@ export default function TimelinePage() {
                 className={`px-2.5 py-1 rounded-xl text-xs transition-all whitespace-nowrap cursor-pointer ${
                   filterSource === src
                     ? "bg-primary-cyan/20 text-primary-cyan border border-primary-cyan/40 font-semibold shadow-[0_0_12px_color-mix(in_srgb,var(--color-primary-cyan)_15%,transparent)]"
-                    : "text-slate-400 hover:text-slate-200 hover:bg-crm-inner"
+                    : "text-crm-text-muted hover:text-crm-text hover:bg-crm-inner"
                 }`}
               >
                 {src}
@@ -456,7 +456,7 @@ export default function TimelinePage() {
                 className={`px-2 py-1 rounded-lg text-[11px] transition-all cursor-pointer ${
                   filterStatus === st.value
                     ? "bg-white/15 text-white border border-white/30 font-semibold"
-                    : "text-slate-400 hover:text-slate-200"
+                    : "text-crm-text-muted hover:text-crm-text"
                 }`}
               >
                 {st.label}
@@ -489,7 +489,7 @@ export default function TimelinePage() {
                   className={`z-10 p-2.5 rounded-xl bg-crm-inner border transition-all shrink-0 shadow-inner ${
                     isSelected
                       ? "border-primary-cyan ring-2 ring-primary-cyan/30"
-                      : "border-white/10 group-hover:border-primary-cyan/50"
+                      : "border-crm-border-strong group-hover:border-primary-cyan/50"
                   }`}
                 >
                   <Icon className={`w-4 h-4 ${evt.iconColor}`} />
@@ -503,9 +503,9 @@ export default function TimelinePage() {
                       : "hover:border-primary-cyan/40"
                   }`}
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-crm-border-strong pb-3">
                     <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-semibold text-slate-100 group-hover:text-primary-cyan transition-colors">
+                      <h3 className="text-sm font-semibold text-crm-text group-hover:text-primary-cyan transition-colors">
                         {evt.title}
                       </h3>
                       <MultiCrmTag variant={evt.variant}>
@@ -513,7 +513,7 @@ export default function TimelinePage() {
                       </MultiCrmTag>
                     </div>
 
-                    <div className="flex items-center gap-2 text-[11px] font-mono text-slate-400">
+                    <div className="flex items-center gap-2 text-[11px] font-mono text-crm-text-muted">
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3 text-slate-500" />
                         {evt.timestamp} ({evt.time})
@@ -531,14 +531,14 @@ export default function TimelinePage() {
                     </div>
                   </div>
 
-                  <p className="text-xs text-slate-300 leading-relaxed font-sans">
+                  <p className="text-xs text-crm-text-muted leading-relaxed font-sans">
                     {evt.description}
                   </p>
 
-                  <div className="flex items-center justify-between pt-2 border-t border-white/5 text-xs font-mono">
+                  <div className="flex items-center justify-between pt-2 border-t border-crm-border text-xs font-mono">
                     <div className="flex items-center gap-2">
                       <User className="w-3.5 h-3.5 text-slate-500" />
-                      <span className="text-[11px] text-slate-200 font-medium">
+                      <span className="text-[11px] text-crm-text font-medium">
                         {evt.entity}{" "}
                         {evt.entityCompany ? `(${evt.entityCompany})` : ""}
                       </span>
@@ -550,7 +550,7 @@ export default function TimelinePage() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={(e) => handleCopyId(evt.id, e)}
-                        className="px-2 py-1 rounded bg-crm-inner hover:bg-crm-surface text-slate-400 hover:text-slate-200 text-[10px] flex items-center gap-1 border border-white/5 transition-all cursor-pointer"
+                        className="px-2 py-1 rounded bg-crm-inner hover:bg-crm-surface text-crm-text-muted hover:text-crm-text text-[10px] flex items-center gap-1 border border-crm-border transition-all cursor-pointer"
                         title="Copy Event ID"
                       >
                         {copiedId === evt.id ? (
@@ -563,7 +563,7 @@ export default function TimelinePage() {
 
                       <button
                         onClick={(e) => handleInspectPayloadClick(evt, e)}
-                        className="px-2.5 py-1 rounded-lg bg-crm-inner hover:bg-crm-surface text-primary-cyan hover:text-white border border-white/10 text-[10px] flex items-center gap-1.5 transition-all cursor-pointer shadow-inner"
+                        className="px-2.5 py-1 rounded-lg bg-crm-inner hover:bg-crm-surface text-primary-cyan hover:text-white border border-crm-border-strong text-[10px] flex items-center gap-1.5 transition-all cursor-pointer shadow-inner"
                       >
                         <Code2 className="w-3 h-3 text-primary-cyan" /> Inspect
                         Payload
@@ -577,7 +577,7 @@ export default function TimelinePage() {
 
           {filteredEvents.length === 0 && (
             <div className="text-center py-12 space-y-2 font-mono">
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-crm-text-muted">
                 No events matched the current filter conditions.
               </p>
               <button
@@ -601,37 +601,37 @@ export default function TimelinePage() {
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex justify-end">
           <div className="w-full max-w-xl bg-crm-surface border-l border-primary-cyan/30 h-full p-6 space-y-6 overflow-y-auto font-sans shadow-2xl animate-in slide-in-from-right duration-200">
             {/* Drawer Header */}
-            <div className="flex items-start justify-between border-b border-white/10 pb-4">
+            <div className="flex items-start justify-between border-b border-crm-border-strong pb-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <MultiCrmTag variant={drawerEvent.variant}>
                     {drawerEvent.source}
                   </MultiCrmTag>
-                  <span className="text-xs font-mono text-slate-400">
+                  <span className="text-xs font-mono text-crm-text-muted">
                     {drawerEvent.id}
                   </span>
                 </div>
-                <h2 className="text-base font-bold text-slate-100">
+                <h2 className="text-base font-bold text-crm-text">
                   {drawerEvent.title}
                 </h2>
               </div>
 
               <button
                 onClick={() => setDrawerEvent(null)}
-                className="p-1.5 rounded-lg bg-crm-inner hover:bg-white/10 text-slate-400 hover:text-white transition-all cursor-pointer"
+                className="p-1.5 rounded-lg bg-crm-inner hover:bg-white/10 text-crm-text-muted hover:text-white transition-all cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Navigation Tabs */}
-            <div className="flex items-center gap-2 border-b border-white/10 pb-2 font-mono text-xs">
+            <div className="flex items-center gap-2 border-b border-crm-border-strong pb-2 font-mono text-xs">
               <button
                 onClick={() => setDrawerTab("overview")}
                 className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                   drawerTab === "overview"
                     ? "bg-primary-cyan/20 text-primary-cyan border border-primary-cyan/40 font-semibold"
-                    : "text-slate-400 hover:text-slate-200"
+                    : "text-crm-text-muted hover:text-crm-text"
                 }`}
               >
                 Overview & Context
@@ -643,7 +643,7 @@ export default function TimelinePage() {
                   className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                     drawerTab === "diffs"
                       ? "bg-secondary-pink/20 text-secondary-pink border border-secondary-pink/40 font-semibold"
-                      : "text-slate-400 hover:text-slate-200"
+                      : "text-crm-text-muted hover:text-crm-text"
                   }`}
                 >
                   Field Diffs ({drawerEvent.diffs.length})
@@ -655,7 +655,7 @@ export default function TimelinePage() {
                 className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                   drawerTab === "raw"
                     ? "bg-white/15 text-white border border-white/30 font-semibold"
-                    : "text-slate-400 hover:text-slate-200"
+                    : "text-crm-text-muted hover:text-crm-text"
                 }`}
               >
                 Raw JSON
@@ -667,7 +667,7 @@ export default function TimelinePage() {
               <div className="space-y-5">
                 {/* Entity Summary Card */}
                 <MultiCrmInnerPanel className="p-4 space-y-3">
-                  <span className="text-[11px] font-mono text-slate-400 uppercase tracking-wider block">
+                  <span className="text-[11px] font-mono text-crm-text-muted uppercase tracking-wider block">
                     Associated Lead / Entity Context
                   </span>
                   <div className="grid grid-cols-2 gap-3 text-xs font-mono">
@@ -675,7 +675,7 @@ export default function TimelinePage() {
                       <span className="text-slate-500 block text-[10px]">
                         Contact Name
                       </span>
-                      <span className="text-slate-100 font-semibold">
+                      <span className="text-crm-text font-semibold">
                         {drawerEvent.entity}
                       </span>
                     </div>
@@ -683,7 +683,7 @@ export default function TimelinePage() {
                       <span className="text-slate-500 block text-[10px]">
                         Company / Account
                       </span>
-                      <span className="text-slate-100 font-semibold">
+                      <span className="text-crm-text font-semibold">
                         {drawerEvent.entityCompany || "N/A"}
                       </span>
                     </div>
@@ -699,7 +699,7 @@ export default function TimelinePage() {
                       <span className="text-slate-500 block text-[10px]">
                         System Entity ID
                       </span>
-                      <span className="text-slate-300">
+                      <span className="text-crm-text-muted">
                         {drawerEvent.entityId}
                       </span>
                     </div>
@@ -712,7 +712,7 @@ export default function TimelinePage() {
                     <span className="text-xs font-mono text-secondary-pink font-semibold flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5" /> AI Copilot Logic
                     </span>
-                    <p className="text-xs text-slate-200 leading-relaxed font-sans">
+                    <p className="text-xs text-crm-text leading-relaxed font-sans">
                       {drawerEvent.aiReasoning}
                     </p>
                   </MultiCrmInnerPanel>
@@ -724,7 +724,7 @@ export default function TimelinePage() {
                       <PhoneCall className="w-3.5 h-3.5" /> Transcribed Audio
                       Excerpt
                     </span>
-                    <p className="text-xs text-slate-300 italic leading-relaxed font-sans bg-black/30 p-3 rounded-lg border border-white/5">
+                    <p className="text-xs text-crm-text-muted italic leading-relaxed font-sans bg-black/30 p-3 rounded-lg border border-crm-border">
                       "{drawerEvent.transcript}"
                     </p>
                   </MultiCrmInnerPanel>
@@ -732,7 +732,7 @@ export default function TimelinePage() {
 
                 {/* Performance Metrics */}
                 <div className="grid grid-cols-2 gap-3 font-mono text-xs">
-                  <div className="p-3 rounded-xl bg-crm-inner border border-white/10">
+                  <div className="p-3 rounded-xl bg-crm-inner border border-crm-border-strong">
                     <span className="text-slate-500 block text-[10px]">
                       Execution Latency
                     </span>
@@ -740,7 +740,7 @@ export default function TimelinePage() {
                       {drawerEvent.latencyMs} ms
                     </span>
                   </div>
-                  <div className="p-3 rounded-xl bg-crm-inner border border-white/10">
+                  <div className="p-3 rounded-xl bg-crm-inner border border-crm-border-strong">
                     <span className="text-slate-500 block text-[10px]">
                       Sync Status
                     </span>
@@ -755,7 +755,7 @@ export default function TimelinePage() {
             {/* TAB CONTENT: FIELD DIFFS */}
             {drawerTab === "diffs" && drawerEvent.diffs && (
               <div className="space-y-3 font-mono text-xs">
-                <span className="text-[11px] text-slate-400 block">
+                <span className="text-[11px] text-crm-text-muted block">
                   Field conflicts detected and synced bi-directionally across
                   integrated CRMs:
                 </span>
@@ -763,7 +763,7 @@ export default function TimelinePage() {
                   {drawerEvent.diffs.map((diff, i) => (
                     <div
                       key={i}
-                      className="p-3 rounded-xl bg-crm-inner border border-white/10 space-y-2"
+                      className="p-3 rounded-xl bg-crm-inner border border-crm-border-strong space-y-2"
                     >
                       <div className="flex items-center justify-between text-[11px]">
                         <span className="text-primary-cyan font-bold">
@@ -800,20 +800,20 @@ export default function TimelinePage() {
             {/* TAB CONTENT: RAW PAYLOAD */}
             {drawerTab === "raw" && (
               <div className="space-y-3 font-mono text-xs">
-                <span className="text-slate-400 text-[11px] block">
+                <span className="text-crm-text-muted text-[11px] block">
                   Inbound Webhook / API Payload
                 </span>
-                <pre className="p-4 bg-black/70 rounded-xl border border-white/10 text-emerald-400 text-[11px] overflow-x-auto max-h-80 scrollbar-thin">
+                <pre className="p-4 bg-black/70 rounded-xl border border-crm-border-strong text-emerald-400 text-[11px] overflow-x-auto max-h-80 scrollbar-thin">
                   {JSON.stringify(drawerEvent.payload, null, 2)}
                 </pre>
               </div>
             )}
 
             {/* Action Footer */}
-            <div className="pt-4 border-t border-white/10 flex items-center justify-between font-mono text-xs">
+            <div className="pt-4 border-t border-crm-border-strong flex items-center justify-between font-mono text-xs">
               <button
                 onClick={() => setDrawerEvent(null)}
-                className="px-4 py-2 rounded-xl bg-crm-inner border border-white/10 text-slate-300 hover:text-white cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-crm-inner border border-crm-border-strong text-crm-text-muted hover:text-white cursor-pointer"
               >
                 Close Drawer
               </button>
@@ -835,16 +835,16 @@ export default function TimelinePage() {
       {selectedPayloadEvent && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <MultiCrmCard className="w-full max-w-xl p-6 space-y-4 relative border border-primary-cyan/40 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3 font-mono">
+            <div className="flex items-center justify-between border-b border-crm-border-strong pb-3 font-mono">
               <div className="flex items-center gap-2">
                 <Code2 className="w-4 h-4 text-primary-cyan" />
-                <h3 className="text-sm font-bold text-slate-100">
+                <h3 className="text-sm font-bold text-crm-text">
                   Payload Metadata Inspector — {selectedPayloadEvent.id}
                 </h3>
               </div>
               <button
                 onClick={() => setSelectedPayloadEvent(null)}
-                className="text-slate-400 hover:text-slate-100 p-1 cursor-pointer"
+                className="text-crm-text-muted hover:text-crm-text p-1 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -852,15 +852,15 @@ export default function TimelinePage() {
 
             <div className="space-y-3 font-mono text-xs">
               <div className="grid grid-cols-3 gap-2 text-[11px]">
-                <div className="p-2 bg-crm-inner rounded-lg border border-white/10">
+                <div className="p-2 bg-crm-inner rounded-lg border border-crm-border-strong">
                   <span className="text-slate-500 block text-[10px]">
                     Source CRM
                   </span>
-                  <span className="text-slate-200 font-semibold">
+                  <span className="text-crm-text font-semibold">
                     {selectedPayloadEvent.source}
                   </span>
                 </div>
-                <div className="p-2 bg-crm-inner rounded-lg border border-white/10">
+                <div className="p-2 bg-crm-inner rounded-lg border border-crm-border-strong">
                   <span className="text-slate-500 block text-[10px]">
                     Execution Latency
                   </span>
@@ -868,7 +868,7 @@ export default function TimelinePage() {
                     {selectedPayloadEvent.latencyMs} ms
                   </span>
                 </div>
-                <div className="p-2 bg-crm-inner rounded-lg border border-white/10">
+                <div className="p-2 bg-crm-inner rounded-lg border border-crm-border-strong">
                   <span className="text-slate-500 block text-[10px]">
                     Entity Reference
                   </span>
@@ -879,19 +879,19 @@ export default function TimelinePage() {
               </div>
 
               <div>
-                <span className="text-slate-400 text-[11px] block mb-1">
+                <span className="text-crm-text-muted text-[11px] block mb-1">
                   JSON Payload & Diff Data
                 </span>
-                <pre className="p-3 bg-black/70 rounded-xl border border-white/10 text-emerald-400 text-[11px] font-mono overflow-x-auto max-h-60 scrollbar-thin">
+                <pre className="p-3 bg-black/70 rounded-xl border border-crm-border-strong text-emerald-400 text-[11px] font-mono overflow-x-auto max-h-60 scrollbar-thin">
                   {JSON.stringify(selectedPayloadEvent.payload, null, 2)}
                 </pre>
               </div>
             </div>
 
-            <div className="flex justify-end pt-2 border-t border-white/10 font-mono text-xs">
+            <div className="flex justify-end pt-2 border-t border-crm-border-strong font-mono text-xs">
               <button
                 onClick={() => setSelectedPayloadEvent(null)}
-                className="px-4 py-1.5 rounded-xl bg-crm-inner border border-white/10 text-slate-300 hover:text-slate-100 cursor-pointer"
+                className="px-4 py-1.5 rounded-xl bg-crm-inner border border-crm-border-strong text-crm-text-muted hover:text-crm-text cursor-pointer"
               >
                 Close Inspector
               </button>

@@ -211,7 +211,7 @@ export default function CalendarPage() {
   };
 
   return (
-    <div className="space-y-6 text-slate-100 font-sans relative min-h-screen">
+    <div className="space-y-6 text-crm-text font-sans relative min-h-screen">
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -221,7 +221,7 @@ export default function CalendarPage() {
               Planner & Cross-CRM Calendar
             </h1>
           </div>
-          <p className="text-xs text-slate-400 font-mono mt-1">
+          <p className="text-xs text-crm-text-muted font-mono mt-1">
             Unified schedule manager for Salesforce, HubSpot, Zoho, and native
             Calendly bookings.
           </p>
@@ -232,23 +232,23 @@ export default function CalendarPage() {
           <div className="relative">
             <button
               onClick={() => setShowOptionsDropdown(!showOptionsDropdown)}
-              className="px-3.5 py-2 rounded-xl bg-crm-surface hover:bg-crm-inner border border-white/10 text-xs font-mono text-slate-300 flex items-center gap-2 cursor-pointer"
+              className="px-3.5 py-2 rounded-xl bg-crm-surface hover:bg-crm-inner border border-crm-border-strong text-xs font-mono text-crm-text-muted flex items-center gap-2 cursor-pointer"
             >
               <SlidersHorizontal className="w-3.5 h-3.5 text-primary-cyan" />
               Options
             </button>
 
             {showOptionsDropdown && (
-              <div className="absolute right-0 mt-2 w-48 bg-crm-surface border border-white/10 rounded-xl shadow-2xl p-1.5 z-50 font-mono text-xs">
-                <button className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 text-slate-300 flex items-center gap-2">
+              <div className="absolute right-0 mt-2 w-48 bg-crm-surface border border-crm-border-strong rounded-xl shadow-2xl p-1.5 z-50 font-mono text-xs">
+                <button className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 text-crm-text-muted flex items-center gap-2">
                   <Link2 className="w-3.5 h-3.5 text-primary-cyan" /> Import
                   Calendar
                 </button>
-                <button className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 text-slate-300 flex items-center gap-2">
+                <button className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 text-crm-text-muted flex items-center gap-2">
                   <ExternalLink className="w-3.5 h-3.5 text-secondary-pink" />{" "}
                   Export ICS
                 </button>
-                <div className="my-1 border-t border-white/10" />
+                <div className="my-1 border-t border-crm-border-strong" />
                 <button className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 text-purple-300 flex items-center gap-2 font-bold">
                   <Sparkles className="w-3.5 h-3.5 text-purple-400" /> Calendly
                   Integration
@@ -271,23 +271,23 @@ export default function CalendarPage() {
         {/* LEFT COLUMN: Sidebar Planner & Upcoming Events Feed */}
         <div className="lg:col-span-3 space-y-4">
           <MultiCrmCard className="p-4 space-y-4">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <span className="text-xs font-mono font-bold text-slate-200 flex items-center gap-2">
+            <div className="flex items-center justify-between border-b border-crm-border-strong pb-3">
+              <span className="text-xs font-mono font-bold text-crm-text flex items-center gap-2">
                 <Briefcase className="w-4 h-4 text-primary-cyan" /> Workspace
                 Priorities
               </span>
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="p-1 text-slate-400 hover:text-slate-100"
+                className="p-1 text-crm-text-muted hover:text-crm-text"
               >
                 <Plus className="w-3.5 h-3.5" />
               </button>
             </div>
 
             {/* Priorities Section */}
-            <div className="p-3 bg-crm-inner rounded-xl border border-white/5 text-center space-y-2">
+            <div className="p-3 bg-crm-inner rounded-xl border border-crm-border text-center space-y-2">
               <AlertCircle className="w-5 h-5 text-slate-500 mx-auto" />
-              <p className="text-[11px] font-mono text-slate-400">
+              <p className="text-[11px] font-mono text-crm-text-muted">
                 Prioritize an event or task to pin it here
               </p>
               <button
@@ -299,9 +299,9 @@ export default function CalendarPage() {
             </div>
 
             {/* UPCOMING EVENTS FEED WIDGET */}
-            <div className="space-y-3 border-t border-white/10 pt-3">
+            <div className="space-y-3 border-t border-crm-border-strong pt-3">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-slate-400 uppercase tracking-wider font-mono font-bold flex items-center gap-1.5">
+                <span className="text-[10px] text-crm-text-muted uppercase tracking-wider font-mono font-bold flex items-center gap-1.5">
                   <Clock className="w-3 h-3 text-primary-cyan" /> Upcoming
                   Schedule
                 </span>
@@ -314,17 +314,17 @@ export default function CalendarPage() {
                 {eventsList.slice(0, 4).map((evt) => (
                   <div
                     key={`upcoming-${evt.id}`}
-                    className="p-2.5 rounded-xl bg-crm-inner border border-white/5 hover:border-white/15 transition-all space-y-1 group"
+                    className="p-2.5 rounded-xl bg-crm-inner border border-crm-border hover:border-white/15 transition-all space-y-1 group"
                   >
                     <div className="flex items-start justify-between gap-1">
-                      <span className="text-xs font-bold text-slate-200 group-hover:text-primary-cyan transition-colors truncate">
+                      <span className="text-xs font-bold text-crm-text group-hover:text-primary-cyan transition-colors truncate">
                         {evt.title}
                       </span>
-                      <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/5 text-slate-300 shrink-0">
+                      <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/5 text-crm-text-muted shrink-0">
                         {evt.crm}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 pt-1">
+                    <div className="flex items-center justify-between text-[10px] font-mono text-crm-text-muted pt-1">
                       <span className="flex items-center gap-1">
                         <CalendarDays className="w-3 h-3 text-secondary-pink" />{" "}
                         {evt.date}
@@ -337,19 +337,19 @@ export default function CalendarPage() {
             </div>
 
             {/* Connected Schedulers Status */}
-            <div className="space-y-2 font-mono text-xs border-t border-white/10 pt-3">
-              <span className="text-[10px] text-slate-400 block uppercase tracking-wider font-bold">
+            <div className="space-y-2 font-mono text-xs border-t border-crm-border-strong pt-3">
+              <span className="text-[10px] text-crm-text-muted block uppercase tracking-wider font-bold">
                 Sync Engine Status
               </span>
               <MultiCrmInnerPanel className="flex items-center justify-between py-2">
-                <span className="text-slate-200 text-[11px] flex items-center gap-1.5">
+                <span className="text-crm-text text-[11px] flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-400" />{" "}
                   Calendly Webhooks
                 </span>
                 <span className="text-[10px] text-purple-400">Active</span>
               </MultiCrmInnerPanel>
               <MultiCrmInnerPanel className="flex items-center justify-between py-2">
-                <span className="text-slate-200 text-[11px] flex items-center gap-1.5">
+                <span className="text-crm-text text-[11px] flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-400" />{" "}
                   Multi-CRM Bridge
                 </span>
@@ -365,14 +365,14 @@ export default function CalendarPage() {
           <MultiCrmCard className="p-3 flex flex-col md:flex-row items-center justify-between gap-3">
             {/* Month & Date Navigation */}
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1 bg-crm-inner rounded-xl p-1 border border-white/10 font-mono text-xs">
-                <button className="p-1 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-white/5 transition-all">
+              <div className="flex items-center gap-1 bg-crm-inner rounded-xl p-1 border border-crm-border-strong font-mono text-xs">
+                <button className="p-1 rounded-lg text-crm-text-muted hover:text-crm-text hover:bg-white/5 transition-all">
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <span className="px-3 font-bold text-slate-200">
+                <span className="px-3 font-bold text-crm-text">
                   August 2026
                 </span>
-                <button className="p-1 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-white/5 transition-all">
+                <button className="p-1 rounded-lg text-crm-text-muted hover:text-crm-text hover:bg-white/5 transition-all">
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
@@ -384,7 +384,7 @@ export default function CalendarPage() {
             {/* Filter Pills & Multi-View Switcher (Week / Month / Table / Box) */}
             <div className="flex items-center gap-3 flex-wrap justify-end">
               {/* Category Filters */}
-              <div className="flex items-center gap-1 bg-crm-inner p-1 rounded-xl border border-white/10 text-[11px] font-mono">
+              <div className="flex items-center gap-1 bg-crm-inner p-1 rounded-xl border border-crm-border-strong text-[11px] font-mono">
                 {["All", "Demo", "Call", "Closing", "Calendly"].map(
                   (filter) => (
                     <button
@@ -395,7 +395,7 @@ export default function CalendarPage() {
                           ? filter === "Calendly"
                             ? "bg-secondary-pink/20 text-secondary-pink font-bold border border-secondary-pink/30"
                             : "bg-primary-cyan/20 text-primary-cyan font-bold border border-primary-cyan/30"
-                          : "text-slate-400 hover:text-slate-200"
+                          : "text-crm-text-muted hover:text-crm-text"
                       }`}
                     >
                       {filter}
@@ -405,7 +405,7 @@ export default function CalendarPage() {
               </div>
 
               {/* View Mode Switcher: Week, Month, Table, Box */}
-              <div className="flex items-center bg-crm-inner p-1 rounded-xl border border-white/10 text-[11px] font-mono">
+              <div className="flex items-center bg-crm-inner p-1 rounded-xl border border-crm-border-strong text-[11px] font-mono">
                 {(["Week", "Month", "Table", "Box"] as const).map((mode) => (
                   <button
                     key={mode}
@@ -413,7 +413,7 @@ export default function CalendarPage() {
                     className={`px-3 py-1 rounded-lg transition-all flex items-center gap-1.5 ${
                       viewMode === mode
                         ? "bg-primary-cyan text-slate-950 font-bold shadow"
-                        : "text-slate-400 hover:text-slate-200"
+                        : "text-crm-text-muted hover:text-crm-text"
                     }`}
                   >
                     {mode === "Table" && (
@@ -429,14 +429,14 @@ export default function CalendarPage() {
 
           {/* VIEW 1: WEEK CALENDAR GRID VIEW */}
           {viewMode === "Week" && (
-            <MultiCrmCard className="p-0 overflow-hidden border-white/10">
-              <div className="grid grid-cols-8 bg-crm-inner/80 border-b border-white/10 text-center font-mono text-xs py-2.5 sticky top-0 z-10">
+            <MultiCrmCard className="p-0 overflow-hidden border-crm-border-strong">
+              <div className="grid grid-cols-8 bg-crm-inner/80 border-b border-crm-border-strong text-center font-mono text-xs py-2.5 sticky top-0 z-10">
                 <div className="text-slate-500 text-[11px] flex items-center justify-center">
                   GMT+5
                 </div>
                 {daysOfWeek.map((day) => (
                   <div key={day.name} className="space-y-0.5">
-                    <span className="text-[10px] text-slate-400 uppercase">
+                    <span className="text-[10px] text-crm-text-muted uppercase">
                       {day.name}
                     </span>
                     <div className="flex justify-center">
@@ -444,7 +444,7 @@ export default function CalendarPage() {
                         className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
                           day.isToday
                             ? "bg-rose-500 text-white shadow-[0_0_10px_rgba(244,63,94,0.6)]"
-                            : "text-slate-200"
+                            : "text-crm-text"
                         }`}
                       >
                         {day.date}
@@ -468,7 +468,7 @@ export default function CalendarPage() {
                   const hour24 = hIdx + 7;
                   return (
                     <div key={slot} className="grid grid-cols-8 min-h-12.5">
-                      <div className="p-2 text-right pr-3 text-[10px] text-slate-500 border-r border-white/5 select-none">
+                      <div className="p-2 text-right pr-3 text-[10px] text-slate-500 border-r border-crm-border select-none">
                         {slot}
                       </div>
 
@@ -481,7 +481,7 @@ export default function CalendarPage() {
                         return (
                           <div
                             key={`${day.name}-${slot}`}
-                            className="border-r border-white/5 p-1 relative hover:bg-white/2 transition-colors group cursor-pointer"
+                            className="border-r border-crm-border p-1 relative hover:bg-white/2 transition-colors group cursor-pointer"
                             onClick={() => setShowCreateModal(true)}
                           >
                             {cellEvents.map((evt) => (
@@ -499,7 +499,7 @@ export default function CalendarPage() {
                                     <Sparkles className="w-3 h-3 text-secondary-pink shrink-0" />
                                   )}
                                 </div>
-                                <div className="text-[9px] text-slate-300 font-mono flex items-center gap-1">
+                                <div className="text-[9px] text-crm-text-muted font-mono flex items-center gap-1">
                                   <Clock className="w-2.5 h-2.5 opacity-70" />{" "}
                                   {evt.startTime}
                                 </div>
@@ -518,7 +518,7 @@ export default function CalendarPage() {
           {/* VIEW 2: MONTH VIEW */}
           {viewMode === "Month" && (
             <MultiCrmCard className="p-0 overflow-hidden font-mono text-xs">
-              <div className="grid grid-cols-7 bg-crm-inner border-b border-white/10 text-center py-2 text-slate-400 text-[11px] font-bold">
+              <div className="grid grid-cols-7 bg-crm-inner border-b border-crm-border-strong text-center py-2 text-crm-text-muted text-[11px] font-bold">
                 <div>MON</div>
                 <div>TUE</div>
                 <div>WED</div>
@@ -560,18 +560,18 @@ export default function CalendarPage() {
           {/* VIEW 3: TABLE VIEW */}
           {viewMode === "Table" && (
             <MultiCrmCard className="p-0 overflow-hidden font-mono text-xs">
-              <div className="p-4 border-b border-white/10 flex items-center justify-between">
-                <span className="font-bold text-slate-200 text-sm">
+              <div className="p-4 border-b border-crm-border-strong flex items-center justify-between">
+                <span className="font-bold text-crm-text text-sm">
                   All Scheduled Events & Entries ({filteredEvents.length})
                 </span>
-                <span className="text-[11px] text-slate-400">
+                <span className="text-[11px] text-crm-text-muted">
                   Tabular Data View
                 </span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-crm-inner border-b border-white/10 text-slate-400 text-[11px]">
+                    <tr className="bg-crm-inner border-b border-crm-border-strong text-crm-text-muted text-[11px]">
                       <th className="p-3">Event Title</th>
                       <th className="p-3">Source CRM</th>
                       <th className="p-3">Date & Time</th>
@@ -580,27 +580,27 @@ export default function CalendarPage() {
                       <th className="p-3">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/5 text-slate-300">
+                  <tbody className="divide-y divide-white/5 text-crm-text-muted">
                     {filteredEvents.map((evt) => (
                       <tr
                         key={`table-${evt.id}`}
                         className="hover:bg-white/2 transition-colors"
                       >
-                        <td className="p-3 font-bold text-slate-100 flex items-center gap-2">
+                        <td className="p-3 font-bold text-crm-text flex items-center gap-2">
                           {evt.title}
                           {evt.crm === "Calendly" && (
                             <Sparkles className="w-3.5 h-3.5 text-secondary-pink" />
                           )}
                         </td>
                         <td className="p-3">
-                          <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] text-primary-cyan">
+                          <span className="px-2 py-0.5 rounded bg-white/5 border border-crm-border-strong text-[10px] text-primary-cyan">
                             {evt.crm}
                           </span>
                         </td>
-                        <td className="p-3 text-slate-400">
+                        <td className="p-3 text-crm-text-muted">
                           {evt.date} @ {evt.startTime}
                         </td>
-                        <td className="p-3 text-slate-300">{evt.attendee}</td>
+                        <td className="p-3 text-crm-text-muted">{evt.attendee}</td>
                         <td className="p-3">
                           <span
                             className={`px-2 py-0.5 rounded text-[10px] font-bold ${
@@ -640,8 +640,8 @@ export default function CalendarPage() {
                       key={statusGroup}
                       className="p-4 space-y-3 bg-crm-surface/80"
                     >
-                      <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                        <span className="font-bold text-slate-200 flex items-center gap-2">
+                      <div className="flex items-center justify-between border-b border-crm-border-strong pb-2">
+                        <span className="font-bold text-crm-text flex items-center gap-2">
                           <span
                             className={`w-2.5 h-2.5 rounded-full ${
                               statusGroup === "Confirmed"
@@ -653,34 +653,34 @@ export default function CalendarPage() {
                           />
                           {statusGroup}
                         </span>
-                        <span className="px-2 py-0.5 rounded bg-white/5 text-[10px] text-slate-400">
+                        <span className="px-2 py-0.5 rounded bg-white/5 text-[10px] text-crm-text-muted">
                           {groupEvents.length}
                         </span>
                       </div>
 
                       <div className="space-y-3 pt-1">
                         {groupEvents.length === 0 ? (
-                          <div className="p-4 text-center text-slate-500 text-[11px] border border-dashed border-white/10 rounded-xl">
+                          <div className="p-4 text-center text-slate-500 text-[11px] border border-dashed border-crm-border-strong rounded-xl">
                             No events in {statusGroup}
                           </div>
                         ) : (
                           groupEvents.map((evt) => (
                             <div
                               key={`box-${evt.id}`}
-                              className="p-3 rounded-xl bg-crm-inner border border-white/10 hover:border-primary-cyan/40 transition-all space-y-2 shadow"
+                              className="p-3 rounded-xl bg-crm-inner border border-crm-border-strong hover:border-primary-cyan/40 transition-all space-y-2 shadow"
                             >
                               <div className="flex items-start justify-between gap-1">
-                                <span className="font-bold text-slate-100 text-xs font-sans">
+                                <span className="font-bold text-crm-text text-xs font-sans">
                                   {evt.title}
                                 </span>
                                 <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-primary-cyan shrink-0">
                                   {evt.crm}
                                 </span>
                               </div>
-                              <p className="text-[11px] text-slate-400 font-sans">
+                              <p className="text-[11px] text-crm-text-muted font-sans">
                                 {evt.aiNotes || "No notes provided."}
                               </p>
-                              <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-white/5">
+                              <div className="flex items-center justify-between text-[10px] text-crm-text-muted pt-1 border-t border-crm-border">
                                 <span>{evt.date}</span>
                                 <span className="text-secondary-pink font-bold">
                                   {evt.startTime}
@@ -703,8 +703,8 @@ export default function CalendarPage() {
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-crm-surface border border-white/15 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl p-6 space-y-5 font-sans">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <div className="flex items-center gap-1 bg-crm-inner p-1 rounded-xl border border-white/10 font-mono text-xs">
+            <div className="flex items-center justify-between border-b border-crm-border-strong pb-3">
+              <div className="flex items-center gap-1 bg-crm-inner p-1 rounded-xl border border-crm-border-strong font-mono text-xs">
                 {(["Event", "Task", "Focus time", "Calendly"] as const).map(
                   (cat) => (
                     <button
@@ -713,7 +713,7 @@ export default function CalendarPage() {
                       className={`px-3 py-1 rounded-lg transition-all ${
                         newEventCategory === cat
                           ? "bg-primary-cyan text-slate-950 font-bold"
-                          : "text-slate-400 hover:text-slate-200"
+                          : "text-crm-text-muted hover:text-crm-text"
                       }`}
                     >
                       {cat}
@@ -723,7 +723,7 @@ export default function CalendarPage() {
               </div>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="text-slate-400 hover:text-slate-100"
+                className="text-crm-text-muted hover:text-crm-text"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -736,32 +736,32 @@ export default function CalendarPage() {
                   placeholder="Add title, @ for people, @@ for tasks, 'space' for ✨ AI"
                   value={newEventTitle}
                   onChange={(e) => setNewEventTitle(e.target.value)}
-                  className="w-full bg-crm-inner border border-white/15 rounded-xl px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-primary-cyan font-mono"
+                  className="w-full bg-crm-inner border border-white/15 rounded-xl px-4 py-3 text-sm text-crm-text focus:outline-none focus:border-primary-cyan font-mono"
                   autoFocus
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-xs font-mono">
-                <div className="p-3 bg-crm-inner rounded-xl border border-white/5 space-y-1">
+                <div className="p-3 bg-crm-inner rounded-xl border border-crm-border space-y-1">
                   <span className="text-[10px] text-slate-500 block">
                     Date & Time
                   </span>
-                  <span className="text-slate-200 font-bold block">
+                  <span className="text-crm-text font-bold block">
                     Aug 3, 2026
                   </span>
-                  <span className="text-slate-400 text-[11px]">
+                  <span className="text-crm-text-muted text-[11px]">
                     11:00 AM → 11:30 AM (30m)
                   </span>
                 </div>
 
-                <div className="p-3 bg-crm-inner rounded-xl border border-white/5 space-y-1">
+                <div className="p-3 bg-crm-inner rounded-xl border border-crm-border space-y-1">
                   <span className="text-[10px] text-slate-500 block">
                     Target CRM / Platform
                   </span>
                   <select
                     value={newEventCrm}
                     onChange={(e: any) => setNewEventCrm(e.target.value)}
-                    className="bg-black text-slate-200 text-xs rounded border border-white/10 p-1 w-full"
+                    className="bg-black text-crm-text text-xs rounded border border-crm-border-strong p-1 w-full"
                   >
                     <option value="Salesforce">Salesforce CRM</option>
                     <option value="HubSpot">HubSpot CRM</option>
@@ -771,10 +771,10 @@ export default function CalendarPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between border-t border-white/10 pt-4">
+              <div className="flex items-center justify-between border-t border-crm-border-strong pt-4">
                 <button
                   type="button"
-                  className="px-3 py-2 rounded-xl bg-crm-inner border border-white/10 text-xs font-mono text-slate-300 flex items-center gap-1.5"
+                  className="px-3 py-2 rounded-xl bg-crm-inner border border-crm-border-strong text-xs font-mono text-crm-text-muted flex items-center gap-1.5"
                 >
                   <Video className="w-3.5 h-3.5 text-primary-cyan" /> Add video
                   call
@@ -784,7 +784,7 @@ export default function CalendarPage() {
                   <button
                     type="button"
                     onClick={() => setShowCreateModal(false)}
-                    className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-slate-200"
+                    className="px-4 py-2 rounded-xl text-xs text-crm-text-muted hover:text-crm-text"
                   >
                     Cancel
                   </button>

@@ -224,17 +224,17 @@ Objective: ${scriptObjective}
   };
 
   return (
-    <div className="space-y-6 font-sans text-slate-100">
+    <div className="space-y-6 font-sans text-crm-text">
       {/* Top Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-secondary-pink" />
-            <h1 className="text-2xl font-bold tracking-tight text-slate-100">
+            <h1 className="text-2xl font-bold tracking-tight text-crm-text">
               AI Copilot & Autonomous Agent Suite
             </h1>
           </div>
-          <p className="text-xs text-slate-400 font-mono mt-1">
+          <p className="text-xs text-crm-text-muted font-mono mt-1">
             Autonomous CRM agent: BANT extraction, brand sales script generator,
             and self-executing multi-CRM actions.
           </p>
@@ -242,32 +242,32 @@ Objective: ${scriptObjective}
 
         {/* Global Brand & CRM Context Switcher */}
         <div className="flex flex-wrap items-center gap-3 font-mono text-xs">
-          <div className="flex items-center gap-2 bg-crm-inner border border-white/10 p-1.5 px-3 rounded-xl">
+          <div className="flex items-center gap-2 bg-crm-inner border border-crm-border-strong p-1.5 px-3 rounded-xl">
             <Building2 className="w-3.5 h-3.5 text-primary-cyan" />
             <span className="text-[10px] text-slate-500 uppercase">Brand:</span>
             <select
               value={selectedBrand}
               onChange={(e) => setSelectedBrand(e.target.value)}
-              className="bg-transparent text-slate-100 text-xs focus:outline-none cursor-pointer font-semibold"
+              className="bg-transparent text-crm-text text-xs focus:outline-none cursor-pointer font-semibold"
             >
               {BRANDS.map((b) => (
-                <option key={b.id} value={b.name} className="bg-slate-900">
+                <option key={b.id} value={b.name} className="bg-crm-inner">
                   {b.name}
                 </option>
               ))}
             </select>
           </div>
 
-          <div className="flex items-center gap-2 bg-crm-inner border border-white/10 p-1.5 px-3 rounded-xl">
+          <div className="flex items-center gap-2 bg-crm-inner border border-crm-border-strong p-1.5 px-3 rounded-xl">
             <Database className="w-3.5 h-3.5 text-secondary-pink" />
             <span className="text-[10px] text-slate-500 uppercase">CRM:</span>
             <select
               value={selectedCrm}
               onChange={(e) => setSelectedCrm(e.target.value)}
-              className="bg-transparent text-slate-100 text-xs focus:outline-none cursor-pointer font-semibold"
+              className="bg-transparent text-crm-text text-xs focus:outline-none cursor-pointer font-semibold"
             >
               {TARGET_CRMS.map((crm) => (
-                <option key={crm} value={crm} className="bg-slate-900">
+                <option key={crm} value={crm} className="bg-crm-inner">
                   {crm}
                 </option>
               ))}
@@ -282,8 +282,8 @@ Objective: ${scriptObjective}
         <div className="lg:col-span-4 space-y-4">
           {/* Action Modes Menu */}
           <MultiCrmCard className="p-4 space-y-3">
-            <div className="flex items-center justify-between border-b border-white/10 pb-2.5 font-mono text-xs">
-              <span className="font-bold text-slate-200 flex items-center gap-2">
+            <div className="flex items-center justify-between border-b border-crm-border-strong pb-2.5 font-mono text-xs">
+              <span className="font-bold text-crm-text flex items-center gap-2">
                 <Sliders className="w-4 h-4 text-primary-cyan" /> Workspace
                 Navigation
               </span>
@@ -328,14 +328,14 @@ Objective: ${scriptObjective}
                     className={`w-full p-2.5 rounded-xl border text-xs font-mono transition-all flex items-center justify-between cursor-pointer ${
                       isActive
                         ? "bg-primary-cyan/15 border-primary-cyan/40 text-primary-cyan font-bold shadow-[0_0_15px_color-mix(in_srgb,var(--color-primary-cyan)_15%,transparent)]"
-                        : "bg-crm-inner border-white/5 text-slate-400 hover:text-slate-200 hover:bg-crm-surface"
+                        : "bg-crm-inner border-crm-border text-crm-text-muted hover:text-crm-text hover:bg-crm-surface"
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
                       <Icon className="w-4 h-4" />
                       <span>{tab.label}</span>
                     </div>
-                    <span className="text-[9px] px-2 py-0.5 rounded bg-white/10 text-slate-300">
+                    <span className="text-[9px] px-2 py-0.5 rounded bg-white/10 text-crm-text-muted">
                       {tab.badge}
                     </span>
                   </button>
@@ -346,26 +346,26 @@ Objective: ${scriptObjective}
 
           {/* Context Card for Selected Brand & CRM */}
           <MultiCrmCard className="p-4 space-y-3">
-            <div className="flex items-center justify-between border-b border-white/10 pb-2">
-              <span className="text-xs font-mono text-slate-300 flex items-center gap-2">
+            <div className="flex items-center justify-between border-b border-crm-border-strong pb-2">
+              <span className="text-xs font-mono text-crm-text-muted flex items-center gap-2">
                 <Building2 className="w-3.5 h-3.5 text-secondary-pink" /> Active
                 Context Summary
               </span>
             </div>
             <div className="space-y-2 text-xs font-mono">
-              <div className="flex justify-between p-2 rounded-lg bg-crm-inner border border-white/5">
+              <div className="flex justify-between p-2 rounded-lg bg-crm-inner border border-crm-border">
                 <span className="text-slate-500">Brand</span>
-                <span className="text-slate-200 font-bold">
+                <span className="text-crm-text font-bold">
                   {selectedBrand}
                 </span>
               </div>
-              <div className="flex justify-between p-2 rounded-lg bg-crm-inner border border-white/5">
+              <div className="flex justify-between p-2 rounded-lg bg-crm-inner border border-crm-border">
                 <span className="text-slate-500">Destination CRM</span>
                 <span className="text-primary-cyan font-bold">
                   {selectedCrm}
                 </span>
               </div>
-              <div className="flex justify-between p-2 rounded-lg bg-crm-inner border border-white/5">
+              <div className="flex justify-between p-2 rounded-lg bg-crm-inner border border-crm-border">
                 <span className="text-slate-500">Autonomous Sync</span>
                 <span className="text-emerald-400 font-bold">
                   Enabled (Auto-Commit)
@@ -376,7 +376,7 @@ Objective: ${scriptObjective}
 
           {/* Quick Trigger Actions */}
           <MultiCrmCard className="p-4 space-y-3">
-            <h3 className="text-xs font-mono font-semibold text-slate-300 border-b border-white/10 pb-2">
+            <h3 className="text-xs font-mono font-semibold text-crm-text-muted border-b border-crm-border-strong pb-2">
               Quick Autonomous Actions
             </h3>
             <div className="space-y-2">
@@ -388,7 +388,7 @@ Objective: ${scriptObjective}
                 <button
                   key={i}
                   onClick={() => handleSend(action)}
-                  className="w-full p-2.5 rounded-xl bg-crm-inner hover:bg-crm-surface border border-white/10 text-left text-xs font-mono text-slate-300 transition-all flex items-center justify-between group cursor-pointer"
+                  className="w-full p-2.5 rounded-xl bg-crm-inner hover:bg-crm-surface border border-crm-border-strong text-left text-xs font-mono text-crm-text-muted transition-all flex items-center justify-between group cursor-pointer"
                 >
                   <span className="truncate pr-2">{action}</span>
                   <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-primary-cyan transition-colors" />
@@ -404,16 +404,16 @@ Objective: ${scriptObjective}
           {activeTab === "chat" && (
             <MultiCrmCard className="flex flex-col h-160 p-0 overflow-hidden">
               {/* Chat Header */}
-              <div className="p-4 border-b border-white/10 flex items-center justify-between bg-crm-surface/80">
+              <div className="p-4 border-b border-crm-border-strong flex items-center justify-between bg-crm-surface/80">
                 <div className="flex items-center gap-2.5">
                   <div className="p-2 rounded-xl bg-purple-500/20 border border-purple-500/30 text-purple-400">
                     <Bot className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-xs font-semibold text-slate-200">
+                    <h3 className="text-xs font-semibold text-crm-text">
                       Agent Orchestrator Stream
                     </h3>
-                    <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1.5">
+                    <span className="text-[10px] font-mono text-crm-text-muted flex items-center gap-1.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                       Context: {selectedBrand} → {selectedCrm}
                     </span>
@@ -422,7 +422,7 @@ Objective: ${scriptObjective}
 
                 <button
                   onClick={() => setMessages(initialMessages)}
-                  className="p-2 rounded-lg bg-crm-inner hover:bg-crm-surface border border-white/10 text-xs font-mono text-slate-300 flex items-center gap-1.5 transition-all cursor-pointer"
+                  className="p-2 rounded-lg bg-crm-inner hover:bg-crm-surface border border-crm-border-strong text-xs font-mono text-crm-text-muted flex items-center gap-1.5 transition-all cursor-pointer"
                 >
                   <RefreshCw className="w-3 h-3 text-primary-cyan" /> Reset
                 </button>
@@ -454,8 +454,8 @@ Objective: ${scriptObjective}
                     <div
                       className={`group relative max-w-[85%] p-4 rounded-2xl space-y-3 shadow-inner ${
                         msg.sender === "user"
-                          ? "bg-primary-cyan/10 border border-primary-cyan/20 text-slate-100"
-                          : "bg-crm-surface/90 border border-white/10 text-slate-200"
+                          ? "bg-primary-cyan/10 border border-primary-cyan/20 text-crm-text"
+                          : "bg-crm-surface/90 border border-crm-border-strong text-crm-text"
                       }`}
                     >
                       <p className="leading-relaxed">{msg.text}</p>
@@ -472,26 +472,26 @@ Objective: ${scriptObjective}
                               {msg.actionExecuted.status}
                             </span>
                           </div>
-                          <div className="text-slate-300">
+                          <div className="text-crm-text-muted">
                             Tool:{" "}
                             <span className="text-primary-cyan">
                               {msg.actionExecuted.tool}
                             </span>
                           </div>
-                          <div className="text-slate-400 text-[10px]">
+                          <div className="text-crm-text-muted text-[10px]">
                             {msg.actionExecuted.payloadSummary}
                           </div>
                         </div>
                       )}
 
-                      <div className="flex items-center justify-between pt-1 text-[10px] font-mono text-slate-500 border-t border-white/5">
+                      <div className="flex items-center justify-between pt-1 text-[10px] font-mono text-slate-500 border-t border-crm-border">
                         <span>
                           {msg.time} {msg.brand ? `• ${msg.brand}` : ""}
                         </span>
                         {msg.sender === "ai" && (
                           <button
                             onClick={() => handleCopy(msg.text, msg.id)}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-slate-300 flex items-center gap-1 cursor-pointer"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-crm-text-muted flex items-center gap-1 cursor-pointer"
                           >
                             {copiedIndex === msg.id ? (
                               <Check className="w-3 h-3 text-emerald-400" />
@@ -507,7 +507,7 @@ Objective: ${scriptObjective}
               </div>
 
               {/* Input Bar */}
-              <div className="p-3 border-t border-white/10 bg-crm-surface/80">
+              <div className="p-3 border-t border-crm-border-strong bg-crm-surface/80">
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
@@ -520,7 +520,7 @@ Objective: ${scriptObjective}
                     placeholder={`Ask Copilot to execute actions for ${selectedBrand} in ${selectedCrm}...`}
                     value={inputQuery}
                     onChange={(e) => setInputQuery(e.target.value)}
-                    className="flex-1 bg-crm-inner border border-white/10 rounded-xl px-4 py-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-500/50 font-mono transition-all shadow-inner"
+                    className="flex-1 bg-crm-inner border border-crm-border-strong rounded-xl px-4 py-2.5 text-xs text-crm-text placeholder-slate-500 focus:outline-none focus:border-purple-500/50 font-mono transition-all shadow-inner"
                   />
                   <button
                     type="submit"
@@ -536,13 +536,13 @@ Objective: ${scriptObjective}
           {/* TAB 2: BANT DATA EXTRACTION PANEL */}
           {activeTab === "bant" && (
             <MultiCrmCard className="p-6 space-y-6">
-              <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center justify-between border-b border-crm-border-strong pb-4">
                 <div>
-                  <h2 className="text-base font-bold text-slate-100 flex items-center gap-2">
+                  <h2 className="text-base font-bold text-crm-text flex items-center gap-2">
                     <Target className="w-5 h-5 text-primary-cyan" /> BANT
                     Qualification Parser
                   </h2>
-                  <p className="text-xs text-slate-400 font-mono mt-1">
+                  <p className="text-xs text-crm-text-muted font-mono mt-1">
                     Extracts Budget, Authority, Need, and Timeline from unified
                     CRM call transcripts & transcripts for {selectedBrand}.
                   </p>
@@ -573,7 +573,7 @@ Objective: ${scriptObjective}
                     </span>
                     <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                   </div>
-                  <p className="text-slate-200 font-sans text-xs">
+                  <p className="text-crm-text font-sans text-xs">
                     {bantData.budget}
                   </p>
                 </MultiCrmInnerPanel>
@@ -586,7 +586,7 @@ Objective: ${scriptObjective}
                     </span>
                     <CheckCircle2 className="w-4 h-4 text-purple-400" />
                   </div>
-                  <p className="text-slate-200 font-sans text-xs">
+                  <p className="text-crm-text font-sans text-xs">
                     {bantData.authority}
                   </p>
                 </MultiCrmInnerPanel>
@@ -599,7 +599,7 @@ Objective: ${scriptObjective}
                     </span>
                     <CheckCircle2 className="w-4 h-4 text-primary-cyan" />
                   </div>
-                  <p className="text-slate-200 font-sans text-xs">
+                  <p className="text-crm-text font-sans text-xs">
                     {bantData.need}
                   </p>
                 </MultiCrmInnerPanel>
@@ -612,16 +612,16 @@ Objective: ${scriptObjective}
                     </span>
                     <CheckCircle2 className="w-4 h-4 text-secondary-pink" />
                   </div>
-                  <p className="text-slate-200 font-sans text-xs">
+                  <p className="text-crm-text font-sans text-xs">
                     {bantData.timeline}
                   </p>
                 </MultiCrmInnerPanel>
               </div>
 
               {/* Lead Qualification Score */}
-              <div className="p-4 rounded-xl bg-crm-inner border border-white/10 flex items-center justify-between font-mono">
+              <div className="p-4 rounded-xl bg-crm-inner border border-crm-border-strong flex items-center justify-between font-mono">
                 <div>
-                  <span className="text-xs text-slate-400 block">
+                  <span className="text-xs text-crm-text-muted block">
                     Overall BANT Qualification Score
                   </span>
                   <span className="text-xl font-bold text-emerald-400">
@@ -645,13 +645,13 @@ Objective: ${scriptObjective}
           {/* TAB 3: BRAND & CRM SALES SCRIPT GENERATOR */}
           {activeTab === "script" && (
             <MultiCrmCard className="p-6 space-y-6">
-              <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center justify-between border-b border-crm-border-strong pb-4">
                 <div>
-                  <h2 className="text-base font-bold text-slate-100 flex items-center gap-2">
+                  <h2 className="text-base font-bold text-crm-text flex items-center gap-2">
                     <FileText className="w-5 h-5 text-secondary-pink" /> Brand
                     Sales Script Generator
                   </h2>
-                  <p className="text-xs text-slate-400 font-mono mt-1">
+                  <p className="text-xs text-crm-text-muted font-mono mt-1">
                     Generates brand-tailored phone & email scripts calibrated
                     for {selectedBrand} reps selling through {selectedCrm}.
                   </p>
@@ -661,13 +661,13 @@ Objective: ${scriptObjective}
               {/* Script Configuration */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono text-xs">
                 <div className="space-y-1.5">
-                  <label className="text-slate-400">
+                  <label className="text-crm-text-muted">
                     Call / Pitch Objective
                   </label>
                   <select
                     value={scriptObjective}
                     onChange={(e) => setScriptObjective(e.target.value)}
-                    className="w-full bg-crm-inner border border-white/10 rounded-xl p-2.5 text-slate-100 focus:outline-none focus:border-secondary-pink"
+                    className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2.5 text-crm-text focus:outline-none focus:border-secondary-pink"
                   >
                     <option value="Discovery Call">Discovery Call</option>
                     <option value="Executive Pitch">Executive Pitch</option>
@@ -681,12 +681,12 @@ Objective: ${scriptObjective}
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-slate-400">Target CRM Context</label>
+                  <label className="text-crm-text-muted">Target CRM Context</label>
                   <input
                     type="text"
                     disabled
                     value={`${selectedBrand} → ${selectedCrm}`}
-                    className="w-full bg-crm-inner/50 border border-white/10 rounded-xl p-2.5 text-slate-400"
+                    className="w-full bg-crm-inner/50 border border-crm-border-strong rounded-xl p-2.5 text-crm-text-muted"
                   />
                 </div>
               </div>
@@ -710,7 +710,7 @@ Objective: ${scriptObjective}
               {generatedScript && (
                 <div className="space-y-2 font-mono text-xs">
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-400">
+                    <span className="text-crm-text-muted">
                       AI Generated Script Output:
                     </span>
                     <button
@@ -720,7 +720,7 @@ Objective: ${scriptObjective}
                       <Copy className="w-3 h-3" /> Copy Script
                     </button>
                   </div>
-                  <pre className="p-4 bg-black/70 rounded-xl border border-white/10 text-slate-200 text-xs font-sans whitespace-pre-wrap leading-relaxed shadow-inner">
+                  <pre className="p-4 bg-black/70 rounded-xl border border-crm-border-strong text-crm-text text-xs font-sans whitespace-pre-wrap leading-relaxed shadow-inner">
                     {generatedScript}
                   </pre>
                 </div>
@@ -731,12 +731,12 @@ Objective: ${scriptObjective}
           {/* TAB 4: AUTONOMOUS SELF-EXECUTION SKILLS */}
           {activeTab === "skills" && (
             <MultiCrmCard className="p-6 space-y-6">
-              <div className="border-b border-white/10 pb-4">
-                <h2 className="text-base font-bold text-slate-100 flex items-center gap-2">
+              <div className="border-b border-crm-border-strong pb-4">
+                <h2 className="text-base font-bold text-crm-text flex items-center gap-2">
                   <Cpu className="w-5 h-5 text-purple-400" /> Autonomous Agent
                   Skills & Tools
                 </h2>
-                <p className="text-xs text-slate-400 font-mono mt-1">
+                <p className="text-xs text-crm-text-muted font-mono mt-1">
                   Active self-executing capabilities enabled for {selectedBrand}{" "}
                   across connected platforms.
                 </p>
@@ -767,14 +767,14 @@ Objective: ${scriptObjective}
                 ].map((skill, i) => (
                   <MultiCrmInnerPanel key={i} className="p-4 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-200">
+                      <span className="font-bold text-crm-text">
                         {skill.name}
                       </span>
                       <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded">
                         {skill.status}
                       </span>
                     </div>
-                    <p className="text-slate-400 font-sans text-xs">
+                    <p className="text-crm-text-muted font-sans text-xs">
                       {skill.desc}
                     </p>
                     <button

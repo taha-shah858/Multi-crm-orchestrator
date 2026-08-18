@@ -20,7 +20,7 @@ export default function MetricWidget({
   return (
     <GlassCard className="p-5 flex flex-col justify-between">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+        <span className="text-xs font-medium text-crm-text-muted uppercase tracking-wider">
           {title}
         </span>
         <div className="p-2 rounded-xl bg-primary-cyan/10 border border-primary-cyan/20 text-primary-cyan">
@@ -28,7 +28,7 @@ export default function MetricWidget({
         </div>
       </div>
       <div className="mt-4 flex items-baseline justify-between">
-        <h3 className="text-2xl font-bold text-slate-100 font-mono tracking-tight">
+        <h3 className="text-2xl font-bold text-crm-text font-mono tracking-tight">
           {value}
         </h3>
         <span

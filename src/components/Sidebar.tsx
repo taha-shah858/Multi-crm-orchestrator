@@ -64,7 +64,7 @@ export default function Sidebar() {
   return (
     <aside
       ref={sidebarRef}
-      className={`border-r border-white/10 flex flex-col justify-between shrink-0 h-screen sticky top-0 z-30 transition-all ${
+      className={`border-r border-crm-border-strong flex flex-col justify-between shrink-0 h-screen sticky top-0 z-30 transition-all ${
         isResizing ? "transition-none" : "duration-300 ease-in-out"
       }`}
       style={{
@@ -78,7 +78,7 @@ export default function Sidebar() {
       <div className="overflow-hidden flex flex-col h-full">
         {/* Header with Collapse Toggle */}
         <div
-          className={`p-4 border-b border-white/10 flex items-center h-16 shrink-0 ${
+          className={`p-4 border-b border-crm-border-strong flex items-center h-16 shrink-0 ${
             isCollapsed ? "justify-center" : "justify-between"
           }`}
         >
@@ -90,7 +90,7 @@ export default function Sidebar() {
                 </span>
               </div>
               <div className="overflow-hidden whitespace-nowrap">
-                <h1 className="font-bold text-xs tracking-widest uppercase text-slate-100">
+                <h1 className="font-bold text-xs tracking-widest uppercase text-crm-text">
                   Multi-CRM
                 </h1>
                 <p className="text-[10px] font-mono text-primary-cyan tracking-widest uppercase">
@@ -102,7 +102,7 @@ export default function Sidebar() {
 
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 border border-transparent hover:border-slate-700/50 transition-all shrink-0 cursor-pointer"
+            className="p-1.5 rounded-lg text-crm-text-muted hover:text-crm-text hover:bg-crm-surface/60 border border-transparent hover:border-crm-border/50 transition-all shrink-0 cursor-pointer"
             title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {isCollapsed ? (
@@ -123,20 +123,21 @@ export default function Sidebar() {
                 key={item.name}
                 href={item.href}
                 title={isCollapsed ? item.name : undefined}
-                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 ${
+                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] active:scale-[0.97] ${
                   isCollapsed ? "justify-center px-0" : ""
                 } ${
                   isActive
                     ? "bg-primary-cyan/15 text-primary-cyan border border-primary-cyan/30 shadow-[0_0_15px_color-mix(in_srgb,var(--color-primary-cyan)_15%,transparent)]"
-                    : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                    : "text-crm-text-muted hover:text-crm-text hover:bg-white/5 border border-transparent"
                 }`}
               >
                 <Icon
-                  className={`w-4 h-4 shrink-0 ${
-                    isActive ? "text-primary-cyan" : "text-slate-400"
+                  strokeWidth={1.75}
+                  className={`w-4 h-4 shrink-0 transition-colors duration-300 ${
+                    isActive ? "text-primary-cyan" : "text-slate-500 group-hover:text-crm-text-muted"
                   }`}
                 />
-                {!isCollapsed && <span className="truncate">{item.name}</span>}
+                {!isCollapsed && <span className="truncate tracking-wide">{item.name}</span>}
               </Link>
             );
           })}
@@ -144,19 +145,19 @@ export default function Sidebar() {
 
         {/* User Profile Bar */}
         <div
-          className={`border-t border-white/10 m-2 rounded-xl bg-black/20 shrink-0 transition-all ${
+          className={`border-t border-crm-border-strong m-2 rounded-xl bg-black/20 shrink-0 transition-all ${
             isCollapsed ? "p-2 flex justify-center" : "p-4"
           }`}
         >
           <div className="flex items-center gap-3 overflow-hidden">
             <div className="w-8 h-8 rounded-full bg-linear-to-tr from-purple-500 to-cyan-400 p-px shrink-0">
-              <div className="w-full h-full rounded-full bg-slate-950 flex items-center justify-center text-xs font-bold text-slate-200">
+              <div className="w-full h-full rounded-full bg-crm-base flex items-center justify-center text-xs font-bold text-crm-text">
                 ZA
               </div>
             </div>
             {!isCollapsed && (
               <div className="overflow-hidden">
-                <p className="text-xs font-medium text-slate-200 truncate">
+                <p className="text-xs font-medium text-crm-text truncate">
                   Agent
                 </p>
                 <p className="text-[10px] text-slate-500 font-mono truncate">

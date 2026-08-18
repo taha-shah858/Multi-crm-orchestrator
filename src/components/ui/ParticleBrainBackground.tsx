@@ -375,7 +375,7 @@ export default function ParticleBrainBackground() {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 pointer-events-none z-0 overflow-hidden bg-slate-950"
+      className="fixed inset-0 pointer-events-none z-0 overflow-hidden bg-crm-base"
     />
   );
 }

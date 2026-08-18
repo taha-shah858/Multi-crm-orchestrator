@@ -87,7 +87,8 @@ export default function ParticleWaveBackground() {
 
     // --- Scene & Camera Setup ---
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x020617, 0.0006);
+    // Using a light fog for the white background
+    scene.fog = new THREE.FogExp2(0xffffff, 0.0006);
 
     const camera = new THREE.PerspectiveCamera(
       60,
@@ -339,9 +340,9 @@ export default function ParticleWaveBackground() {
       map: starTexture,
       vertexColors: true,
       transparent: true,
-      opacity: 0.7,
+      opacity: 0.3,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
+      blending: THREE.NormalBlending,
     });
 
     const nebulaCloud = new THREE.Points(
@@ -390,9 +391,9 @@ export default function ParticleWaveBackground() {
       map: starTexture,
       vertexColors: true,
       transparent: true,
-      opacity: 0.8,
+      opacity: 0.4,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
+      blending: THREE.NormalBlending,
     });
 
     const zTunnelParticles = new THREE.Points(
@@ -422,10 +423,10 @@ export default function ParticleWaveBackground() {
       );
 
       const meteorMat = new THREE.LineBasicMaterial({
-        color: 0x38bdf8,
+        color: 0x0f172a,
         transparent: true,
-        opacity: 0.85,
-        blending: THREE.AdditiveBlending,
+        opacity: 0.4,
+        blending: THREE.NormalBlending,
       });
 
       const line = new THREE.Line(meteorGeo, meteorMat);
@@ -494,9 +495,9 @@ export default function ParticleWaveBackground() {
       map: bokehTexture,
       vertexColors: true,
       transparent: true,
-      opacity: 0.45,
+      opacity: 0.2,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
+      blending: THREE.NormalBlending,
     });
 
     const bokehField = new THREE.Points(
@@ -552,9 +553,9 @@ export default function ParticleWaveBackground() {
       map: starTexture,
       vertexColors: true,
       transparent: true,
-      opacity: 0.85,
+      opacity: 0.4,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
+      blending: THREE.NormalBlending,
     });
 
     const fireflies = new THREE.Points(
@@ -571,10 +572,10 @@ export default function ParticleWaveBackground() {
     const constellationPositions = new Float32Array(maxLineConnections * 6);
     const constellationGeo = new THREE.BufferGeometry();
     const constellationMat = new THREE.LineBasicMaterial({
-      color: 0x38bdf8,
+      color: 0x94a3b8, // slate-400
       transparent: true,
       opacity: 0.25,
-      blending: THREE.AdditiveBlending,
+      blending: THREE.NormalBlending,
     });
 
     const constellationLines = new THREE.LineSegments(
@@ -620,9 +621,9 @@ export default function ParticleWaveBackground() {
       map: starTexture,
       vertexColors: true,
       transparent: true,
-      opacity: 0.6,
+      opacity: 0.3,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
+      blending: THREE.NormalBlending,
     });
 
     const fgDustField = new THREE.Points(
@@ -708,7 +709,7 @@ export default function ParticleWaveBackground() {
       transparent: true,
       opacity: 0,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
+      blending: THREE.NormalBlending,
     });
 
     const crmPointCloud = new THREE.Points(crmGeometry, crmMaterialRef.current);
@@ -717,22 +718,6 @@ export default function ParticleWaveBackground() {
     // --- Mouse Event Handler ---
     let mouseX = 0,
       mouseY = 0;
-    let targetMouseX = 0,
-      targetMouseY = 0;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      targetMouseX = (e.clientX / window.innerWidth - 0.5) * 2.0;
-      targetMouseY = (e.clientY / window.innerHeight - 0.5) * 2.0;
-
-      const vector = new THREE.Vector3(targetMouseX, -targetMouseY, 0.5);
-      vector.unproject(camera);
-      const dir = vector.sub(camera.position).normalize();
-      const distance = -camera.position.z / dir.z;
-      mouseWorldPos.copy(
-        camera.position.clone().add(dir.multiplyScalar(distance))
-      );
-    };
-    window.addEventListener("mousemove", handleMouseMove);
 
     let animationFrameId: number;
     const clock = new THREE.Clock();
@@ -743,9 +728,6 @@ export default function ParticleWaveBackground() {
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
       const elapsed = clock.getElapsedTime();
-
-      mouseX += (targetMouseX - mouseX) * 0.05;
-      mouseY += (targetMouseY - mouseY) * 0.05;
 
       warpIntensityRef.current *= 0.91;
       const warp = warpIntensityRef.current;
@@ -774,17 +756,17 @@ export default function ParticleWaveBackground() {
 
       if (nebulaMaterialRef.current)
         nebulaMaterialRef.current.opacity =
-          0.7 * standardOpacity * nebulaBreath;
+          0.3 * standardOpacity * nebulaBreath;
       if (zTunnelMaterialRef.current)
         zTunnelMaterialRef.current.opacity =
-          0.8 * standardOpacity * zTunnelBreath;
+          0.4 * standardOpacity * zTunnelBreath;
       if (bokehMaterialRef.current)
-        bokehMaterialRef.current.opacity = 0.45 * standardOpacity * bokehBreath;
+        bokehMaterialRef.current.opacity = 0.2 * standardOpacity * bokehBreath;
       if (fireflyMaterialRef.current)
         fireflyMaterialRef.current.opacity =
-          0.85 * standardOpacity * fireflyBreath;
+          0.4 * standardOpacity * fireflyBreath;
       if (foregroundDustMaterialRef.current)
-        foregroundDustMaterialRef.current.opacity = 0.6 * standardOpacity;
+        foregroundDustMaterialRef.current.opacity = 0.3 * standardOpacity;
 
       if (crmMaterialRef.current) {
         crmMaterialRef.current.opacity = 0.95 * morphProgress;
@@ -809,7 +791,7 @@ export default function ParticleWaveBackground() {
         const mat = (shaft as THREE.Mesh).material as THREE.MeshBasicMaterial;
         if (mat) {
           mat.opacity =
-            (0.25 + Math.sin(elapsed * 0.8 + idx) * 0.1) * standardOpacity;
+            (0.1 + Math.sin(elapsed * 0.8 + idx) * 0.05) * standardOpacity;
         }
       });
 
@@ -846,23 +828,11 @@ export default function ParticleWaveBackground() {
         }
         zTunnelPosAttr.needsUpdate = true;
 
-        // --- FIREFLIES + MOUSE GRAVITATIONAL ATTRACTOR LENS ---
         const ffPosAttr = fireflies.geometry.attributes.position;
         for (let i = 0; i < fireflyCount; i++) {
           let fx = ffPosAttr.getX(i) + fireflyVelocities[i * 3];
           let fy = ffPosAttr.getY(i) + Math.sin(elapsed * 1.2 + i) * 0.012;
           let fz = ffPosAttr.getZ(i) + fireflyVelocities[i * 3 + 2];
-
-          // Gravitational Lens Offset
-          const dx = mouseWorldPos.x - fx;
-          const dy = mouseWorldPos.y - fy;
-          const distToMouse = Math.sqrt(dx * dx + dy * dy);
-
-          if (distToMouse < 22) {
-            const pull = (1 - distToMouse / 22) * 0.08;
-            fx += dx * pull;
-            fy += dy * pull;
-          }
 
           if (Math.abs(fx) > 85) fx = (Math.random() - 0.5) * 165;
           if (Math.abs(fy) > 48) fy = (Math.random() - 0.5) * 95;
@@ -980,7 +950,6 @@ export default function ParticleWaveBackground() {
 
     return () => {
       document.removeEventListener("click", handleGlobalClick);
-      window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("resize", handleResize);
       cancelAnimationFrame(animationFrameId);
 
@@ -1016,7 +985,7 @@ export default function ParticleWaveBackground() {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 pointer-events-none z-0 overflow-hidden bg-slate-950"
+      className="fixed inset-0 pointer-events-none z-0 overflow-hidden bg-crm-base"
     />
   );
 }

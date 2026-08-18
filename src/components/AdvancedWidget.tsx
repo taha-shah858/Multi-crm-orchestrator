@@ -169,35 +169,35 @@ export default function AdvancedWidget() {
 
       {/* Expanded Floating Modal Panel */}
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-crm-base/60 backdrop-blur-md animate-in fade-in duration-200">
           <div className="w-full max-w-2xl">
             <GlassCard
               className="space-y-6 relative overflow-hidden shadow-2xl border"
               style={{ borderColor: `${colors.primaryCyan}40` }}
             >
               {/* Header */}
-              <div className="flex items-center justify-between border-b border-slate-800/80 pb-4">
+              <div className="flex items-center justify-between border-b border-crm-border pb-4">
                 <div className="flex items-center gap-3">
                   {currentView !== "home" && (
                     <button
                       onClick={handleBack}
-                      className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 transition-all cursor-pointer"
+                      className="p-1.5 rounded-lg bg-crm-inner hover:bg-crm-surface border border-crm-border text-crm-text-muted transition-all cursor-pointer"
                       title="Go Back"
                     >
                       <ArrowLeft className="w-4 h-4" />
                     </button>
                   )}
-                  <div className="p-2 rounded-xl bg-slate-900 border border-slate-800 shadow-inner">
+                  <div className="p-2 rounded-xl bg-crm-inner border border-crm-border shadow-inner">
                     <Sliders
                       className="w-4 h-4"
                       style={{ color: colors.primaryCyan }}
                     />
                   </div>
                   <div>
-                    <h3 className="text-xs font-semibold text-slate-200 tracking-wide uppercase font-mono">
+                    <h3 className="text-xs font-semibold text-crm-text tracking-wide uppercase font-mono">
                       Advanced Orchestrator Control Hub
                     </h3>
-                    <p className="text-[10px] font-mono text-slate-400">
+                    <p className="text-[10px] font-mono text-crm-text-muted">
                       Modular UI Engine • Active Theme:{" "}
                       <span style={{ color: colors.primaryCyan }}>
                         {activePreset?.label || currentTheme}
@@ -208,7 +208,7 @@ export default function AdvancedWidget() {
 
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white transition-all cursor-pointer"
+                  className="p-1.5 rounded-lg bg-crm-inner hover:bg-crm-surface border border-crm-border text-crm-text-muted hover:text-white transition-all cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -220,7 +220,7 @@ export default function AdvancedWidget() {
                 {currentView === "home" && (
                   <div className="space-y-4 animate-in fade-in duration-200">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-mono text-slate-400 uppercase tracking-wider">
+                      <span className="text-xs font-mono text-crm-text-muted uppercase tracking-wider">
                         Select Control Module
                       </span>
                       <span className="text-[10px] font-mono text-emerald-400 flex items-center gap-1.5">
@@ -270,25 +270,25 @@ export default function AdvancedWidget() {
                               setCurrentView(item.id as MainView);
                               if (item.id === "themes") setThemeSubView("menu");
                             }}
-                            className="w-full p-3.5 rounded-xl bg-slate-950/60 hover:bg-slate-900/60 border border-slate-800/80 hover:border-slate-700 transition-all flex items-center justify-between group cursor-pointer shadow-inner text-left"
+                            className="w-full p-3.5 rounded-xl bg-crm-base/60 hover:bg-crm-inner/60 border border-crm-border hover:border-crm-border transition-all flex items-center justify-between group cursor-pointer shadow-inner text-left"
                           >
                             <div className="flex items-center gap-3.5">
-                              <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 group-hover:scale-105 transition-transform">
+                              <div className="p-2 rounded-lg bg-crm-inner border border-crm-border text-crm-text group-hover:scale-105 transition-transform">
                                 <IconComponent
                                   className="w-4 h-4"
                                   style={{ color: colors.primaryCyan }}
                                 />
                               </div>
                               <div>
-                                <h4 className="text-xs font-semibold text-slate-200 group-hover:text-slate-100 transition-colors">
+                                <h4 className="text-xs font-semibold text-crm-text group-hover:text-crm-text transition-colors">
                                   {item.title}
                                 </h4>
-                                <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                                <p className="text-[11px] text-crm-text-muted font-mono mt-0.5">
                                   {item.desc}
                                 </p>
                               </div>
                             </div>
-                            <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-slate-300 transition-colors shrink-0" />
+                            <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-crm-text-muted transition-colors shrink-0" />
                           </button>
                         );
                       })}
@@ -299,7 +299,7 @@ export default function AdvancedWidget() {
                 {/* 2. THEME & UI CUSTOMIZATION SUB-MENU */}
                 {currentView === "themes" && themeSubView === "menu" && (
                   <div className="space-y-4 animate-in fade-in duration-200">
-                    <div className="text-xs font-mono text-slate-300">
+                    <div className="text-xs font-mono text-crm-text-muted">
                       Select Theme Customization Tier
                     </div>
 
@@ -331,25 +331,25 @@ export default function AdvancedWidget() {
                             onClick={() =>
                               setThemeSubView(sub.id as ThemeSubView)
                             }
-                            className="w-full p-4 rounded-xl bg-slate-950/60 hover:bg-slate-900/60 border border-slate-800/80 hover:border-slate-700 transition-all flex items-center justify-between group cursor-pointer shadow-inner text-left"
+                            className="w-full p-4 rounded-xl bg-crm-base/60 hover:bg-crm-inner/60 border border-crm-border hover:border-crm-border transition-all flex items-center justify-between group cursor-pointer shadow-inner text-left"
                           >
                             <div className="flex items-center gap-3.5">
-                              <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+                              <div className="p-2.5 rounded-lg bg-crm-inner border border-crm-border">
                                 <SubIcon
                                   className="w-4 h-4"
                                   style={{ color: colors.primaryCyan }}
                                 />
                               </div>
                               <div>
-                                <h4 className="text-xs font-semibold text-slate-200 group-hover:text-slate-100 transition-colors">
+                                <h4 className="text-xs font-semibold text-crm-text group-hover:text-crm-text transition-colors">
                                   {sub.title}
                                 </h4>
-                                <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                                <p className="text-[11px] text-crm-text-muted font-mono mt-0.5">
                                   {sub.desc}
                                 </p>
                               </div>
                             </div>
-                            <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-slate-300 transition-colors" />
+                            <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-crm-text-muted transition-colors" />
                           </button>
                         );
                       })}
@@ -361,7 +361,7 @@ export default function AdvancedWidget() {
                 {currentView === "themes" && themeSubView === "default" && (
                   <div className="space-y-4 animate-in fade-in duration-200">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-mono text-slate-300">
+                      <span className="text-xs font-mono text-crm-text-muted">
                         Default System Theme Configuration
                       </span>
                       <span
@@ -375,13 +375,13 @@ export default function AdvancedWidget() {
                       </span>
                     </div>
 
-                    <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-4">
+                    <div className="p-4 rounded-xl bg-crm-base/60 border border-crm-border space-y-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <h4 className="text-xs font-semibold text-slate-100 font-mono">
+                          <h4 className="text-xs font-semibold text-crm-text font-mono">
                             Obsidian Factory (Standard)
                           </h4>
-                          <p className="text-[11px] text-slate-400 font-mono">
+                          <p className="text-[11px] text-crm-text-muted font-mono">
                             The baseline high-contrast enterprise design layout.
                           </p>
                         </div>
@@ -390,7 +390,7 @@ export default function AdvancedWidget() {
                           className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all cursor-pointer ${
                             currentTheme === "obsidian"
                               ? "font-bold"
-                              : "bg-slate-900 text-slate-300 border border-slate-800 hover:border-slate-700"
+                              : "bg-crm-inner text-crm-text-muted border border-crm-border hover:border-crm-border"
                           }`}
                           style={{
                             backgroundColor:
@@ -416,7 +416,7 @@ export default function AdvancedWidget() {
                 {currentView === "themes" && themeSubView === "presets" && (
                   <div className="space-y-4 animate-in fade-in duration-200">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-mono text-slate-300">
+                      <span className="text-xs font-mono text-crm-text-muted">
                         Select Global CRM Theme Presets
                       </span>
                       <span
@@ -436,8 +436,8 @@ export default function AdvancedWidget() {
                             onClick={() => setTheme(key)}
                             className={`p-3.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
                               isSelected
-                                ? "bg-slate-900/90 shadow-lg"
-                                : "bg-slate-950/60 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900/40"
+                                ? "bg-crm-inner/90 shadow-lg"
+                                : "bg-crm-base/60 border-crm-border hover:border-crm-border hover:bg-crm-inner/40"
                             }`}
                             style={{
                               borderColor: isSelected
@@ -446,12 +446,12 @@ export default function AdvancedWidget() {
                             }}
                           >
                             <div className="flex items-center justify-between">
-                              <span className="text-xs font-semibold text-slate-200 font-mono">
+                              <span className="text-xs font-semibold text-crm-text font-mono">
                                 {preset.label}
                               </span>
                               {isSelected && (
                                 <span
-                                  className="p-1 rounded-full bg-slate-800"
+                                  className="p-1 rounded-full bg-crm-surface"
                                   style={{ color: preset.colors.primaryCyan }}
                                 >
                                   <Check className="w-3 h-3" />
@@ -461,25 +461,25 @@ export default function AdvancedWidget() {
 
                             <div className="flex items-center gap-1.5 pt-1">
                               <span
-                                className="w-4 h-4 rounded-full border border-slate-700"
+                                className="w-4 h-4 rounded-full border border-crm-border"
                                 style={{
                                   backgroundColor: preset.colors.crmBase,
                                 }}
                               />
                               <span
-                                className="w-4 h-4 rounded-full border border-slate-700"
+                                className="w-4 h-4 rounded-full border border-crm-border"
                                 style={{
                                   backgroundColor: preset.colors.primaryCyan,
                                 }}
                               />
                               <span
-                                className="w-4 h-4 rounded-full border border-slate-700"
+                                className="w-4 h-4 rounded-full border border-crm-border"
                                 style={{
                                   backgroundColor: preset.colors.secondaryPink,
                                 }}
                               />
                               <span
-                                className="w-4 h-4 rounded-full border border-slate-700"
+                                className="w-4 h-4 rounded-full border border-crm-border"
                                 style={{
                                   backgroundColor: preset.colors.tertiaryPurple,
                                 }}
@@ -496,7 +496,7 @@ export default function AdvancedWidget() {
                 {currentView === "themes" && themeSubView === "custom-user" && (
                   <div className="space-y-4 animate-in fade-in duration-200">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-mono text-slate-300">
+                      <span className="text-xs font-mono text-crm-text-muted">
                         Custom User Theme Overrides
                       </span>
                       <span
@@ -510,9 +510,9 @@ export default function AdvancedWidget() {
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-950/60 p-4 rounded-xl border border-slate-800/80">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-crm-base/60 p-4 rounded-xl border border-crm-border">
                       <div className="space-y-1">
-                        <label className="text-[11px] font-mono text-slate-400 flex justify-between">
+                        <label className="text-[11px] font-mono text-crm-text-muted flex justify-between">
                           <span>Primary Cyan / Accent</span>
                           <span
                             className="font-mono"
@@ -528,7 +528,7 @@ export default function AdvancedWidget() {
                             onChange={(e) =>
                               updateColor("primaryCyan", e.target.value)
                             }
-                            className="w-10 h-8 bg-slate-900 border border-slate-700 rounded cursor-pointer"
+                            className="w-10 h-8 bg-crm-inner border border-crm-border rounded cursor-pointer"
                           />
                           <input
                             type="text"
@@ -536,13 +536,13 @@ export default function AdvancedWidget() {
                             onChange={(e) =>
                               updateColor("primaryCyan", e.target.value)
                             }
-                            className="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs font-mono text-slate-200"
+                            className="w-full bg-crm-inner border border-crm-border rounded px-2 py-1 text-xs font-mono text-crm-text"
                           />
                         </div>
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[11px] font-mono text-slate-400 flex justify-between">
+                        <label className="text-[11px] font-mono text-crm-text-muted flex justify-between">
                           <span>Secondary Pink / Accent</span>
                           <span
                             className="font-mono"
@@ -558,7 +558,7 @@ export default function AdvancedWidget() {
                             onChange={(e) =>
                               updateColor("secondaryPink", e.target.value)
                             }
-                            className="w-10 h-8 bg-slate-900 border border-slate-700 rounded cursor-pointer"
+                            className="w-10 h-8 bg-crm-inner border border-crm-border rounded cursor-pointer"
                           />
                           <input
                             type="text"
@@ -566,15 +566,15 @@ export default function AdvancedWidget() {
                             onChange={(e) =>
                               updateColor("secondaryPink", e.target.value)
                             }
-                            className="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs font-mono text-slate-200"
+                            className="w-full bg-crm-inner border border-crm-border rounded px-2 py-1 text-xs font-mono text-crm-text"
                           />
                         </div>
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[11px] font-mono text-slate-400 flex justify-between">
+                        <label className="text-[11px] font-mono text-crm-text-muted flex justify-between">
                           <span>Card Surface Color</span>
-                          <span className="font-mono text-slate-300">
+                          <span className="font-mono text-crm-text-muted">
                             {colors.crmCard}
                           </span>
                         </label>
@@ -585,7 +585,7 @@ export default function AdvancedWidget() {
                             onChange={(e) =>
                               updateColor("crmCard", e.target.value)
                             }
-                            className="w-10 h-8 bg-slate-900 border border-slate-700 rounded cursor-pointer"
+                            className="w-10 h-8 bg-crm-inner border border-crm-border rounded cursor-pointer"
                           />
                           <input
                             type="text"
@@ -593,15 +593,15 @@ export default function AdvancedWidget() {
                             onChange={(e) =>
                               updateColor("crmCard", e.target.value)
                             }
-                            className="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs font-mono text-slate-200"
+                            className="w-full bg-crm-inner border border-crm-border rounded px-2 py-1 text-xs font-mono text-crm-text"
                           />
                         </div>
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[11px] font-mono text-slate-400 flex justify-between">
+                        <label className="text-[11px] font-mono text-crm-text-muted flex justify-between">
                           <span>Base Background Color</span>
-                          <span className="font-mono text-slate-300">
+                          <span className="font-mono text-crm-text-muted">
                             {colors.crmBase}
                           </span>
                         </label>
@@ -612,7 +612,7 @@ export default function AdvancedWidget() {
                             onChange={(e) =>
                               updateColor("crmBase", e.target.value)
                             }
-                            className="w-10 h-8 bg-slate-900 border border-slate-700 rounded cursor-pointer"
+                            className="w-10 h-8 bg-crm-inner border border-crm-border rounded cursor-pointer"
                           />
                           <input
                             type="text"
@@ -620,7 +620,7 @@ export default function AdvancedWidget() {
                             onChange={(e) =>
                               updateColor("crmBase", e.target.value)
                             }
-                            className="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs font-mono text-slate-200"
+                            className="w-full bg-crm-inner border border-crm-border rounded px-2 py-1 text-xs font-mono text-crm-text"
                           />
                         </div>
                       </div>
@@ -631,10 +631,10 @@ export default function AdvancedWidget() {
                 {/* 3. PLACEHOLDER VIEWS FOR OTHER MODULES */}
                 {currentView === "telemetry" && (
                   <div className="space-y-4 animate-in fade-in duration-200">
-                    <h3 className="text-xs font-semibold text-slate-200 font-mono uppercase tracking-wider">
+                    <h3 className="text-xs font-semibold text-crm-text font-mono uppercase tracking-wider">
                       Telemetry & Bridge Diagnostics
                     </h3>
-                    <p className="text-xs text-slate-400 font-mono bg-slate-950/60 p-4 rounded-xl border border-slate-800/80">
+                    <p className="text-xs text-crm-text-muted font-mono bg-crm-base/60 p-4 rounded-xl border border-crm-border">
                       Live WebSocket and CRM sync diagnostics dashboard
                       placeholder.
                     </p>
@@ -643,10 +643,10 @@ export default function AdvancedWidget() {
 
                 {currentView === "api" && (
                   <div className="space-y-4 animate-in fade-in duration-200">
-                    <h3 className="text-xs font-semibold text-slate-200 font-mono uppercase tracking-wider">
+                    <h3 className="text-xs font-semibold text-crm-text font-mono uppercase tracking-wider">
                       API Gateway & OAuth Vault
                     </h3>
-                    <p className="text-xs text-slate-400 font-mono bg-slate-950/60 p-4 rounded-xl border border-slate-800/80">
+                    <p className="text-xs text-crm-text-muted font-mono bg-crm-base/60 p-4 rounded-xl border border-crm-border">
                       Manage secure connector credentials and webhook secret
                       keys placeholder.
                     </p>
@@ -655,10 +655,10 @@ export default function AdvancedWidget() {
 
                 {currentView === "security" && (
                   <div className="space-y-4 animate-in fade-in duration-200">
-                    <h3 className="text-xs font-semibold text-slate-200 font-mono uppercase tracking-wider">
+                    <h3 className="text-xs font-semibold text-crm-text font-mono uppercase tracking-wider">
                       Security & Collision Audit Logs
                     </h3>
-                    <p className="text-xs text-slate-400 font-mono bg-slate-950/60 p-4 rounded-xl border border-slate-800/80">
+                    <p className="text-xs text-crm-text-muted font-mono bg-crm-base/60 p-4 rounded-xl border border-crm-border">
                       View bi-directional deduplication records and security
                       event audit trails placeholder.
                     </p>
@@ -667,7 +667,7 @@ export default function AdvancedWidget() {
 
                 {currentView === "fx" && (
                   <div className="space-y-4 animate-in fade-in duration-200">
-                    <div className="text-xs font-mono text-slate-300">
+                    <div className="text-xs font-mono text-crm-text-muted">
                       3D Particle Mesh Background Density Controls
                     </div>
 
@@ -678,8 +678,8 @@ export default function AdvancedWidget() {
                           onClick={() => setParticleDensity(density)}
                           className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                             particleDensity === density
-                              ? "bg-slate-950 shadow-inner"
-                              : "bg-slate-950/60 border-slate-800/80 text-slate-400 hover:border-slate-700"
+                              ? "bg-crm-base shadow-inner"
+                              : "bg-crm-base/60 border-crm-border text-crm-text-muted hover:border-crm-border"
                           }`}
                           style={{
                             borderColor:
@@ -692,7 +692,7 @@ export default function AdvancedWidget() {
                             className="w-4 h-4 mb-2"
                             style={{ color: colors.primaryCyan }}
                           />
-                          <p className="text-xs font-semibold text-slate-200 font-mono">
+                          <p className="text-xs font-semibold text-crm-text font-mono">
                             {density}
                           </p>
                         </button>
@@ -703,7 +703,7 @@ export default function AdvancedWidget() {
               </div>
 
               {/* Footer Actions */}
-              <div className="flex items-center justify-between pt-4 border-t border-slate-800/80">
+              <div className="flex items-center justify-between pt-4 border-t border-crm-border">
                 <button
                   onClick={() => {
                     setTheme("obsidian");
@@ -711,7 +711,7 @@ export default function AdvancedWidget() {
                     setCurrentView("home");
                     setThemeSubView("menu");
                   }}
-                  className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-mono flex items-center gap-1.5 transition-all cursor-pointer shadow-inner"
+                  className="px-3 py-1.5 rounded-xl bg-crm-inner hover:bg-crm-surface border border-crm-border text-crm-text-muted text-xs font-mono flex items-center gap-1.5 transition-all cursor-pointer shadow-inner"
                 >
                   <RefreshCw
                     className="w-3 h-3"

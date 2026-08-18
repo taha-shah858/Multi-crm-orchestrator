@@ -349,17 +349,17 @@ export default function SmartDialerPage() {
   };
 
   return (
-    <div className="space-y-6 text-slate-100 font-sans relative min-h-screen">
+    <div className="space-y-6 text-crm-text font-sans relative min-h-screen">
       {/* Header & View Switcher */}
       <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <PhoneCall className="w-5 h-5 text-primary-cyan" />
-            <h1 className="text-2xl font-bold tracking-tight text-slate-100">
+            <h1 className="text-2xl font-bold tracking-tight text-crm-text">
               Multi-CRM Orchestrator & Smart Dialer Studio
             </h1>
           </div>
-          <p className="text-xs text-slate-400 font-mono mt-1">
+          <p className="text-xs text-crm-text-muted font-mono mt-1">
             Cross-brand contact mapping, schema customization, WebRTC cloud
             dialing, and AI transcript synchronization.
           </p>
@@ -367,13 +367,13 @@ export default function SmartDialerPage() {
 
         {/* Tab Navigation & Status */}
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center bg-crm-inner p-1 rounded-xl border border-white/10 text-xs font-mono">
+          <div className="flex items-center bg-crm-inner p-1 rounded-xl border border-crm-border-strong text-xs font-mono">
             <button
               onClick={() => setActiveTab("mapping")}
               className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                 activeTab === "mapping"
                   ? "bg-primary-cyan text-slate-950 font-bold shadow-[0_0_12px_rgba(6,182,212,0.3)]"
-                  : "text-slate-400 hover:text-slate-200"
+                  : "text-crm-text-muted hover:text-crm-text"
               }`}
             >
               <GitMerge className="w-3.5 h-3.5" /> Contact Mapping
@@ -383,7 +383,7 @@ export default function SmartDialerPage() {
               className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                 activeTab === "dialer"
                   ? "bg-primary-cyan text-slate-950 font-bold shadow-[0_0_12px_rgba(6,182,212,0.3)]"
-                  : "text-slate-400 hover:text-slate-200"
+                  : "text-crm-text-muted hover:text-crm-text"
               }`}
             >
               Active Dialer
@@ -393,7 +393,7 @@ export default function SmartDialerPage() {
               className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                 activeTab === "transcripts"
                   ? "bg-primary-cyan text-slate-950 font-bold shadow-[0_0_12px_rgba(6,182,212,0.3)]"
-                  : "text-slate-400 hover:text-slate-200"
+                  : "text-crm-text-muted hover:text-crm-text"
               }`}
             >
               <FileText className="w-3.5 h-3.5" /> Transcripts (
@@ -404,7 +404,7 @@ export default function SmartDialerPage() {
               className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                 activeTab === "analytics"
                   ? "bg-primary-cyan text-slate-950 font-bold shadow-[0_0_12px_rgba(6,182,212,0.3)]"
-                  : "text-slate-400 hover:text-slate-200"
+                  : "text-crm-text-muted hover:text-crm-text"
               }`}
             >
               <BarChart3 className="w-3.5 h-3.5" /> Analytics
@@ -424,11 +424,11 @@ export default function SmartDialerPage() {
           {/* Top Bar inside Mapping */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h2 className="text-base font-bold text-slate-100 flex items-center gap-2">
+              <h2 className="text-base font-bold text-crm-text flex items-center gap-2">
                 <GitMerge className="w-4 h-4 text-primary-cyan" /> Cross-Brand
                 Contact Mapping & Scope Studio
               </h2>
-              <p className="text-xs text-slate-400 font-mono mt-0.5">
+              <p className="text-xs text-crm-text-muted font-mono mt-0.5">
                 Configure unified contact schemas, multi-CRM attributes, and
                 conflict resolution rules across distinct brand instances.
               </p>
@@ -452,14 +452,14 @@ export default function SmartDialerPage() {
 
           {/* Brand Integrations Overview Bar */}
           <MultiCrmCard className="space-y-4">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+            <div className="flex items-center justify-between border-b border-crm-border-strong pb-3">
               <div className="flex items-center gap-2">
                 <Globe className="w-4 h-4 text-primary-cyan" />
-                <h3 className="text-sm font-semibold text-slate-200">
+                <h3 className="text-sm font-semibold text-crm-text">
                   Connected Brand Environments & Data Sources
                 </h3>
               </div>
-              <span className="text-xs font-mono text-slate-400">
+              <span className="text-xs font-mono text-crm-text-muted">
                 6 Active Connectors
               </span>
             </div>
@@ -474,10 +474,10 @@ export default function SmartDialerPage() {
                     <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">
                       {brand.type}
                     </span>
-                    <h4 className="text-xs font-bold text-slate-200">
+                    <h4 className="text-xs font-bold text-crm-text">
                       {brand.name}
                     </h4>
-                    <p className="text-[10px] font-mono text-slate-400">
+                    <p className="text-[10px] font-mono text-crm-text-muted">
                       {brand.syncFreq}
                     </p>
                   </div>
@@ -494,22 +494,22 @@ export default function SmartDialerPage() {
             {/* Left Column: Conflict & Master Brand Priority Settings (4 cols) */}
             <div className="lg:col-span-4 space-y-6">
               <MultiCrmCard className="space-y-4">
-                <div className="flex items-center gap-2 border-b border-white/10 pb-3">
+                <div className="flex items-center gap-2 border-b border-crm-border-strong pb-3">
                   <Sliders className="w-4 h-4 text-secondary-pink" />
-                  <h3 className="text-sm font-semibold text-slate-200">
+                  <h3 className="text-sm font-semibold text-crm-text">
                     Resolution & Priority Rules
                   </h3>
                 </div>
 
                 <div className="space-y-4 font-mono text-xs">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] text-slate-400">
+                    <label className="text-[10px] text-crm-text-muted">
                       Master Authority Brand
                     </label>
                     <select
                       value={priorityBrand}
                       onChange={(e) => setPriorityBrand(e.target.value)}
-                      className="w-full bg-crm-inner border border-white/10 rounded-xl px-3 py-2.5 text-slate-100 focus:outline-none focus:border-primary-cyan"
+                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2.5 text-crm-text focus:outline-none focus:border-primary-cyan"
                     >
                       <option value="Salesforce">Salesforce Enterprise</option>
                       <option value="HubSpot">HubSpot CRM</option>
@@ -523,13 +523,13 @@ export default function SmartDialerPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] text-slate-400">
+                    <label className="text-[10px] text-crm-text-muted">
                       Attribute Conflict Policy
                     </label>
                     <select
                       value={conflictResolution}
                       onChange={(e) => setConflictResolution(e.target.value)}
-                      className="w-full bg-crm-inner border border-white/10 rounded-xl px-3 py-2.5 text-slate-100 focus:outline-none focus:border-primary-cyan"
+                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2.5 text-crm-text focus:outline-none focus:border-primary-cyan"
                     >
                       <option value="Most recent timestamp wins">
                         Most recent timestamp wins
@@ -550,7 +550,7 @@ export default function SmartDialerPage() {
                         Data Isolation & Security
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-400 leading-relaxed font-sans">
+                    <p className="text-[11px] text-crm-text-muted leading-relaxed font-sans">
                       All cross-brand mappings are encrypted via TLS 1.3 and
                       validated against workspace access permissions before
                       synchronization.
@@ -561,9 +561,9 @@ export default function SmartDialerPage() {
 
               {/* Quick Add Custom Attribute */}
               <MultiCrmCard className="space-y-4">
-                <div className="flex items-center gap-2 border-b border-white/10 pb-3">
+                <div className="flex items-center gap-2 border-b border-crm-border-strong pb-3">
                   <Plus className="w-4 h-4 text-primary-cyan" />
-                  <h3 className="text-sm font-semibold text-slate-200">
+                  <h3 className="text-sm font-semibold text-crm-text">
                     Add Custom Field Mapping
                   </h3>
                 </div>
@@ -573,7 +573,7 @@ export default function SmartDialerPage() {
                   className="space-y-3 font-mono text-xs"
                 >
                   <div className="space-y-1">
-                    <label className="text-[10px] text-slate-400">
+                    <label className="text-[10px] text-crm-text-muted">
                       Unified Schema Field Name
                     </label>
                     <input
@@ -581,14 +581,14 @@ export default function SmartDialerPage() {
                       placeholder="e.g. Lead Score / Region"
                       value={newUnified}
                       onChange={(e) => setNewUnified(e.target.value)}
-                      className="w-full bg-crm-inner border border-white/10 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-primary-cyan"
+                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-crm-text focus:outline-none focus:border-primary-cyan"
                       required
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
-                      <label className="text-[10px] text-slate-400">
+                      <label className="text-[10px] text-crm-text-muted">
                         Salesforce Key
                       </label>
                       <input
@@ -596,11 +596,11 @@ export default function SmartDialerPage() {
                         placeholder="SF Field"
                         value={newSf}
                         onChange={(e) => setNewSf(e.target.value)}
-                        className="w-full bg-crm-inner border border-white/10 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-primary-cyan"
+                        className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-crm-text focus:outline-none focus:border-primary-cyan"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] text-slate-400">
+                      <label className="text-[10px] text-crm-text-muted">
                         HubSpot Key
                       </label>
                       <input
@@ -608,7 +608,7 @@ export default function SmartDialerPage() {
                         placeholder="HS Field"
                         value={newHubspot}
                         onChange={(e) => setNewHubspot(e.target.value)}
-                        className="w-full bg-crm-inner border border-white/10 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-primary-cyan"
+                        className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-crm-text focus:outline-none focus:border-primary-cyan"
                       />
                     </div>
                   </div>
@@ -626,14 +626,14 @@ export default function SmartDialerPage() {
             {/* Right Column: Schema Mapping Table & Customization Matrix (8 cols) */}
             <MultiCrmCard className="lg:col-span-8 space-y-4 flex flex-col justify-between">
               <div className="space-y-4">
-                <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <div className="flex items-center justify-between border-b border-crm-border-strong pb-3">
                   <div className="flex items-center gap-2">
                     <Database className="w-4 h-4 text-primary-cyan" />
-                    <h3 className="text-sm font-semibold text-slate-200">
+                    <h3 className="text-sm font-semibold text-crm-text">
                       Unified Contact Attribute Matrix
                     </h3>
                   </div>
-                  <span className="text-xs font-mono text-slate-400">
+                  <span className="text-xs font-mono text-crm-text-muted">
                     {mappings.length} Attributes Mapped
                   </span>
                 </div>
@@ -641,7 +641,7 @@ export default function SmartDialerPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left font-mono text-xs">
                     <thead>
-                      <tr className="border-b border-white/10 text-slate-400">
+                      <tr className="border-b border-crm-border-strong text-crm-text-muted">
                         <th className="py-3 px-3 font-semibold">
                           Unified Schema
                         </th>
@@ -661,17 +661,17 @@ export default function SmartDialerPage() {
                           key={m.id}
                           className="hover:bg-crm-inner/60 transition-all"
                         >
-                          <td className="py-3 px-3 font-bold text-slate-200 flex items-center gap-2">
+                          <td className="py-3 px-3 font-bold text-crm-text flex items-center gap-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-primary-cyan" />
                             {m.unifiedField}
                           </td>
-                          <td className="py-3 px-3 text-slate-300">
+                          <td className="py-3 px-3 text-crm-text-muted">
                             {m.salesforceField}
                           </td>
-                          <td className="py-3 px-3 text-slate-300">
+                          <td className="py-3 px-3 text-crm-text-muted">
                             {m.hubspotField}
                           </td>
-                          <td className="py-3 px-3 text-slate-400">
+                          <td className="py-3 px-3 text-crm-text-muted">
                             {m.zohoField} / {m.pipedriveField}
                           </td>
                           <td className="py-3 px-3 text-right">
@@ -697,7 +697,7 @@ export default function SmartDialerPage() {
               <MultiCrmInnerPanel className="flex flex-col sm:flex-row items-center justify-between gap-3 py-3 mt-4">
                 <div className="flex items-center gap-2.5 text-xs font-mono">
                   <RefreshCw className="w-4 h-4 text-primary-cyan animate-spin" />
-                  <span className="text-slate-300">
+                  <span className="text-crm-text-muted">
                     Continuous schema sync active across all brand webhooks.
                   </span>
                 </div>
@@ -716,7 +716,7 @@ export default function SmartDialerPage() {
           {/* Left Column: Keypad & Call Control Center (5 cols) */}
           <MultiCrmCard className="lg:col-span-5 flex flex-col justify-between space-y-6">
             <div className="space-y-4">
-              <div className="flex items-center justify-between text-xs font-mono text-slate-400">
+              <div className="flex items-center justify-between text-xs font-mono text-crm-text-muted">
                 <span>TARGET DESTINATION</span>
                 <span className="text-primary-cyan">US/CAN Gateway</span>
               </div>
@@ -727,12 +727,12 @@ export default function SmartDialerPage() {
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   placeholder="Enter phone number..."
-                  className="w-full bg-crm-inner border border-white/10 rounded-xl px-4 py-3 text-xl font-mono text-center tracking-widest text-slate-100 focus:outline-none focus:border-primary-cyan/50 shadow-inner"
+                  className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-4 py-3 text-xl font-mono text-center tracking-widest text-crm-text focus:outline-none focus:border-primary-cyan/50 shadow-inner"
                 />
                 {phoneNumber && (
                   <button
                     onClick={handleBackspace}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-400 hover:text-slate-200 px-2 py-1 rounded bg-crm-surface/90 border border-white/10 shadow-inner cursor-pointer"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono text-crm-text-muted hover:text-crm-text px-2 py-1 rounded bg-crm-surface/90 border border-crm-border-strong shadow-inner cursor-pointer"
                   >
                     DEL
                   </button>
@@ -741,14 +741,14 @@ export default function SmartDialerPage() {
 
               {/* Brand Routing Selector */}
               <div className="space-y-1.5 font-mono text-xs">
-                <label className="text-[10px] text-slate-400 flex items-center gap-1.5">
+                <label className="text-[10px] text-crm-text-muted flex items-center gap-1.5">
                   <GitBranch className="w-3 h-3 text-primary-cyan" /> Route Call
                   & Log to CRM Brand Instance
                 </label>
                 <select
                   value={targetBrand}
                   onChange={(e) => setTargetBrand(e.target.value)}
-                  className="w-full bg-crm-inner border border-white/10 rounded-xl px-3 py-2.5 text-slate-100 focus:outline-none focus:border-primary-cyan"
+                  className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2.5 text-crm-text focus:outline-none focus:border-primary-cyan"
                 >
                   <option value="Salesforce Enterprise">
                     Salesforce Enterprise
@@ -779,7 +779,7 @@ export default function SmartDialerPage() {
                 <button
                   key={key.num}
                   onClick={() => handleKeyPress(key.num)}
-                  className="p-3.5 rounded-xl bg-crm-inner hover:bg-crm-surface border border-white/10 hover:border-primary-cyan/40 text-slate-200 transition-all flex flex-col items-center justify-center active:scale-95 shadow-inner cursor-pointer"
+                  className="p-3.5 rounded-xl bg-crm-inner hover:bg-crm-surface border border-crm-border-strong hover:border-primary-cyan/40 text-crm-text transition-all flex flex-col items-center justify-center active:scale-95 shadow-inner cursor-pointer"
                 >
                   <span className="text-lg font-mono font-bold">{key.num}</span>
                   {key.sub && (
@@ -809,7 +809,7 @@ export default function SmartDialerPage() {
                       className={`p-3 rounded-xl border transition-all cursor-pointer ${
                         isMuted
                           ? "bg-amber-500/20 text-amber-400 border-amber-500/40 shadow-inner"
-                          : "bg-crm-inner text-slate-300 border-white/10 hover:bg-crm-surface shadow-inner"
+                          : "bg-crm-inner text-crm-text-muted border-crm-border-strong hover:bg-crm-surface shadow-inner"
                       }`}
                     >
                       {isMuted ? (
@@ -824,7 +824,7 @@ export default function SmartDialerPage() {
                       className={`p-3 rounded-xl border transition-all cursor-pointer ${
                         isOnHold
                           ? "bg-amber-500/20 text-amber-400 border-amber-500/40 shadow-inner"
-                          : "bg-crm-inner text-slate-300 border-white/10 hover:bg-crm-surface shadow-inner"
+                          : "bg-crm-inner text-crm-text-muted border-crm-border-strong hover:bg-crm-surface shadow-inner"
                       }`}
                     >
                       {isOnHold ? (
@@ -853,7 +853,7 @@ export default function SmartDialerPage() {
               <div className="flex items-center justify-between border-b border-primary-cyan/15 pb-3">
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-secondary-pink animate-pulse" />
-                  <h3 className="text-sm font-semibold text-slate-200">
+                  <h3 className="text-sm font-semibold text-crm-text">
                     AI Real-Time Call Assistant ({targetBrand})
                   </h3>
                 </div>
@@ -872,7 +872,7 @@ export default function SmartDialerPage() {
                       </span>
                       <span>94% Confidence</span>
                     </div>
-                    <p className="text-xs text-slate-200 leading-relaxed font-mono">
+                    <p className="text-xs text-crm-text leading-relaxed font-mono">
                       "I understand budget is a primary concern. Our multi-CRM
                       orchestration across {targetBrand} actually reduces
                       redundant API licensing costs by an average of 28%."
@@ -892,7 +892,7 @@ export default function SmartDialerPage() {
                       <span className="text-[10px] text-slate-500 block">
                         TALK / LISTEN RATIO
                       </span>
-                      <span className="text-slate-200 mt-1 block font-bold">
+                      <span className="text-crm-text mt-1 block font-bold">
                         42% / 58% (Optimal)
                       </span>
                     </MultiCrmInnerPanel>
@@ -901,7 +901,7 @@ export default function SmartDialerPage() {
               ) : (
                 <div className="py-8 text-center space-y-2">
                   <Bot className="w-8 h-8 text-slate-600 mx-auto" />
-                  <p className="text-xs text-slate-400 font-mono">
+                  <p className="text-xs text-crm-text-muted font-mono">
                     Initiate a call to trigger live transcription, sentiment
                     tracking, and instant objection prompts mapped to{" "}
                     {targetBrand}.
@@ -914,8 +914,8 @@ export default function SmartDialerPage() {
             <MultiCrmCard className="space-y-4">
               <div className="flex items-center justify-between border-b border-primary-cyan/15 pb-3">
                 <div className="flex items-center gap-2">
-                  <History className="w-4 h-4 text-slate-400" />
-                  <h3 className="text-sm font-semibold text-slate-200">
+                  <History className="w-4 h-4 text-crm-text-muted" />
+                  <h3 className="text-sm font-semibold text-crm-text">
                     Recent Call History & Brand Sync
                   </h3>
                 </div>
@@ -931,7 +931,7 @@ export default function SmartDialerPage() {
                     className="flex items-center justify-between py-3 hover:border-primary-cyan/40 transition-all"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-crm-surface border border-white/10 text-slate-400 shadow-inner">
+                      <div className="p-2 rounded-lg bg-crm-surface border border-crm-border-strong text-crm-text-muted shadow-inner">
                         {call.type === "outgoing" ? (
                           <PhoneOutgoing className="w-4 h-4 text-primary-cyan" />
                         ) : (
@@ -939,13 +939,13 @@ export default function SmartDialerPage() {
                         )}
                       </div>
                       <div>
-                        <h4 className="text-xs font-semibold text-slate-200">
+                        <h4 className="text-xs font-semibold text-crm-text">
                           {call.name}{" "}
                           <span className="text-[10px] font-mono text-primary-cyan ml-1">
                             ({call.brand})
                           </span>
                         </h4>
-                        <p className="text-[11px] text-slate-400 font-mono">
+                        <p className="text-[11px] text-crm-text-muted font-mono">
                           {call.company} • {call.number}
                         </p>
                       </div>
@@ -972,11 +972,11 @@ export default function SmartDialerPage() {
         <div className="space-y-6">
           <MultiCrmCard className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="space-y-1">
-              <h2 className="text-sm font-bold text-slate-200 flex items-center gap-2">
+              <h2 className="text-sm font-bold text-crm-text flex items-center gap-2">
                 <FileText className="w-4 h-4 text-primary-cyan" /> Call
                 Transcript & Cross-Brand AI Agent Hub
               </h2>
-              <p className="text-xs text-slate-400 font-mono">
+              <p className="text-xs text-crm-text-muted font-mono">
                 Manage, edit, and push auto-recorded or custom transcripts
                 directly to your AI agent for intent indexing across CRM
                 instances.
@@ -999,11 +999,11 @@ export default function SmartDialerPage() {
                 className="space-y-4 flex flex-col justify-between"
               >
                 <div className="space-y-3">
-                  <div className="flex items-start justify-between border-b border-white/10 pb-3">
+                  <div className="flex items-start justify-between border-b border-crm-border-strong pb-3">
                     <div>
-                      <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                      <h3 className="text-sm font-bold text-crm-text flex items-center gap-2">
                         {tr.clientName}
-                        <span className="text-xs font-mono text-slate-400">
+                        <span className="text-xs font-mono text-crm-text-muted">
                           ({tr.company})
                         </span>
                       </h3>
@@ -1021,20 +1021,20 @@ export default function SmartDialerPage() {
                   </div>
 
                   {/* Transcript Content Box */}
-                  <div className="p-3 bg-crm-inner rounded-xl border border-white/5 font-mono text-xs text-slate-300 leading-relaxed whitespace-pre-line max-h-36 overflow-y-auto">
+                  <div className="p-3 bg-crm-inner rounded-xl border border-crm-border font-mono text-xs text-crm-text-muted leading-relaxed whitespace-pre-line max-h-36 overflow-y-auto">
                     {tr.content}
                   </div>
                 </div>
 
                 {/* Actions Bar */}
-                <div className="flex items-center justify-between border-t border-white/10 pt-3 font-mono text-xs">
+                <div className="flex items-center justify-between border-t border-crm-border-strong pt-3 font-mono text-xs">
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => toggleForwardToAi(tr.id)}
                       className={`px-2.5 py-1 rounded-lg border text-[11px] transition-all flex items-center gap-1.5 cursor-pointer ${
                         tr.forwardedToAi
                           ? "bg-purple-500/20 text-purple-300 border-purple-500/40"
-                          : "bg-crm-inner text-slate-400 border-white/10 hover:text-slate-200"
+                          : "bg-crm-inner text-crm-text-muted border-crm-border-strong hover:text-crm-text"
                       }`}
                     >
                       <Sparkles className="w-3.5 h-3.5" />
@@ -1050,7 +1050,7 @@ export default function SmartDialerPage() {
                         setSelectedTranscript(tr);
                         setIsEditModalOpen(true);
                       }}
-                      className="px-3 py-1.5 rounded-lg bg-crm-inner hover:bg-crm-surface border border-white/10 text-slate-300 flex items-center gap-1.5 cursor-pointer"
+                      className="px-3 py-1.5 rounded-lg bg-crm-inner hover:bg-crm-surface border border-crm-border-strong text-crm-text-muted flex items-center gap-1.5 cursor-pointer"
                     >
                       <Edit3 className="w-3.5 h-3.5 text-primary-cyan" /> Edit
                     </button>
@@ -1060,7 +1060,7 @@ export default function SmartDialerPage() {
                           transcripts.filter((t) => t.id !== tr.id)
                         )
                       }
-                      className="p-1.5 rounded-lg bg-crm-inner hover:bg-rose-500/20 border border-white/10 hover:border-rose-500/40 text-slate-400 hover:text-rose-400 cursor-pointer"
+                      className="p-1.5 rounded-lg bg-crm-inner hover:bg-rose-500/20 border border-crm-border-strong hover:border-rose-500/40 text-crm-text-muted hover:text-rose-400 cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -1076,14 +1076,14 @@ export default function SmartDialerPage() {
       {activeTab === "analytics" && (
         <div className="space-y-6">
           <MultiCrmCard className="space-y-4">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+            <div className="flex items-center justify-between border-b border-crm-border-strong pb-3">
               <div className="flex items-center gap-2">
                 <BarChart3 className="w-4 h-4 text-primary-cyan" />
-                <h3 className="text-sm font-semibold text-slate-200">
+                <h3 className="text-sm font-semibold text-crm-text">
                   Cross-Brand Voice & Call Analytics
                 </h3>
               </div>
-              <span className="text-xs font-mono text-slate-400">
+              <span className="text-xs font-mono text-crm-text-muted">
                 Aggregated Telephony Insights
               </span>
             </div>
@@ -1093,7 +1093,7 @@ export default function SmartDialerPage() {
                 <span className="text-[10px] text-slate-500 uppercase">
                   Total Outbound / Inbound
                 </span>
-                <h3 className="text-xl font-bold text-slate-100">
+                <h3 className="text-xl font-bold text-crm-text">
                   1,482 Calls
                 </h3>
                 <p className="text-[10px] text-emerald-400">
@@ -1104,7 +1104,7 @@ export default function SmartDialerPage() {
                 <span className="text-[10px] text-slate-500 uppercase">
                   Average Call Duration
                 </span>
-                <h3 className="text-xl font-bold text-slate-100">07m 14s</h3>
+                <h3 className="text-xl font-bold text-crm-text">07m 14s</h3>
                 <p className="text-[10px] text-primary-cyan">
                   Optimal engagement window
                 </p>
@@ -1113,7 +1113,7 @@ export default function SmartDialerPage() {
                 <span className="text-[10px] text-slate-500 uppercase">
                   AI Intent Conversion Rate
                 </span>
-                <h3 className="text-xl font-bold text-slate-100">34.2%</h3>
+                <h3 className="text-xl font-bold text-crm-text">34.2%</h3>
                 <p className="text-[10px] text-purple-400">
                   Synced across 4 CRM brands
                 </p>
@@ -1122,15 +1122,15 @@ export default function SmartDialerPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-2">
               <MultiCrmInnerPanel className="space-y-3">
-                <h4 className="text-xs font-bold text-slate-200 font-mono">
+                <h4 className="text-xs font-bold text-crm-text font-mono">
                   Call Distribution by Brand Instance
                 </h4>
                 <div className="space-y-2 font-mono text-xs">
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-400">
+                    <span className="text-crm-text-muted">
                       Salesforce Enterprise
                     </span>
-                    <span className="text-slate-200 font-bold">
+                    <span className="text-crm-text font-bold">
                       45% (667 calls)
                     </span>
                   </div>
@@ -1139,8 +1139,8 @@ export default function SmartDialerPage() {
                   </div>
 
                   <div className="flex items-center justify-between pt-1">
-                    <span className="text-slate-400">HubSpot CRM</span>
-                    <span className="text-slate-200 font-bold">
+                    <span className="text-crm-text-muted">HubSpot CRM</span>
+                    <span className="text-crm-text font-bold">
                       30% (445 calls)
                     </span>
                   </div>
@@ -1149,10 +1149,10 @@ export default function SmartDialerPage() {
                   </div>
 
                   <div className="flex items-center justify-between pt-1">
-                    <span className="text-slate-400">
+                    <span className="text-crm-text-muted">
                       Zoho CRM Plus / Pipedrive
                     </span>
-                    <span className="text-slate-200 font-bold">
+                    <span className="text-crm-text font-bold">
                       25% (370 calls)
                     </span>
                   </div>
@@ -1163,29 +1163,29 @@ export default function SmartDialerPage() {
               </MultiCrmInnerPanel>
 
               <MultiCrmInnerPanel className="space-y-3">
-                <h4 className="text-xs font-bold text-slate-200 font-mono">
+                <h4 className="text-xs font-bold text-crm-text font-mono">
                   Sentiment Breakdown
                 </h4>
                 <div className="grid grid-cols-2 gap-3 font-mono text-xs">
-                  <div className="p-3 bg-crm-surface rounded-xl border border-white/5 space-y-1">
+                  <div className="p-3 bg-crm-surface rounded-xl border border-crm-border space-y-1">
                     <span className="text-[10px] text-emerald-400 block font-bold">
                       POSITIVE / HIGH INTENT
                     </span>
-                    <span className="text-lg font-bold text-slate-100">
+                    <span className="text-lg font-bold text-crm-text">
                       68%
                     </span>
-                    <p className="text-[10px] text-slate-400">
+                    <p className="text-[10px] text-crm-text-muted">
                       Ready for automated pipeline stage advance
                     </p>
                   </div>
-                  <div className="p-3 bg-crm-surface rounded-xl border border-white/5 space-y-1">
+                  <div className="p-3 bg-crm-surface rounded-xl border border-crm-border space-y-1">
                     <span className="text-[10px] text-amber-400 block font-bold">
                       OBJECTION HEAVY
                     </span>
-                    <span className="text-lg font-bold text-slate-100">
+                    <span className="text-lg font-bold text-crm-text">
                       32%
                     </span>
-                    <p className="text-[10px] text-slate-400">
+                    <p className="text-[10px] text-crm-text-muted">
                       Requires AI objection handler playbook review
                     </p>
                   </div>
@@ -1200,14 +1200,14 @@ export default function SmartDialerPage() {
       {isEditModalOpen && selectedTranscript && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-crm-surface border border-white/15 rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl p-6 space-y-5 font-sans">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2 font-mono">
+            <div className="flex items-center justify-between border-b border-crm-border-strong pb-3">
+              <h3 className="text-sm font-bold text-crm-text flex items-center gap-2 font-mono">
                 <Edit3 className="w-4 h-4 text-primary-cyan" /> Edit Transcript
                 & AI Context
               </h3>
               <button
                 onClick={() => setIsEditModalOpen(false)}
-                className="text-slate-400 hover:text-slate-100 cursor-pointer"
+                className="text-crm-text-muted hover:text-crm-text cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1216,7 +1216,7 @@ export default function SmartDialerPage() {
             <form onSubmit={handleSaveEdit} className="space-y-4">
               <div className="grid grid-cols-2 gap-3 font-mono text-xs">
                 <div className="space-y-1">
-                  <label className="text-[10px] text-slate-400">
+                  <label className="text-[10px] text-crm-text-muted">
                     Client Name
                   </label>
                   <input
@@ -1228,11 +1228,11 @@ export default function SmartDialerPage() {
                         clientName: e.target.value,
                       })
                     }
-                    className="w-full bg-crm-inner border border-white/10 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-primary-cyan"
+                    className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-crm-text focus:outline-none focus:border-primary-cyan"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] text-slate-400">
+                  <label className="text-[10px] text-crm-text-muted">
                     Sentiment Tag
                   </label>
                   <select
@@ -1243,7 +1243,7 @@ export default function SmartDialerPage() {
                         sentiment: e.target.value,
                       })
                     }
-                    className="w-full bg-crm-inner border border-white/10 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-primary-cyan font-mono"
+                    className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-crm-text focus:outline-none focus:border-primary-cyan font-mono"
                   >
                     <option value="Positive">Positive</option>
                     <option value="Neutral">Neutral</option>
@@ -1254,7 +1254,7 @@ export default function SmartDialerPage() {
               </div>
 
               <div className="space-y-1 font-mono text-xs">
-                <label className="text-[10px] text-slate-400">
+                <label className="text-[10px] text-crm-text-muted">
                   CRM Brand Instance
                 </label>
                 <input
@@ -1266,12 +1266,12 @@ export default function SmartDialerPage() {
                       brandInstance: e.target.value,
                     })
                   }
-                  className="w-full bg-crm-inner border border-white/10 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-primary-cyan"
+                  className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-crm-text focus:outline-none focus:border-primary-cyan"
                 />
               </div>
 
               <div className="space-y-1 font-mono text-xs">
-                <label className="text-[10px] text-slate-400">
+                <label className="text-[10px] text-crm-text-muted">
                   Transcript Content / Notes (Forwarded to AI Agent)
                 </label>
                 <textarea
@@ -1283,12 +1283,12 @@ export default function SmartDialerPage() {
                       content: e.target.value,
                     })
                   }
-                  className="w-full bg-crm-inner border border-white/10 rounded-xl p-3 text-slate-100 focus:outline-none focus:border-primary-cyan leading-relaxed"
+                  className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-3 text-crm-text focus:outline-none focus:border-primary-cyan leading-relaxed"
                 />
               </div>
 
-              <div className="flex items-center justify-between border-t border-white/10 pt-4 font-mono text-xs">
-                <label className="flex items-center gap-2 cursor-pointer text-slate-300">
+              <div className="flex items-center justify-between border-t border-crm-border-strong pt-4 font-mono text-xs">
+                <label className="flex items-center gap-2 cursor-pointer text-crm-text-muted">
                   <input
                     type="checkbox"
                     checked={selectedTranscript.forwardedToAi}
@@ -1307,7 +1307,7 @@ export default function SmartDialerPage() {
                   <button
                     type="button"
                     onClick={() => setIsEditModalOpen(false)}
-                    className="px-4 py-2 rounded-xl text-slate-400 hover:text-slate-200 cursor-pointer"
+                    className="px-4 py-2 rounded-xl text-crm-text-muted hover:text-crm-text cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -1328,14 +1328,14 @@ export default function SmartDialerPage() {
       {isNewTranscriptModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-crm-surface border border-white/15 rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl p-6 space-y-5 font-sans">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2 font-mono">
+            <div className="flex items-center justify-between border-b border-crm-border-strong pb-3">
+              <h3 className="text-sm font-bold text-crm-text flex items-center gap-2 font-mono">
                 <Plus className="w-4 h-4 text-primary-cyan" /> Add Custom
                 Transcript for AI Agent
               </h3>
               <button
                 onClick={() => setIsNewTranscriptModalOpen(false)}
-                className="text-slate-400 hover:text-slate-100 cursor-pointer"
+                className="text-crm-text-muted hover:text-crm-text cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1344,7 +1344,7 @@ export default function SmartDialerPage() {
             <form onSubmit={handleCreateTranscript} className="space-y-4">
               <div className="grid grid-cols-2 gap-3 font-mono text-xs">
                 <div className="space-y-1">
-                  <label className="text-[10px] text-slate-400">
+                  <label className="text-[10px] text-crm-text-muted">
                     Client Name *
                   </label>
                   <input
@@ -1352,30 +1352,30 @@ export default function SmartDialerPage() {
                     placeholder="e.g. Rachel Chen"
                     value={newClientName}
                     onChange={(e) => setNewClientName(e.target.value)}
-                    className="w-full bg-crm-inner border border-white/10 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-primary-cyan"
+                    className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-crm-text focus:outline-none focus:border-primary-cyan"
                     required
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] text-slate-400">Company</label>
+                  <label className="text-[10px] text-crm-text-muted">Company</label>
                   <input
                     type="text"
                     placeholder="e.g. Wayne Ent."
                     value={newCompanyName}
                     onChange={(e) => setNewCompanyName(e.target.value)}
-                    className="w-full bg-crm-inner border border-white/10 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-primary-cyan"
+                    className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-crm-text focus:outline-none focus:border-primary-cyan"
                   />
                 </div>
               </div>
 
               <div className="space-y-1 font-mono text-xs">
-                <label className="text-[10px] text-slate-400">
+                <label className="text-[10px] text-crm-text-muted">
                   Target CRM Brand Instance
                 </label>
                 <select
                   value={newBrandInstance}
                   onChange={(e) => setNewBrandInstance(e.target.value)}
-                  className="w-full bg-crm-inner border border-white/10 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-primary-cyan"
+                  className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-crm-text focus:outline-none focus:border-primary-cyan"
                 >
                   <option value="Salesforce Enterprise">
                     Salesforce Enterprise
@@ -1387,7 +1387,7 @@ export default function SmartDialerPage() {
               </div>
 
               <div className="space-y-1 font-mono text-xs">
-                <label className="text-[10px] text-slate-400">
+                <label className="text-[10px] text-crm-text-muted">
                   Transcript Dialogue / Notes *
                 </label>
                 <textarea
@@ -1395,16 +1395,16 @@ export default function SmartDialerPage() {
                   placeholder="Paste transcript or call notes here..."
                   value={newTranscriptContent}
                   onChange={(e) => setNewTranscriptContent(e.target.value)}
-                  className="w-full bg-crm-inner border border-white/10 rounded-xl p-3 text-slate-100 focus:outline-none focus:border-primary-cyan leading-relaxed"
+                  className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-3 text-crm-text focus:outline-none focus:border-primary-cyan leading-relaxed"
                   required
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 border-t border-white/10 pt-4 font-mono text-xs">
+              <div className="flex items-center justify-end gap-2 border-t border-crm-border-strong pt-4 font-mono text-xs">
                 <button
                   type="button"
                   onClick={() => setIsNewTranscriptModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-slate-400 hover:text-slate-200 cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-crm-text-muted hover:text-crm-text cursor-pointer"
                 >
                   Cancel
                 </button>

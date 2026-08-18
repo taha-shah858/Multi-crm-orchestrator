@@ -11,6 +11,8 @@ export interface ThemeColors {
   primaryCyan: string;
   secondaryPink: string;
   tertiaryPurple: string;
+  crmText: string;
+  crmTextMuted: string;
 }
 
 export interface ThemeDefinition {
@@ -31,6 +33,23 @@ export const THEME_PRESETS: Record<string, ThemeDefinition> = {
       primaryCyan: "#00f2ff",
       secondaryPink: "#ff00e5",
       tertiaryPurple: "#7c3aed",
+      crmText: "#f1f5f9",
+      crmTextMuted: "#94a3b8",
+    },
+  },
+  lumina: {
+    name: "lumina",
+    label: "Lumina Clean (Light)",
+    colors: {
+      crmBase: "#ffffff",
+      crmSurface: "#f8fafc",
+      crmCard: "#ffffff",
+      crmInner: "#f1f5f9",
+      primaryCyan: "#0ea5e9",
+      secondaryPink: "#ec4899",
+      tertiaryPurple: "#8b5cf6",
+      crmText: "#0f172a",
+      crmTextMuted: "#64748b",
     },
   },
   matrix: {
@@ -44,6 +63,8 @@ export const THEME_PRESETS: Record<string, ThemeDefinition> = {
       primaryCyan: "#10b981",
       secondaryPink: "#06b6d4",
       tertiaryPurple: "#3b82f6",
+      crmText: "#e2e8f0",
+      crmTextMuted: "#64748b",
     },
   },
   plasma: {
@@ -57,6 +78,8 @@ export const THEME_PRESETS: Record<string, ThemeDefinition> = {
       primaryCyan: "#ff9e00",
       secondaryPink: "#ff0055",
       tertiaryPurple: "#9d00ff",
+      crmText: "#f8fafc",
+      crmTextMuted: "#a8a29e",
     },
   },
 };
@@ -72,9 +95,9 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [currentTheme, setCurrentTheme] = useState<string>("obsidian");
+  const [currentTheme, setCurrentTheme] = useState<string>("lumina");
   const [colors, setColors] = useState<ThemeColors>(
-    THEME_PRESETS.obsidian.colors
+    THEME_PRESETS.lumina.colors
   );
 
   // Load saved theme preference on mount
@@ -96,6 +119,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     root.style.setProperty("--primary-cyan", colors.primaryCyan);
     root.style.setProperty("--secondary-pink", colors.secondaryPink);
     root.style.setProperty("--tertiary-purple", colors.tertiaryPurple);
+    root.style.setProperty("--crm-text", colors.crmText);
+    root.style.setProperty("--crm-text-muted", colors.crmTextMuted);
   }, [colors]);
 
   const setTheme = (themeName: string) => {

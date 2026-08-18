@@ -176,7 +176,7 @@ export default function BrandProfitabilityHub() {
   };
 
   return (
-    <div className="space-y-6 text-slate-100 font-sans print:p-0 print:bg-white print:text-black">
+    <div className="space-y-6 text-crm-text font-sans print:p-0 print:bg-white print:text-black">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 print:hidden">
         <div>
@@ -186,20 +186,20 @@ export default function BrandProfitabilityHub() {
               Brand Profitability & Installation Intelligence
             </h1>
           </div>
-          <p className="text-xs text-slate-400 font-mono mt-1">
+          <p className="text-xs text-crm-text-muted font-mono mt-1">
             Real-time tracking for revenue realization, installation forecasts,
             agency labor hours, and yield efficiency.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex items-center bg-crm-inner p-1 rounded-xl border border-white/10 font-mono text-xs">
+          <div className="flex items-center bg-crm-inner p-1 rounded-xl border border-crm-border-strong font-mono text-xs">
             <button
               onClick={() => setViewMode("matrix")}
               className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer ${
                 viewMode === "matrix"
                   ? "bg-primary-cyan/20 text-primary-cyan font-bold border border-primary-cyan/30"
-                  : "text-slate-400"
+                  : "text-crm-text-muted"
               }`}
             >
               <TableIcon className="w-3.5 h-3.5" /> Full Matrix
@@ -209,7 +209,7 @@ export default function BrandProfitabilityHub() {
               className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer ${
                 viewMode === "profitability"
                   ? "bg-primary-cyan/20 text-primary-cyan font-bold border border-primary-cyan/30"
-                  : "text-slate-400"
+                  : "text-crm-text-muted"
               }`}
             >
               <Zap className="w-3.5 h-3.5" /> Yield Analysis
@@ -217,7 +217,7 @@ export default function BrandProfitabilityHub() {
           </div>
           <button
             onClick={() => window.print()}
-            className="px-3.5 py-2 rounded-xl bg-crm-surface hover:bg-crm-inner border border-white/10 text-xs font-mono text-slate-300 flex items-center gap-2"
+            className="px-3.5 py-2 rounded-xl bg-crm-surface hover:bg-crm-inner border border-crm-border-strong text-xs font-mono text-crm-text-muted flex items-center gap-2"
           >
             <Printer className="w-3.5 h-3.5 text-secondary-pink" /> Print Audit
           </button>
@@ -235,9 +235,9 @@ export default function BrandProfitabilityHub() {
               <span className="text-[10px] font-mono text-emerald-400 font-bold uppercase tracking-wider block">
                 Top Performing Brand (Yield / Hour)
               </span>
-              <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+              <h2 className="text-lg font-bold text-crm-text flex items-center gap-2">
                 {topProfitBrand.brand}
-                <span className="text-xs text-slate-400 font-normal">
+                <span className="text-xs text-crm-text-muted font-normal">
                   ({topProfitBrand.assignedRep})
                 </span>
               </h2>
@@ -245,7 +245,7 @@ export default function BrandProfitabilityHub() {
           </div>
           <div className="flex items-center gap-6 font-mono text-xs">
             <div>
-              <span className="text-slate-400 block text-[10px]">
+              <span className="text-crm-text-muted block text-[10px]">
                 Effective Hourly Yield
               </span>
               <span className="text-emerald-400 font-bold text-sm">
@@ -253,7 +253,7 @@ export default function BrandProfitabilityHub() {
               </span>
             </div>
             <div>
-              <span className="text-slate-400 block text-[10px]">
+              <span className="text-crm-text-muted block text-[10px]">
                 Revenue Realization
               </span>
               <span className="text-primary-cyan font-bold text-sm">
@@ -261,7 +261,7 @@ export default function BrandProfitabilityHub() {
               </span>
             </div>
             <div>
-              <span className="text-slate-400 block text-[10px]">
+              <span className="text-crm-text-muted block text-[10px]">
                 Upcoming Installations
               </span>
               <span className="text-purple-300 font-bold text-sm">
@@ -275,11 +275,11 @@ export default function BrandProfitabilityHub() {
       {/* Primary KPI Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MultiCrmCard className="p-4 space-y-2">
-          <span className="text-[11px] font-mono text-slate-400 flex items-center justify-between">
+          <span className="text-[11px] font-mono text-crm-text-muted flex items-center justify-between">
             Expected vs Received Revenue
             <DollarSign className="w-4 h-4 text-emerald-400" />
           </span>
-          <div className="text-lg font-bold font-mono text-slate-100">
+          <div className="text-lg font-bold font-mono text-crm-text">
             ${totalReceivedRev.toLocaleString()}{" "}
             <span className="text-xs font-normal text-slate-500">
               / ${totalExpectedRev.toLocaleString()}
@@ -294,7 +294,7 @@ export default function BrandProfitabilityHub() {
         </MultiCrmCard>
 
         <MultiCrmCard className="p-4 space-y-2">
-          <span className="text-[11px] font-mono text-slate-400 flex items-center justify-between">
+          <span className="text-[11px] font-mono text-crm-text-muted flex items-center justify-between">
             Received vs Expected Installs
             <Box className="w-4 h-4 text-primary-cyan" />
           </span>
@@ -304,7 +304,7 @@ export default function BrandProfitabilityHub() {
               / {totalExpectedInst} units
             </span>
           </div>
-          <span className="text-[10px] font-mono text-slate-400">
+          <span className="text-[10px] font-mono text-crm-text-muted">
             {totalExpectedInst > 0
               ? Math.round((totalReceivedInst / totalExpectedInst) * 100)
               : 0}
@@ -313,7 +313,7 @@ export default function BrandProfitabilityHub() {
         </MultiCrmCard>
 
         <MultiCrmCard className="p-4 space-y-2">
-          <span className="text-[11px] font-mono text-slate-400 flex items-center justify-between">
+          <span className="text-[11px] font-mono text-crm-text-muted flex items-center justify-between">
             Upcoming Month Projections
             <TrendingUp className="w-4 h-4 text-purple-400" />
           </span>
@@ -326,14 +326,14 @@ export default function BrandProfitabilityHub() {
         </MultiCrmCard>
 
         <MultiCrmCard className="p-4 space-y-2">
-          <span className="text-[11px] font-mono text-slate-400 flex items-center justify-between">
+          <span className="text-[11px] font-mono text-crm-text-muted flex items-center justify-between">
             Total Agency Labor
             <Clock className="w-4 h-4 text-secondary-pink" />
           </span>
           <div className="text-lg font-bold font-mono text-secondary-pink">
             {totalHours} hrs logged
           </div>
-          <span className="text-[10px] font-mono text-slate-400">
+          <span className="text-[10px] font-mono text-crm-text-muted">
             Multi-brand team allocation
           </span>
         </MultiCrmCard>
@@ -342,8 +342,8 @@ export default function BrandProfitabilityHub() {
       {/* MATRIX VIEW */}
       {viewMode === "matrix" && (
         <MultiCrmCard className="overflow-hidden p-0">
-          <div className="p-4 bg-crm-inner border-b border-white/10 flex items-center justify-between font-mono text-xs">
-            <span className="text-slate-300 font-bold flex items-center gap-2">
+          <div className="p-4 bg-crm-inner border-b border-crm-border-strong flex items-center justify-between font-mono text-xs">
+            <span className="text-crm-text-muted font-bold flex items-center gap-2">
               <TableIcon className="w-4 h-4 text-primary-cyan" /> Brand Revenue,
               Installation & Time Audit
             </span>
@@ -354,7 +354,7 @@ export default function BrandProfitabilityHub() {
                 placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-crm-surface border border-white/10 rounded-lg pl-8 pr-2 py-1 text-[11px] text-slate-200"
+                className="w-full bg-crm-surface border border-crm-border-strong rounded-lg pl-8 pr-2 py-1 text-[11px] text-crm-text"
               />
             </div>
           </div>
@@ -362,7 +362,7 @@ export default function BrandProfitabilityHub() {
           <div className="overflow-x-auto">
             <table className="w-full text-left font-mono text-xs border-collapse">
               <thead>
-                <tr className="bg-crm-surface/80 text-slate-400 text-[11px] border-b border-white/10">
+                <tr className="bg-crm-surface/80 text-crm-text-muted text-[11px] border-b border-crm-border-strong">
                   <th className="p-3 pl-4">Brand & Lead Rep</th>
                   <th className="p-3 text-right">Hours</th>
                   <th className="p-3 text-right">Expected Revenue</th>
@@ -387,10 +387,10 @@ export default function BrandProfitabilityHub() {
                       className="hover:bg-white/5 transition-colors text-[11px]"
                     >
                       <td className="p-3 pl-4">
-                        <span className="font-bold text-slate-100 block">
+                        <span className="font-bold text-crm-text block">
                           {b.brand}
                         </span>
-                        <span className="text-[10px] text-slate-400">
+                        <span className="text-[10px] text-crm-text-muted">
                           {b.assignedRep}
                         </span>
                       </td>
@@ -415,7 +415,7 @@ export default function BrandProfitabilityHub() {
                       </td>
 
                       {/* Expected Revenue */}
-                      <td className="p-3 text-right text-slate-400">
+                      <td className="p-3 text-right text-crm-text-muted">
                         {isEditing ? (
                           <input
                             type="number"
@@ -455,7 +455,7 @@ export default function BrandProfitabilityHub() {
                       </td>
 
                       {/* Expected Installs */}
-                      <td className="p-3 text-right text-slate-400">
+                      <td className="p-3 text-right text-crm-text-muted">
                         {isEditing ? (
                           <input
                             type="number"
@@ -475,7 +475,7 @@ export default function BrandProfitabilityHub() {
                       </td>
 
                       {/* Received Installs */}
-                      <td className="p-3 text-right font-bold text-slate-200">
+                      <td className="p-3 text-right font-bold text-crm-text">
                         {isEditing ? (
                           <input
                             type="number"
@@ -554,7 +554,7 @@ export default function BrandProfitabilityHub() {
                         ) : (
                           <button
                             onClick={() => handleStartEdit(b)}
-                            className="p-1 text-slate-400 hover:text-primary-cyan"
+                            className="p-1 text-crm-text-muted hover:text-primary-cyan"
                           >
                             <Edit3 className="w-3.5 h-3.5" />
                           </button>
@@ -574,7 +574,7 @@ export default function BrandProfitabilityHub() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 font-mono text-xs">
           {/* Brand Hourly Profitability Ranking */}
           <MultiCrmCard className="p-6 space-y-4">
-            <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2 border-b border-white/10 pb-3">
+            <h3 className="text-sm font-bold text-crm-text flex items-center gap-2 border-b border-crm-border-strong pb-3">
               <Zap className="w-4 h-4 text-emerald-400" /> Brand Profitability
               Ranking ($ Net Yield / Hour)
             </h3>
@@ -585,17 +585,17 @@ export default function BrandProfitabilityHub() {
                 .map((b, rank) => (
                   <div
                     key={b.id}
-                    className="p-3 bg-crm-inner rounded-xl border border-white/5 space-y-2"
+                    className="p-3 bg-crm-inner rounded-xl border border-crm-border space-y-2"
                   >
                     <div className="flex justify-between items-center">
-                      <span className="font-bold text-slate-200">
+                      <span className="font-bold text-crm-text">
                         #{rank + 1} {b.brand}
                       </span>
                       <span className="text-emerald-400 font-bold">
                         ${Math.round(b.hourlyYield).toLocaleString()} / hour
                       </span>
                     </div>
-                    <div className="flex justify-between text-[10px] text-slate-400">
+                    <div className="flex justify-between text-[10px] text-crm-text-muted">
                       <span>Hours Logged: {b.hoursSpent}h</span>
                       <span>Net Profit: ${b.netProfit.toLocaleString()}</span>
                     </div>
@@ -606,7 +606,7 @@ export default function BrandProfitabilityHub() {
 
           {/* Installation Velocity & Upcoming Pipeline */}
           <MultiCrmCard className="p-6 space-y-4">
-            <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2 border-b border-white/10 pb-3">
+            <h3 className="text-sm font-bold text-crm-text flex items-center gap-2 border-b border-crm-border-strong pb-3">
               <Box className="w-4 h-4 text-primary-cyan" /> Installation
               Fulfillment vs. Upcoming Growth
             </h3>
@@ -615,8 +615,8 @@ export default function BrandProfitabilityHub() {
               {calculatedBrands.map((b) => (
                 <div key={b.id} className="space-y-1.5">
                   <div className="flex justify-between text-[11px]">
-                    <span className="text-slate-200">{b.brand}</span>
-                    <span className="text-slate-400">
+                    <span className="text-crm-text">{b.brand}</span>
+                    <span className="text-crm-text-muted">
                       {b.receivedInstallations} / {b.expectedInstallations}{" "}
                       Completed (
                       <span className="text-purple-300">
@@ -625,7 +625,7 @@ export default function BrandProfitabilityHub() {
                       )
                     </span>
                   </div>
-                  <div className="w-full bg-crm-inner h-2.5 rounded-full overflow-hidden border border-white/5">
+                  <div className="w-full bg-crm-inner h-2.5 rounded-full overflow-hidden border border-crm-border">
                     <div
                       style={{
                         width: `${Math.min(

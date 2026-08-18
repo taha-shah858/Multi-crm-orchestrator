@@ -12,11 +12,12 @@ export function MultiCrmCard({
 }: MultiCrmCardProps) {
   return (
     <div
-      className={`bg-zenith-base/90 border border-cyan-500/20 rounded-2xl p-6 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.4)] relative overflow-hidden ${className}`}
+      className={`bg-crm-card/90 border border-crm-border rounded-2xl p-6 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] shadow-primary-cyan/5 relative overflow-hidden transition-all duration-300 ${className}`}
       {...props}
     >
-      {/* Subtle top inner highlight line */}
-      <div className="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-cyan-500/30 to-transparent pointer-events-none" />
+      {/* True glassmorphism inner reflection / 1px highlight */}
+      <div className="absolute inset-0 rounded-2xl border border-crm-border pointer-events-none" style={{ mixBlendMode: 'overlay' }} />
+      <div className="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-primary-cyan/20 to-transparent pointer-events-none" />
       {children}
     </div>
   );
@@ -29,7 +30,7 @@ export function MultiCrmInnerPanel({
 }: MultiCrmCardProps) {
   return (
     <div
-      className={`bg-slate-900/60 border border-slate-800/80 rounded-xl p-4 transition-all ${className}`}
+      className={`bg-crm-inner/80 border border-crm-border rounded-xl p-4 transition-all duration-300 shadow-inner ${className}`}
       {...props}
     >
       {children}
@@ -47,15 +48,15 @@ export function MultiCrmTag({
   className?: string;
 }) {
   const variants = {
-    cyan: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
-    magenta: "bg-pink-500/10 text-pink-400 border-pink-500/20",
-    purple: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-    neutral: "bg-slate-800/60 text-slate-300 border-slate-700/60",
+    cyan: "bg-primary-cyan/10 text-primary-cyan border-primary-cyan/20",
+    magenta: "bg-secondary-pink/10 text-secondary-pink border-secondary-pink/20",
+    purple: "bg-tertiary-purple/10 text-tertiary-purple border-tertiary-purple/20",
+    neutral: "bg-crm-surface/60 text-crm-text-muted border-crm-border/60",
   };
 
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-mono border ${variants[variant]} ${className}`}
+      className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-mono border font-medium ${variants[variant]} ${className}`}
     >
       {children}
     </span>

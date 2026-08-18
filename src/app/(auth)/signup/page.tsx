@@ -34,24 +34,24 @@ export default function SignupPage() {
       <div className="absolute w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none translate-x-32 translate-y-32" />
 
-      <MultiCrmCard className="w-full max-w-md p-8 space-y-6 relative z-10 border-cyan-500/20 bg-slate-950/80 backdrop-blur-xl shadow-2xl">
+      <MultiCrmCard className="w-full max-w-md p-8 space-y-6 relative z-10 border-cyan-500/20 bg-crm-base/80 backdrop-blur-xl shadow-2xl">
         {/* Header Badge */}
         <div className="text-center space-y-3">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-mono text-xs shadow-inner">
             <Shield className="w-4 h-4" />
             <span>MULTI-CRM ORCHESTRATOR</span>
           </div>
-          <p className="text-[10px] font-mono tracking-widest text-slate-400 uppercase">
+          <p className="text-[10px] font-mono tracking-widest text-crm-text-muted uppercase">
             Secure Vault Authentication
           </p>
         </div>
 
         {/* Title Section */}
         <div className="text-center space-y-1">
-          <h1 className="text-xl font-bold tracking-tight text-slate-100 uppercase font-serif">
+          <h1 className="text-xl font-bold tracking-tight text-crm-text uppercase font-serif">
             Create Agent Account
           </h1>
-          <p className="text-xs text-slate-400 font-mono">
+          <p className="text-xs text-crm-text-muted font-mono">
             Set Up Your Local Independent CRM Workspace Profile
           </p>
         </div>
@@ -69,7 +69,7 @@ export default function SignupPage() {
               onChange={(e) =>
                 setFormData({ ...formData, workspace: e.target.value })
               }
-              className="w-full bg-slate-900/90 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-cyan-500/60 transition-all shadow-inner"
+              className="w-full bg-crm-inner/90 border border-crm-border rounded-xl px-4 py-3 text-xs text-crm-text font-mono focus:outline-none focus:border-cyan-500/60 transition-all shadow-inner"
             />
           </div>
 
@@ -84,7 +84,7 @@ export default function SignupPage() {
               onChange={(e) =>
                 setFormData({ ...formData, email: e.target.value })
               }
-              className="w-full bg-slate-900/90 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-cyan-500/60 transition-all shadow-inner"
+              className="w-full bg-crm-inner/90 border border-crm-border rounded-xl px-4 py-3 text-xs text-crm-text font-mono focus:outline-none focus:border-cyan-500/60 transition-all shadow-inner"
             />
           </div>
 
@@ -100,7 +100,7 @@ export default function SignupPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, password: e.target.value })
                 }
-                className="w-full bg-slate-900/90 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-cyan-500/60 transition-all shadow-inner"
+                className="w-full bg-crm-inner/90 border border-crm-border rounded-xl px-4 py-3 text-xs text-crm-text font-mono focus:outline-none focus:border-cyan-500/60 transition-all shadow-inner"
               />
             </div>
             <div className="space-y-1.5">
@@ -117,7 +117,7 @@ export default function SignupPage() {
                     confirmPassword: e.target.value,
                   })
                 }
-                className="w-full bg-slate-900/90 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-cyan-500/60 transition-all shadow-inner"
+                className="w-full bg-crm-inner/90 border border-crm-border rounded-xl px-4 py-3 text-xs text-crm-text font-mono focus:outline-none focus:border-cyan-500/60 transition-all shadow-inner"
               />
             </div>
           </div>
@@ -146,7 +146,7 @@ export default function SignupPage() {
                 "multi_crm_session=active; path=/; max-age=86400";
               router.push("/");
             }}
-            className="w-full py-3 px-4 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-200 hover:bg-slate-900 hover:border-slate-700 font-mono text-xs flex items-center justify-center gap-2 cursor-pointer transition-all shadow-inner"
+            className="w-full py-3 px-4 rounded-xl bg-crm-inner/90 border border-crm-border text-crm-text hover:bg-crm-inner hover:border-crm-border font-mono text-xs flex items-center justify-center gap-2 cursor-pointer transition-all shadow-inner"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24">
               <path
@@ -171,7 +171,7 @@ export default function SignupPage() {
         </form>
 
         {/* Footer Back Link */}
-        <div className="text-center pt-2 border-t border-slate-800/80">
+        <div className="text-center pt-2 border-t border-crm-border">
           <Link
             href="/login"
             className="text-[11px] font-mono text-cyan-400 hover:text-cyan-300 transition-colors inline-flex items-center gap-1.5 cursor-pointer"

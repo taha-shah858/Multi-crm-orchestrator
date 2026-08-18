@@ -6,6 +6,10 @@
   --color-crm-surface: var(--crm-surface, #121827);
   --color-crm-card: var(--crm-card, #161e2e);
   --color-crm-inner: var(--crm-inner, #0f1420);
+  --color-crm-text: var(--crm-text, #f8fafc);
+  --color-crm-text-muted: var(--crm-text-muted, #94a3b8);
+  --color-crm-border: color-mix(in srgb, var(--crm-text) 10%, transparent);
+  --color-crm-border-strong: color-mix(in srgb, var(--crm-text) 20%, transparent);
 
   /* Multi-CRM Accents */
   --color-primary-cyan: var(--primary-cyan, #00f2ff);
