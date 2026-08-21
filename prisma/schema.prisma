@@ -26,6 +26,7 @@ enum ClientStatus {
 
 enum CrmProvider {
   HUBSPOT
+  MOCK
   SALESFORCE
   CLOSE
   GOHIGHLEVEL
@@ -46,6 +47,19 @@ enum AuditAction {
   CLIENT_ACCOUNT_SELECTED
   CONTACT_IMPORT_REQUESTED
   CONTACT_IMPORT_COMPLETED
+  CONTACT_SYNC_STARTED
+  CONTACT_SYNC_COMPLETED
+  CONTACT_SYNC_FAILED
+}
+
+enum SyncRunStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum SyncTrigger {
+  MANUAL
 }
 
 model Organization {
@@ -57,6 +71,7 @@ model Organization {
   clients   ClientAccount[]
   contacts  Contact[]
   audits    AuditLog[]
+  syncRuns  SyncRun[]
 }
 
 model User {
@@ -73,6 +88,7 @@ model User {
   clientAccess   ClientAssignment[]
   assignedLeads  Contact[]       @relation("AssignedContacts")
   audits         AuditLog[]
+  syncRuns       SyncRun[]
 
   @@index([organizationId])
 }
@@ -91,6 +107,7 @@ model ClientAccount {
   crmConnections           CrmConnection[]
   contacts                 Contact[]
   audits                   AuditLog[]
+  syncRuns                 SyncRun[]
 
   @@index([organizationId])
 }
@@ -119,6 +136,7 @@ model CrmConnection {
   updatedAt             DateTime         @updatedAt
   clientAccount         ClientAccount    @relation(fields: [clientAccountId], references: [id], onDelete: Cascade)
   externalRecords       ExternalRecord[]
+  syncRuns              SyncRun[]
 
   @@unique([clientAccountId, provider])
   @@index([organizationId, clientAccountId])
@@ -181,4 +199,29 @@ model AuditLog {
 
   @@index([organizationId, clientAccountId, createdAt])
   @@index([requestId])
+}
+
+model SyncRun {
+  id              String        @id @default(cuid())
+  organizationId  String
+  clientAccountId String
+  connectionId    String
+  userId          String?
+  provider        CrmProvider
+  trigger         SyncTrigger   @default(MANUAL)
+  status          SyncRunStatus @default(RUNNING)
+  recordsRead     Int           @default(0)
+  recordsCreated  Int           @default(0)
+  recordsUpdated  Int           @default(0)
+  recordsFailed   Int           @default(0)
+  errorMessage    String?
+  startedAt       DateTime      @default(now())
+  completedAt     DateTime?
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clientAccount   ClientAccount @relation(fields: [clientAccountId], references: [id], onDelete: Cascade)
+  connection      CrmConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  user            User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, clientAccountId, startedAt])
+  @@index([connectionId, status])
 }

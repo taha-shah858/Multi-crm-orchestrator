@@ -1,18 +1,39 @@
 import type { RequestContext } from "@/lib/models/canonical";
+import { prisma } from "@/lib/db/prisma";
 
 export interface AuditEvent {
-  action: "CONTACT_IMPORT_REQUESTED" | "CONTACT_IMPORT_COMPLETED";
-  entityType: "CONTACT";
+  action:
+    | "CONTACT_IMPORT_REQUESTED"
+    | "CONTACT_IMPORT_COMPLETED"
+    | "CONTACT_SYNC_STARTED"
+    | "CONTACT_SYNC_COMPLETED"
+    | "CONTACT_SYNC_FAILED";
+  entityType: "CONTACT" | "SYNC_RUN";
+  entityId?: string;
   requestId: string;
-  source: "PLATFORM" | "HUBSPOT";
+  source: "PLATFORM" | "HUBSPOT" | "MOCK";
   metadata?: Record<string, boolean | number | string | null>;
 }
 
 /**
- * Phase 1 audit boundary. The database schema is ready for persistence; this
- * safe structured log keeps events traceable until repositories arrive in Phase 2.
+ * Audit events are persisted with tenant and client-account scope. Metadata is
+ * limited to operational values, never credentials or raw CRM payloads.
  */
-export function recordAuditEvent(context: RequestContext, event: AuditEvent) {
+export async function recordAuditEvent(context: RequestContext, event: AuditEvent) {
+  await prisma.auditLog.create({
+    data: {
+      organizationId: context.user.organizationId,
+      clientAccountId: context.activeClientAccountId,
+      userId: context.user.id,
+      action: event.action,
+      entityType: event.entityType,
+      entityId: event.entityId,
+      source: event.source,
+      requestId: event.requestId,
+      metadata: event.metadata,
+    },
+  });
+
   console.info(
     JSON.stringify({
       event: "audit",

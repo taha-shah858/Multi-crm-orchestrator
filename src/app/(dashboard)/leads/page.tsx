@@ -40,6 +40,7 @@ import {
   MultiCrmTag,
 } from "@/components/ui/MultiCrmCard";
 import type { NormalizedContact } from "@/lib/models/contact";
+import { useClientAccount } from "@/context/ClientAccountContext";
 
 // Comprehensive Lead Data Structure
 interface Lead {
@@ -51,7 +52,7 @@ interface Lead {
   phone: string;
   mobile: string;
   leadSource: string;
-  crmSource: "Salesforce" | "HubSpot" | "Zoho" | "Pipedrive";
+  crmSource: "Salesforce" | "HubSpot" | "Mock CRM" | "Zoho" | "Pipedrive";
   pulledFrom: string; // e.g. "Salesforce REST API v58.0"
   pulledAt: string; // e.g. "2026-08-11 09:30 AM"
   syncStatus: "Synced" | "Pending" | "Conflict";
@@ -146,6 +147,7 @@ const initialLeads: Lead[] = [
 ];
 
 export default function LeadsPage() {
+  const { activeClientAccount } = useClientAccount();
   const [leads, setLeads] = useState<Lead[]>(initialLeads);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -171,27 +173,27 @@ export default function LeadsPage() {
   const mapNormalizedContactToLead = (contact: NormalizedContact): Lead => {
     const fullName = `${contact.first_name} ${contact.last_name}`.trim() || "Unnamed Contact";
     return {
-      id: `HS-${contact.id}`,
+      id: `${contact.source_crm}-${contact.id}`,
       name: fullName,
       title: "Contact",
       company: contact.company || "Independent",
       email: contact.email || "no-email@hubspot.com",
       phone: contact.phone || "N/A",
       mobile: "N/A",
-      leadSource: "HubSpot CRM Import",
-      crmSource: "HubSpot",
-      pulledFrom: "HubSpot CRM REST API v3",
+      leadSource: `${contact.source_crm} Sync Import`,
+      crmSource: contact.source_crm,
+      pulledFrom: `${contact.source_crm} client-account sync`,
       pulledAt: new Date().toLocaleString(),
       syncStatus: "Synced",
-      leadOwner: "HubSpot Integration",
+      leadOwner: `${activeClientAccount.name} Integration`,
       status: "Active Lead",
       rating: "Unrated", // Real data: no fabricated rating
       score: null, // Real data: no fabricated score
       industry: "General",
       annualRevenue: "N/A",
       website: "",
-      address: "Imported from HubSpot",
-      description: `Imported via Multi-CRM Backend from HubSpot Contact ID #${contact.id}`,
+      address: `Imported for ${activeClientAccount.name}`,
+      description: `Imported via the ${activeClientAccount.name} client-account sync from ${contact.source_crm} Contact ID #${contact.id}`,
       variant: "neutral",
     };
   };
@@ -200,18 +202,18 @@ export default function LeadsPage() {
    * Trigger backend import from HubSpot CRM and merge newly fetched contacts
    * while preventing duplicates based on the unique HubSpot Contact ID.
    */
-  const handleImportFromHubSpot = async () => {
+  const handleManualClientSync = async () => {
     setIsImporting(true);
     setImportFeedback({ type: null, message: "" });
 
     try {
-      const res = await fetch("/api/contacts/import");
+      const res = await fetch("/api/contacts/import", { method: "POST" });
       const data = await res.json();
 
       if (!res.ok || !data.success) {
         const errorMessage =
           typeof data.error === "string" ? data.error : data.error?.message;
-        throw new Error(errorMessage || "Failed to import contacts from HubSpot.");
+        throw new Error(errorMessage || "Failed to sync contacts for the active client account.");
       }
 
       const importedContacts: NormalizedContact[] = data.contacts || [];
@@ -219,7 +221,7 @@ export default function LeadsPage() {
       if (importedContacts.length === 0) {
         setImportFeedback({
           type: "success",
-          message: "HubSpot query completed: No contacts found in connected account.",
+          message: `${activeClientAccount.name} sync completed: No contacts found in its connected CRM.`,
         });
         return;
       }
@@ -235,20 +237,20 @@ export default function LeadsPage() {
         if (newUniqueLeads.length === 0) {
           setImportFeedback({
             type: "success",
-            message: `All ${convertedLeads.length} HubSpot contact(s) are already present in the directory.`,
+            message: `All ${convertedLeads.length} synced contact(s) are already present in the directory.`,
           });
           return prevLeads;
         }
 
         setImportFeedback({
           type: "success",
-          message: `Successfully imported ${newUniqueLeads.length} new contact(s) from HubSpot CRM.`,
+          message: `Successfully synced ${newUniqueLeads.length} new contact(s) for ${activeClientAccount.name}.`,
         });
 
         return [...newUniqueLeads, ...prevLeads];
       });
     } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : "Unable to complete HubSpot CRM import.";
+      const errMsg = err instanceof Error ? err.message : "Unable to complete the client-account sync.";
       setImportFeedback({
         type: "error",
         message: errMsg,
@@ -285,6 +287,7 @@ export default function LeadsPage() {
     const variantMap: Record<Lead["crmSource"], Lead["variant"]> = {
       Salesforce: "cyan",
       HubSpot: "neutral",
+      "Mock CRM": "magenta",
       Zoho: "purple",
       Pipedrive: "magenta",
     };
@@ -371,12 +374,12 @@ export default function LeadsPage() {
             </div>
 
             <div className="flex items-center gap-3">
-              {/* POC: Real HubSpot Import Action Button */}
+              {/* Manual Phase 2 sync for the currently selected client account */}
               <button
-                onClick={handleImportFromHubSpot}
+                onClick={handleManualClientSync}
                 disabled={isImporting}
                 className="px-4 py-2 rounded-xl bg-orange-500/10 border border-orange-500/30 text-xs font-mono text-orange-400 hover:bg-orange-500/20 hover:border-orange-500/50 transition-all flex items-center gap-2 shadow-inner cursor-pointer disabled:opacity-50"
-                title="Import live contacts directly from HubSpot CRM v3 API"
+                title="Manually sync contacts from the active client account's CRM"
               >
                 <RefreshCw
                   className={`w-3.5 h-3.5 ${
@@ -384,7 +387,7 @@ export default function LeadsPage() {
                   }`}
                 />
                 <span>
-                  {isImporting ? "Importing from HubSpot..." : "Import from HubSpot"}
+                  {isImporting ? "Syncing active client..." : "Sync Active Client"}
                 </span>
               </button>
 
@@ -456,7 +459,7 @@ export default function LeadsPage() {
                   <span className="text-[11px] font-mono text-crm-text-muted px-2 flex items-center gap-1">
                     <Database className="w-3 h-3 text-primary-cyan" /> Source:
                   </span>
-                  {["All", "Salesforce", "HubSpot", "Zoho", "Pipedrive"].map(
+                  {["All", "Salesforce", "HubSpot", "Mock CRM", "Zoho", "Pipedrive"].map(
                     (crm) => (
                       <button
                         key={crm}

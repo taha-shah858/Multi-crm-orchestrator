@@ -1,5 +1,6 @@
 export const CRM_PROVIDERS = [
   "HUBSPOT",
+  "MOCK",
   "SALESFORCE",
   "CLOSE",
   "GOHIGHLEVEL",
