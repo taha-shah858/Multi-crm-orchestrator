@@ -63,6 +63,8 @@ export const THEME_PRESETS: Record<string, ThemeDefinition> = {
       primaryCyan: "#0284c7",
       secondaryPink: "#db2777",
       tertiaryPurple: "#7c3aed",
+      crmText: "#0f172a",
+      crmTextMuted: "#64748b",
     },
   },
   matrix: {

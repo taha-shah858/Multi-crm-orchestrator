@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
-import { ThemeProvider } from "@/context/ThemeContext";
+import ClientAccountSwitcher from "@/components/ClientAccountSwitcher";
 
 export default function ClientLayoutWrapper({
   children,
@@ -16,7 +16,7 @@ export default function ClientLayoutWrapper({
     pathname?.includes("/login") || pathname?.includes("/signup");
 
   return (
-    <ThemeProvider>
+    <>
       {isAuthPage ? (
         <main className="relative z-10 w-full min-h-screen flex flex-col items-center justify-center bg-transparent">
           {children}
@@ -40,6 +40,7 @@ export default function ClientLayoutWrapper({
               </div>
 
               <div className="flex items-center gap-4 text-xs font-mono text-crm-text-muted">
+                <ClientAccountSwitcher />
                 <span className="bg-white/5 backdrop-blur-md px-3 py-1.5 rounded-xl border border-crm-border-strong shadow-inner">
                   Active Pipeline:{" "}
                   <strong className="text-accent-cyan">$142,500</strong>
@@ -53,6 +54,6 @@ export default function ClientLayoutWrapper({
           </div>
         </div>
       )}
-    </ThemeProvider>
+    </>
   );
 }

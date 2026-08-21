@@ -1,42 +1,36 @@
-import { fetchHubSpotContacts } from "@/lib/integrations/hubspot/client";
-import { mapHubSpotContactToNormalized } from "@/lib/integrations/hubspot/mapper";
+import type { NextRequest } from "next/server";
+import { requireRequestContext } from "@/lib/auth/request-context";
+import { recordAuditEvent } from "@/lib/audit/audit-log";
+import { withApiErrorHandling, success } from "@/lib/http/api-response";
+import { getCrmAdapter } from "@/lib/integrations/registry";
 
 /**
  * GET /api/contacts/import
  * Backend endpoint to fetch contacts from HubSpot CRM, normalize them into our
  * canonical NormalizedContact format, and return them to the caller.
  */
-export async function GET() {
-  console.log("[API: /api/contacts/import] Received contact import request.");
+export const dynamic = "force-dynamic";
 
-  try {
-    const rawData = await fetchHubSpotContacts(100);
-    const normalizedContacts = (rawData.results || []).map(mapHubSpotContactToNormalized);
+export async function GET(request: NextRequest) {
+  return withApiErrorHandling(request, async (requestId) => {
+    const context = requireRequestContext(request);
+    recordAuditEvent(context, {
+      action: "CONTACT_IMPORT_REQUESTED",
+      entityType: "CONTACT",
+      requestId,
+      source: "PLATFORM",
+    });
 
-    console.log(
-      `[API: /api/contacts/import] Normalized ${normalizedContacts.length} contacts. Returning response.`
-    );
+    const contacts = await getCrmAdapter("HUBSPOT").listContacts({ limit: 100 });
 
-    return Response.json(
-      {
-        success: true,
-        count: normalizedContacts.length,
-        contacts: normalizedContacts,
-      },
-      { status: 200 }
-    );
-  } catch (error: unknown) {
-    const message =
-      error instanceof Error ? error.message : "An unexpected error occurred while importing contacts.";
-    console.error("[API: /api/contacts/import] Error during import:", message);
+    recordAuditEvent(context, {
+      action: "CONTACT_IMPORT_COMPLETED",
+      entityType: "CONTACT",
+      requestId,
+      source: "HUBSPOT",
+      metadata: { count: contacts.length },
+    });
 
-    return Response.json(
-      {
-        success: false,
-        error: message,
-        contacts: [],
-      },
-      { status: 500 }
-    );
-  }
+    return success({ count: contacts.length, contacts }, requestId);
+  });
 }

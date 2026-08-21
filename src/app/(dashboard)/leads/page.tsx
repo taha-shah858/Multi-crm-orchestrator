@@ -209,7 +209,9 @@ export default function LeadsPage() {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Failed to import contacts from HubSpot.");
+        const errorMessage =
+          typeof data.error === "string" ? data.error : data.error?.message;
+        throw new Error(errorMessage || "Failed to import contacts from HubSpot.");
       }
 
       const importedContacts: NormalizedContact[] = data.contacts || [];

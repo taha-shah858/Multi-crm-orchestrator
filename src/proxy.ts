@@ -1,19 +1,20 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { SESSION_COOKIE } from "@/lib/auth/request-context";
 
-export function middleware(request: NextRequest) {
-  const sessionCookie = request.cookies.get("multi_crm_session");
+/**
+ * Next.js 16 Proxy performs optimistic route redirects only. Server routes use
+ * `requireRequestContext` for the authoritative request-level check.
+ */
+export function proxy(request: NextRequest) {
+  const sessionCookie = request.cookies.get(SESSION_COOKIE);
   const pathname = request.nextUrl.pathname;
+  const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/signup");
 
-  const isAuthPage =
-    pathname.startsWith("/login") || pathname.startsWith("/signup");
-
-  // If user is not logged in and trying to access protected routes, redirect to login
   if (!sessionCookie && !isAuthPage) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // If user is logged in and trying to visit login/signup, redirect to dashboard
   if (sessionCookie && isAuthPage) {
     return NextResponse.redirect(new URL("/", request.url));
   }

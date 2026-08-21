@@ -1,4 +1,5 @@
 import { HubSpotContactsApiResponse } from "./types";
+import { AppError } from "@/lib/errors/app-error";
 
 const HUBSPOT_API_BASE = "https://api.hubapi.com";
 
@@ -10,8 +11,11 @@ export async function fetchHubSpotContacts(limit = 100): Promise<HubSpotContacts
   const token = process.env.HUBSPOT_ACCESS_TOKEN;
 
   if (!token) {
-    throw new Error(
-      "HUBSPOT_ACCESS_TOKEN is missing. Please configure it in .env.local on the server."
+    throw new AppError(
+      "INTEGRATION_CONFIGURATION_ERROR",
+      503,
+      "HUBSPOT_ACCESS_TOKEN is missing.",
+      "HubSpot import is not configured for this environment.",
     );
   }
 
@@ -45,12 +49,27 @@ export async function fetchHubSpotContacts(limit = 100): Promise<HubSpotContacts
     console.error(`[HubSpot Client] Error ${response.status}: ${errorDetail}`);
 
     if (response.status === 401) {
-      throw new Error("HubSpot authentication failed. Check your HUBSPOT_ACCESS_TOKEN.");
+      throw new AppError(
+        "EXTERNAL_SERVICE_ERROR",
+        502,
+        "HubSpot authentication failed.",
+        "HubSpot authentication needs attention. Please reconnect the client account.",
+      );
     }
     if (response.status === 403) {
-      throw new Error("HubSpot access forbidden. Ensure the token has the 'crm.objects.contacts.read' scope.");
+      throw new AppError(
+        "EXTERNAL_SERVICE_ERROR",
+        502,
+        "HubSpot access was forbidden.",
+        "HubSpot does not have permission to read contacts for this client account.",
+      );
     }
-    throw new Error(`HubSpot API responded with status ${response.status}: ${errorDetail}`);
+    throw new AppError(
+      "EXTERNAL_SERVICE_ERROR",
+      502,
+      `HubSpot API responded with status ${response.status}: ${errorDetail}`,
+      "HubSpot could not complete the import. Try again or use a manual import.",
+    );
   }
 
   const data: HubSpotContactsApiResponse = await response.json();
