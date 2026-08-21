@@ -92,6 +92,14 @@ body {
   transition: background-color 0.4s ease, color 0.4s ease;
 }
 
+/* Shared dashboard overlay boundary. Fixed drawers and modals begin below the
+   persistent client-account header, whose height is owned by the dashboard shell. */
+.dashboard-overlay {
+  position: fixed;
+  inset: var(--dashboard-header-height, 4rem) 0 0;
+  z-index: 30;
+}
+
 /* ==========================================================================
    CUSTOM SCROLLBARS (Preserved for Dashboard Polish)
    ========================================================================== */

@@ -802,7 +802,7 @@ export default function LeadsPage() {
 
       {/* ==================== EXPANDED CREATE LEAD MODAL ==================== */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="dashboard-overlay bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <MultiCrmCard className="w-full max-w-2xl p-6 space-y-6 relative border border-primary-cyan/40 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-crm-border-strong pb-3">
               <div>

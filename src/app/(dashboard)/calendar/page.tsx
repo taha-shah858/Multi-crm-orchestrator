@@ -701,7 +701,7 @@ export default function CalendarPage() {
 
       {/* QUICK SCHEDULE MODAL */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="dashboard-overlay bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-crm-surface border border-white/15 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl p-6 space-y-5 font-sans">
             <div className="flex items-center justify-between border-b border-crm-border-strong pb-3">
               <div className="flex items-center gap-1 bg-crm-inner p-1 rounded-xl border border-crm-border-strong font-mono text-xs">

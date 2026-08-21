@@ -837,7 +837,7 @@ export default function HomeDashboard() {
 
       {/* 7. Glassmorphic Add CRM Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-crm-base/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
+        <div className="dashboard-overlay flex items-center justify-center bg-crm-base/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
           <div className="w-full max-w-md bg-crm-inner/90 border border-cyan-500/30 rounded-2xl p-6 shadow-2xl shadow-cyan-500/10 space-y-6 relative">
             <div className="flex items-center justify-between border-b border-crm-border pb-4">
               <div className="flex items-center gap-2.5">

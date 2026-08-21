@@ -65,3 +65,55 @@
 - Phase 2 client-context fix: the account selector now writes the active-client cookie synchronously and exposes a ready state before dependent data reads begin. Leads guards against stale in-flight reads so rapid account changes cannot overwrite the current client's directory.
 - PostgreSQL verification: Prisma is connected to database `multicrm`, schema `public`, on the local PostgreSQL server (`::1`, port `5432`). At verification time, `Contact` and `ExternalRecord` each contained 14 rows, `SyncRun` 5 rows, and `AuditLog` 20 rows; Atlas and Northstar contacts remained isolated (2 and 12 rows respectively).
 - Persistence verification: a fresh process read Atlas contacts and sync history successfully after prior syncs, confirming persistence across process restart. TypeScript and production builds pass. Browser-server startup remains blocked by this environment, so route handlers were exercised directly with the same request cookies and headers they receive at runtime.
+
+## Phase 3 - Status
+
+### Completed
+- Added canonical, tenant- and client-account-scoped `Interaction` persistence for calls, SMS, emails, notes, and CRM activities.
+- Added `GET` and `POST /api/interactions`; manual interaction creation is audited and validates the active client context and optional contact ownership.
+- Extended the existing Aggregation Timeline to read persisted interactions for the selected client account and refresh on client changes.
+- Added the manual interaction logging failsafe in the Timeline UI for call, SMS, email, note, and CRM-activity records.
+- Created and applied Prisma migration `20260821171956_phase3_interactions` and regenerated Prisma Client.
+- Verified manual interaction creation and tenant isolation: an Atlas note appeared in Atlas's timeline and was absent from Northstar's.
+- Passed `tsc --noEmit` and the Next.js production build.
+
+### In Progress
+- None. Phase 3 is complete and awaiting review.
+
+### Pending
+- Phase 4 and later MVP modules only.
+
+### Notes / Decisions
+- Phase 3 persists and aggregates manual interaction records; external telephony/SMS delivery remains explicitly deferred to Phase 4.
+- Phase 3 correction: the Timeline is now explicitly an interaction-history surface, not a system/connector-health timeline. It presents customer calls, SMS, emails, notes, and CRM activities by contact and timestamp; technical telemetry remains outside this module.
+- The manual interaction failsafe allows CALL, SMS, EMAIL, NOTE, and CRM_ACTIVITY records and can associate them with a contact from the active client account.
+- Correction verification: a manual outbound CALL was persisted, linked to an Atlas contact, labeled `MANUAL`, returned first in Atlas's chronological interaction feed, and was absent from Northstar. TypeScript and the production build pass.
+- Phase 3 UI correction: replaced the Timeline's native prompt-based interaction logger with an in-app modal that follows the existing card, panel, form, and modal styling.
+- The modal loads contacts only from the active client's existing `/api/contacts` route, supports name, email, and company search, and displays no internal database IDs. Selecting a contact sends its opaque ID to the unchanged `POST /api/interactions` API; account-level records remain available through “Use account only.”
+- Removed the remaining native Timeline alert in favor of inline feedback. `tsc --noEmit` and the production build pass; a direct authenticated active-client contacts-route check returned Atlas's persisted contacts for the modal.
+- Dashboard layout correction: the shared client-account header now owns `--dashboard-header-height`, the dashboard shell uses a viewport-bounded scroll region for short viewports, and page content flows below the header without page-specific offsets.
+- Added the shared `.dashboard-overlay` boundary for dashboard drawers and full-screen modals. Timeline, Leads, Calendar, Dialer, and dashboard overlays begin below the header; the header has a higher stacking layer (`60` versus overlay `30`). TypeScript and the production build pass.
+
+## Phase 4 - Status
+
+### Completed
+- Inspected the active-client context, canonical Interaction model, development tenant bootstrap, and existing Dialer before implementing the VoIP & SMS Identity Gateway.
+- Added tenant- and client-account-scoped `CommunicationIdentity` persistence, including provider, brand-safe display label, outgoing phone number, enabled state, and default selection.
+- Added `GET /api/communications/identities` and `POST /api/communications/dispatch`. Both enforce the current agent's active-client access and keep provider credentials server-side.
+- Added a provider boundary that dispatches SMS and configured calls through Twilio when a `TWILIO` identity and server configuration are available; the development bootstrap provides deterministic `MOCK` identities for local verification.
+- Reused canonical `Interaction` records for every call/SMS and added persisted audit events for automated dispatch and manual fallback logging.
+- Replaced the Dialer’s static brand-routing controls with the active-client identity gateway UI. Agents can search active-client contacts, select an outgoing identity by label/number, enter a number manually, place/send through the gateway, or use manual `tel:`/SMS fallback while logging the same canonical interaction.
+- Created and applied Prisma migration `20260821180250_phase4_communication_identity` and regenerated Prisma Client.
+- Verified the identities API, mock automated CALL, manual SMS fallback, persisted interactions, audit entries, and Atlas/Northstar isolation through the route handlers.
+- Passed `tsc --noEmit`, the Next.js production build, Prisma migration status, and whitespace validation.
+
+### In Progress
+- None. Phase 4 is complete and awaiting review.
+
+### Pending
+- Phase 5 and later MVP modules only.
+
+### Notes / Decisions
+- Twilio requires `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and, for outbound calls, `TWILIO_VOICE_URL`; these are read only in the server-side communication service and are never returned to the frontend.
+- Without a configured Twilio identity, the client-scoped MOCK identity still creates a persisted communication interaction for local verification. Agents can always use the explicit manual dial/SMS fallback when automated dispatch is unavailable.
+- External delivery identifiers and selected identity metadata are retained on the canonical Interaction, allowing the Phase 3 unified timeline to continue serving as the single communication history.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import {
   GitCommit,
   Filter,
@@ -29,6 +29,7 @@ import {
   MultiCrmInnerPanel,
   MultiCrmTag,
 } from "@/components/ui/MultiCrmCard";
+import { useClientAccount } from "@/context/ClientAccountContext";
 
 export interface FieldDiff {
   field: string;
@@ -49,9 +50,11 @@ export interface TimelineEvent {
     | "Zoho"
     | "Pipedrive"
     | "Twilio"
-    | "AI Copilot";
+    | "AI Copilot"
+    | "Manual"
+    | "MOCK";
   variant: "cyan" | "purple" | "magenta" | "neutral";
-  type: "sync" | "ai" | "call" | "deal" | "lead";
+  type: "sync" | "ai" | "call" | "deal" | "lead" | "sms" | "email" | "note" | "crm_activity";
   icon: any;
   iconColor: string;
   entity: string;
@@ -65,6 +68,33 @@ export interface TimelineEvent {
   transcript?: string;
   payload: Record<string, any>;
 }
+
+type InteractionType = "CALL" | "SMS" | "EMAIL" | "NOTE" | "CRM_ACTIVITY";
+type InteractionDirection = "INBOUND" | "OUTBOUND" | "INTERNAL";
+
+interface ContactOption {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  company: string | null;
+}
+
+interface InteractionFormValues {
+  type: InteractionType;
+  direction: InteractionDirection;
+  subject: string;
+  body: string;
+  contactId: string;
+}
+
+const emptyInteractionForm = (): InteractionFormValues => ({
+  type: "NOTE",
+  direction: "INTERNAL",
+  subject: "",
+  body: "",
+  contactId: "",
+});
 
 const mockEvents: TimelineEvent[] = [
   {
@@ -220,7 +250,8 @@ const mockEvents: TimelineEvent[] = [
 ];
 
 export default function TimelinePage() {
-  const [events, setEvents] = useState<TimelineEvent[]>(mockEvents);
+  const { activeClientAccount, isClientAccountReady } = useClientAccount();
+  const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterSource, setFilterSource] = useState("All");
   const [filterType, setFilterType] = useState("All");
@@ -235,6 +266,94 @@ export default function TimelinePage() {
     "overview"
   );
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isLogModalOpen, setIsLogModalOpen] = useState(false);
+  const [isLoadingContacts, setIsLoadingContacts] = useState(false);
+  const [contacts, setContacts] = useState<ContactOption[]>([]);
+  const [contactSearch, setContactSearch] = useState("");
+  const [interactionForm, setInteractionForm] = useState<InteractionFormValues>(
+    emptyInteractionForm
+  );
+  const [interactionError, setInteractionError] = useState<string | null>(null);
+  const [isSavingInteraction, setIsSavingInteraction] = useState(false);
+  const [drawerNotice, setDrawerNotice] = useState<string | null>(null);
+
+  const loadInteractions = useCallback(async () => {
+    if (!isClientAccountReady) return;
+    const response = await fetch("/api/interactions", { cache: "no-store" });
+    const data = await response.json();
+    if (!response.ok || !data.success) return;
+    setEvents(data.interactions.map((interaction: { id: string; type: string; direction: string; source: string; subject: string | null; body: string; occurredAt: string; contact: { id: string; firstName: string; lastName: string; company: string | null; email: string | null } | null }) => {
+      const type = interaction.type.toLowerCase();
+      const icon = interaction.type === "CALL" ? PhoneCall : interaction.type === "NOTE" ? Code2 : interaction.type === "EMAIL" ? Activity : interaction.type === "SMS" ? Radio : Layers;
+      const contactName = interaction.contact ? `${interaction.contact.firstName} ${interaction.contact.lastName}` : "Client activity";
+      return { id: interaction.id, time: new Date(interaction.occurredAt).toLocaleString(), timestamp: new Date(interaction.occurredAt).toLocaleTimeString(), title: interaction.subject || `${interaction.type.replace("_", " ")} logged`, description: interaction.body, source: interaction.source === "MANUAL" ? "Manual" : interaction.source, variant: "neutral", type, icon, iconColor: "text-primary-cyan", entity: contactName, entityId: interaction.contact?.id || activeClientAccount.id, entityEmail: interaction.contact?.email || undefined, entityCompany: interaction.contact?.company || undefined, syncStatus: "success", latencyMs: 0, payload: { direction: interaction.direction, source: interaction.source } } as TimelineEvent;
+    }));
+  }, [activeClientAccount.id, isClientAccountReady]);
+
+  useEffect(() => { void loadInteractions(); }, [loadInteractions]);
+
+  const openManualLog = async () => {
+    setInteractionForm(emptyInteractionForm());
+    setContactSearch("");
+    setInteractionError(null);
+    setIsLogModalOpen(true);
+    setIsLoadingContacts(true);
+
+    try {
+      const response = await fetch("/api/contacts", { cache: "no-store" });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        setContacts([]);
+        setInteractionError(
+          data?.error?.message ?? "Contacts could not be loaded for this client account."
+        );
+        return;
+      }
+
+      setContacts(data.contacts ?? []);
+    } catch {
+      setContacts([]);
+      setInteractionError("Contacts could not be loaded for this client account.");
+    } finally {
+      setIsLoadingContacts(false);
+    }
+  };
+
+  const handleManualLog = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setInteractionError(null);
+    setIsSavingInteraction(true);
+
+    try {
+      const response = await fetch("/api/interactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: interactionForm.type,
+          direction: interactionForm.direction,
+          subject: interactionForm.subject || undefined,
+          body: interactionForm.body,
+          contactId: interactionForm.contactId || undefined,
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        setInteractionError(
+          data?.error?.message ?? "The interaction could not be saved."
+        );
+        return;
+      }
+
+      await loadInteractions();
+      setIsLogModalOpen(false);
+    } catch {
+      setInteractionError("The interaction could not be saved. Try again.");
+    } finally {
+      setIsSavingInteraction(false);
+    }
+  };
 
   const handleRefreshStream = async () => {
     setIsRefreshing(true);
@@ -279,6 +398,19 @@ export default function TimelinePage() {
     return matchesSearch && matchesSource && matchesType && matchesStatus;
   });
 
+  const matchingContacts = contacts.filter((contact) => {
+    const query = contactSearch.trim().toLowerCase();
+    if (!query) return true;
+
+    return [contact.firstName, contact.lastName, contact.email, contact.company]
+      .filter((value): value is string => Boolean(value))
+      .some((value) => value.toLowerCase().includes(query));
+  });
+
+  const selectedContact = contacts.find(
+    (contact) => contact.id === interactionForm.contactId
+  );
+
   const totalEvents = events.length;
   const avgLatency = Math.round(
     events.reduce((acc, curr) => acc + curr.latencyMs, 0) / totalEvents
@@ -296,12 +428,11 @@ export default function TimelinePage() {
           <div className="flex items-center gap-2">
             <GitCommit className="w-5 h-5 text-primary-cyan" />
             <h1 className="text-2xl font-bold tracking-tight text-crm-text">
-              Aggregation Timeline
+              Interaction Timeline
             </h1>
           </div>
           <p className="text-xs text-crm-text-muted font-mono mt-1">
-            Real-time multi-CRM event stream, automated AI actions, and field
-            conflict logs.
+            Unified customer communication history for the active client account.
           </p>
         </div>
 
@@ -320,7 +451,11 @@ export default function TimelinePage() {
                 isLiveIngestion ? "animate-pulse text-emerald-400" : ""
               }`}
             />
-            {isLiveIngestion ? "Live Streaming: Active" : "Stream Paused"}
+            {isLiveIngestion ? "Interaction Feed: Active" : "Feed Paused"}
+          </button>
+
+          <button onClick={() => void openManualLog()} className="px-3 py-1.5 rounded-xl bg-primary-cyan/15 border border-primary-cyan/30 text-primary-cyan hover:bg-primary-cyan/25 transition-all cursor-pointer">
+            Log Interaction
           </button>
 
           <button
@@ -343,10 +478,10 @@ export default function TimelinePage() {
         <MultiCrmCard className="p-3.5 flex items-center justify-between">
           <div>
             <span className="text-[10px] font-mono text-crm-text-muted block uppercase">
-              Total Ingested
+              Total Interactions
             </span>
             <span className="text-lg font-bold font-mono text-crm-text">
-              {totalEvents} Events
+              {totalEvents} Records
             </span>
           </div>
           <Activity className="w-5 h-5 text-primary-cyan opacity-80" />
@@ -355,10 +490,10 @@ export default function TimelinePage() {
         <MultiCrmCard className="p-3.5 flex items-center justify-between">
           <div>
             <span className="text-[10px] font-mono text-crm-text-muted block uppercase">
-              Sync Success Rate
+              Calls Logged
             </span>
             <span className="text-lg font-bold font-mono text-emerald-400">
-              {successRate}%
+              {events.filter((event) => event.type === "call").length}
             </span>
           </div>
           <Zap className="w-5 h-5 text-emerald-400 opacity-80" />
@@ -367,10 +502,10 @@ export default function TimelinePage() {
         <MultiCrmCard className="p-3.5 flex items-center justify-between">
           <div>
             <span className="text-[10px] font-mono text-crm-text-muted block uppercase">
-              Avg Sync Latency
+              Messages Logged
             </span>
             <span className="text-lg font-bold font-mono text-secondary-pink">
-              {avgLatency} ms
+              {events.filter((event) => event.type === "sms" || event.type === "email").length}
             </span>
           </div>
           <Clock className="w-5 h-5 text-secondary-pink opacity-80" />
@@ -379,10 +514,10 @@ export default function TimelinePage() {
         <MultiCrmCard className="p-3.5 flex items-center justify-between">
           <div>
             <span className="text-[10px] font-mono text-crm-text-muted block uppercase">
-              Active Connectors
+              Notes Logged
             </span>
             <span className="text-lg font-bold font-mono text-crm-text">
-              6 Platforms
+              {events.filter((event) => event.type === "note").length}
             </span>
           </div>
           <Database className="w-5 h-5 text-primary-cyan opacity-80" />
@@ -393,8 +528,7 @@ export default function TimelinePage() {
       <MultiCrmCard className="p-4 space-y-3">
         <div className="flex items-center justify-between border-b border-crm-border-strong pb-2.5 font-mono text-xs">
           <span className="font-bold text-crm-text-muted flex items-center gap-2">
-            <Filter className="w-3.5 h-3.5 text-primary-cyan" /> Stream Controls
-            & Filtering
+            <Filter className="w-3.5 h-3.5 text-primary-cyan" /> Interaction Filters
           </span>
           <span className="text-[10px] text-slate-500">
             Showing {filteredEvents.length} of {events.length} events
@@ -598,7 +732,7 @@ export default function TimelinePage() {
 
       {/* SECONDARY VIEW: SLIDE-OVER EVENT DETAIL DRAWER */}
       {drawerEvent && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex justify-end">
+        <div className="dashboard-overlay bg-black/60 backdrop-blur-sm flex justify-end">
           <div className="w-full max-w-xl bg-crm-surface border-l border-primary-cyan/30 h-full p-6 space-y-6 overflow-y-auto font-sans shadow-2xl animate-in slide-in-from-right duration-200">
             {/* Drawer Header */}
             <div className="flex items-start justify-between border-b border-crm-border-strong pb-4">
@@ -812,28 +946,229 @@ export default function TimelinePage() {
             {/* Action Footer */}
             <div className="pt-4 border-t border-crm-border-strong flex items-center justify-between font-mono text-xs">
               <button
-                onClick={() => setDrawerEvent(null)}
+                onClick={() => {
+                  setDrawerEvent(null);
+                  setDrawerNotice(null);
+                }}
                 className="px-4 py-2 rounded-xl bg-crm-inner border border-crm-border-strong text-crm-text-muted hover:text-white cursor-pointer"
               >
                 Close Drawer
               </button>
 
-              <button
-                onClick={() =>
-                  alert(`Triggering manual re-sync for ${drawerEvent.id}`)
-                }
-                className="px-4 py-2 rounded-xl bg-primary-cyan/20 border border-primary-cyan/40 text-primary-cyan hover:bg-primary-cyan/30 flex items-center gap-1.5 transition-all cursor-pointer font-semibold"
-              >
-                <RefreshCw className="w-3.5 h-3.5" /> Re-trigger Event
-              </button>
+              <div className="flex items-center gap-3">
+                {drawerNotice && (
+                  <span className="text-[10px] text-crm-text-muted max-w-48 text-right">
+                    {drawerNotice}
+                  </span>
+                )}
+                <button
+                  onClick={() =>
+                    setDrawerNotice(
+                      "Event re-triggering belongs to Telemetry & Logs and is not available from the interaction timeline."
+                    )
+                  }
+                  className="px-4 py-2 rounded-xl bg-primary-cyan/20 border border-primary-cyan/40 text-primary-cyan hover:bg-primary-cyan/30 flex items-center gap-1.5 transition-all cursor-pointer font-semibold"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" /> Re-trigger Event
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
+      {isLogModalOpen && (
+        <div
+          className="dashboard-overlay bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="log-interaction-title"
+        >
+          <MultiCrmCard className="w-full max-w-2xl p-6 space-y-5 relative border border-primary-cyan/40 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-start justify-between border-b border-crm-border-strong pb-3">
+              <div>
+                <h2 id="log-interaction-title" className="text-lg font-bold text-crm-text flex items-center gap-2">
+                  <GitCommit className="w-5 h-5 text-primary-cyan" /> Log Interaction
+                </h2>
+                <p className="text-xs text-crm-text-muted font-mono mt-0.5">
+                  Add a manual customer interaction for the active client account.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsLogModalOpen(false)}
+                className="text-crm-text-muted hover:text-crm-text p-1 cursor-pointer"
+                aria-label="Close interaction form"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleManualLog} className="space-y-5 font-mono text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-crm-text-muted block mb-1">Interaction type *</label>
+                  <select
+                    value={interactionForm.type}
+                    onChange={(event) => {
+                      const type = event.target.value as InteractionType;
+                      setInteractionForm((current) => ({
+                        ...current,
+                        type,
+                        direction: type === "NOTE" ? "INTERNAL" : current.direction,
+                      }));
+                    }}
+                    className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2 text-crm-text focus:outline-none focus:border-primary-cyan"
+                  >
+                    <option value="CALL">Call</option>
+                    <option value="SMS">SMS</option>
+                    <option value="EMAIL">Email</option>
+                    <option value="NOTE">Note</option>
+                    <option value="CRM_ACTIVITY">CRM activity</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-crm-text-muted block mb-1">Direction *</label>
+                  <select
+                    value={interactionForm.direction}
+                    onChange={(event) =>
+                      setInteractionForm((current) => ({
+                        ...current,
+                        direction: event.target.value as InteractionDirection,
+                      }))
+                    }
+                    className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2 text-crm-text focus:outline-none focus:border-primary-cyan"
+                  >
+                    <option value="OUTBOUND">Outbound</option>
+                    <option value="INBOUND">Inbound</option>
+                    <option value="INTERNAL">Internal</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-crm-text-muted block mb-1">Subject</label>
+                <input
+                  type="text"
+                  value={interactionForm.subject}
+                  onChange={(event) =>
+                    setInteractionForm((current) => ({ ...current, subject: event.target.value }))
+                  }
+                  placeholder="Optional summary"
+                  className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2 text-crm-text placeholder-slate-500 focus:outline-none focus:border-primary-cyan"
+                />
+              </div>
+
+              <MultiCrmInnerPanel className="p-4 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <label className="text-crm-text-muted block">Associate contact</label>
+                    <p className="text-[10px] text-slate-500 mt-0.5">
+                      Optional. Search the active client's contacts by name, email, or company.
+                    </p>
+                  </div>
+                  {selectedContact && (
+                    <button
+                      type="button"
+                      onClick={() => setInteractionForm((current) => ({ ...current, contactId: "" }))}
+                      className="text-[10px] text-primary-cyan hover:underline cursor-pointer shrink-0"
+                    >
+                      Use account only
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-crm-text-muted absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="search"
+                    value={contactSearch}
+                    onChange={(event) => setContactSearch(event.target.value)}
+                    placeholder="Search contacts by name..."
+                    className="w-full bg-crm-surface border border-crm-border-strong rounded-xl pl-9 pr-3 py-2 text-crm-text placeholder-slate-500 focus:outline-none focus:border-primary-cyan"
+                  />
+                </div>
+                {selectedContact && (
+                  <div className="rounded-lg border border-primary-cyan/40 bg-primary-cyan/10 px-3 py-2 text-primary-cyan">
+                    Selected: {selectedContact.firstName} {selectedContact.lastName}
+                    {selectedContact.company ? ` · ${selectedContact.company}` : ""}
+                  </div>
+                )}
+                <div className="max-h-40 overflow-y-auto space-y-1 pr-1 scrollbar-thin">
+                  {isLoadingContacts ? (
+                    <p className="py-3 text-center text-crm-text-muted">Loading contacts…</p>
+                  ) : matchingContacts.length ? (
+                    matchingContacts.map((contact) => (
+                      <button
+                        key={contact.id}
+                        type="button"
+                        onClick={() => setInteractionForm((current) => ({ ...current, contactId: contact.id }))}
+                        className={`w-full text-left rounded-lg border px-3 py-2 transition-colors cursor-pointer ${
+                          interactionForm.contactId === contact.id
+                            ? "border-primary-cyan/50 bg-primary-cyan/10"
+                            : "border-crm-border-strong bg-crm-surface hover:border-primary-cyan/30"
+                        }`}
+                      >
+                        <span className="block text-crm-text font-semibold">
+                          {contact.firstName} {contact.lastName}
+                        </span>
+                        <span className="block mt-0.5 text-[10px] text-crm-text-muted">
+                          {[contact.email, contact.company].filter(Boolean).join(" · ") || "No email or company"}
+                        </span>
+                      </button>
+                    ))
+                  ) : (
+                    <p className="py-3 text-center text-crm-text-muted">
+                      No active-client contacts match this search.
+                    </p>
+                  )}
+                </div>
+              </MultiCrmInnerPanel>
+
+              <div>
+                <label className="text-crm-text-muted block mb-1">Interaction details *</label>
+                <textarea
+                  required
+                  rows={4}
+                  value={interactionForm.body}
+                  onChange={(event) =>
+                    setInteractionForm((current) => ({ ...current, body: event.target.value }))
+                  }
+                  placeholder="Record the outcome, context, or next step…"
+                  className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2 text-crm-text placeholder-slate-500 focus:outline-none focus:border-primary-cyan"
+                />
+              </div>
+
+              {interactionError && (
+                <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-300">
+                  {interactionError}
+                </p>
+              )}
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-crm-border-strong">
+                <button
+                  type="button"
+                  onClick={() => setIsLogModalOpen(false)}
+                  disabled={isSavingInteraction}
+                  className="px-4 py-2 rounded-xl bg-crm-inner text-crm-text-muted hover:text-crm-text disabled:opacity-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingInteraction || !interactionForm.body.trim()}
+                  className="px-5 py-2 rounded-xl bg-primary-cyan text-slate-950 font-semibold hover:opacity-90 disabled:opacity-50 cursor-pointer"
+                >
+                  {isSavingInteraction ? "Saving…" : "Save Interaction"}
+                </button>
+              </div>
+            </form>
+          </MultiCrmCard>
+        </div>
+      )}
+
       {/* RAW PAYLOAD INSPECTOR MODAL */}
       {selectedPayloadEvent && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="dashboard-overlay bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <MultiCrmCard className="w-full max-w-xl p-6 space-y-4 relative border border-primary-cyan/40 shadow-2xl">
             <div className="flex items-center justify-between border-b border-crm-border-strong pb-3 font-mono">
               <div className="flex items-center gap-2">

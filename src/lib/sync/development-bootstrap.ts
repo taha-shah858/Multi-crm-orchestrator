@@ -92,5 +92,27 @@ export async function ensureDevelopmentTenant(context: RequestContext) {
         status: "CONNECTED",
       },
     });
+
+    await prisma.communicationIdentity.upsert({
+      where: {
+        clientAccountId_phoneNumber: {
+          clientAccountId: client.id,
+          phoneNumber: client.communicationIdentity,
+        },
+      },
+      update: {
+        label: `${client.brandName} primary line`,
+        isDefault: true,
+        isEnabled: true,
+      },
+      create: {
+        organizationId: context.user.organizationId,
+        clientAccountId: client.id,
+        provider: "MOCK",
+        label: `${client.brandName} primary line`,
+        phoneNumber: client.communicationIdentity,
+        isDefault: true,
+      },
+    });
   }
 }

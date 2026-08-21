@@ -7,11 +7,14 @@ export interface AuditEvent {
     | "CONTACT_IMPORT_COMPLETED"
     | "CONTACT_SYNC_STARTED"
     | "CONTACT_SYNC_COMPLETED"
-    | "CONTACT_SYNC_FAILED";
-  entityType: "CONTACT" | "SYNC_RUN";
+    | "CONTACT_SYNC_FAILED"
+    | "INTERACTION_CREATED"
+    | "COMMUNICATION_DISPATCHED"
+    | "COMMUNICATION_MANUALLY_LOGGED";
+  entityType: "CONTACT" | "SYNC_RUN" | "INTERACTION" | "COMMUNICATION_IDENTITY";
   entityId?: string;
   requestId: string;
-  source: "PLATFORM" | "HUBSPOT" | "MOCK";
+  source: "PLATFORM" | "HUBSPOT" | "MOCK" | "TWILIO";
   metadata?: Record<string, boolean | number | string | null>;
 }
 
