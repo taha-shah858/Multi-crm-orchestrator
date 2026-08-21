@@ -23,17 +23,19 @@
 }
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
-  /* Default Obsidian Robotic Factory Baseline */
-  --crm-base: #0b0f19;
-  --crm-surface: #121827;
-  --crm-card: #161e2e;
-  --crm-inner: #0f1420;
+  /* Match the provider's light default during SSR and hydration. */
+  --crm-base: #ffffff;
+  --crm-surface: #f8fafc;
+  --crm-card: #ffffff;
+  --crm-inner: #f1f5f9;
 
-  --primary-cyan: #00f2ff;
-  --secondary-pink: #ff00e5;
+  --primary-cyan: #0ea5e9;
+  --secondary-pink: #ec4899;
   --tertiary-purple: #7c3aed;
+  --crm-text: #0f172a;
+  --crm-text-muted: #64748b;
 }
 
 /* ==========================================================================
@@ -83,7 +85,7 @@
 body {
   margin: 0;
   background-color: var(--color-crm-base);
-  color: #f8fafc;
+  color: var(--color-crm-text);
   font-family: var(--font-sans);
   overflow-x: hidden;
   min-height: 100vh;

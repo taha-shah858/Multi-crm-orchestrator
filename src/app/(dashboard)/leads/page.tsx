@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Users,
   Search,
@@ -39,7 +39,6 @@ import {
   MultiCrmInnerPanel,
   MultiCrmTag,
 } from "@/components/ui/MultiCrmCard";
-import type { NormalizedContact } from "@/lib/models/contact";
 import { useClientAccount } from "@/context/ClientAccountContext";
 
 // Comprehensive Lead Data Structure
@@ -68,87 +67,22 @@ interface Lead {
   variant: "cyan" | "purple" | "magenta" | "neutral";
 }
 
-const initialLeads: Lead[] = [
-  {
-    id: "LD-9021",
-    name: "Mr. Christopher Maclead",
-    title: "VP Accounting",
-    company: "Rangoni Of Florence",
-    email: "christopher-maclead@noemail.invalid",
-    phone: "+1 (555) 234-8901",
-    mobile: "+1 (555) 234-8902",
-    leadSource: "Cold Call",
-    crmSource: "Salesforce",
-    pulledFrom: "Salesforce Enterprise Cluster EU-1",
-    pulledAt: "2026-08-11 09:14 AM",
-    syncStatus: "Synced",
-    leadOwner: "Muhammad Kashif",
-    status: "Lost Lead",
-    rating: "Hot",
-    score: 92,
-    industry: "Service Provider",
-    annualRevenue: "PKR 8,50,000.00",
-    website: "http://www.rangoniofflorence.com",
-    address: "Suite 400, Florence Ave, Italy",
-    description:
-      "Evaluated enterprise multi-tier accounting synchronization module.",
-    variant: "cyan",
-  },
-  {
-    id: "LD-9022",
-    name: "Carissa Kidman",
-    title: "Procurement Lead",
-    company: "Oh My Goodknits Inc",
-    email: "carissa-kidman@noemail.invalid",
-    phone: "+1 (555) 876-5432",
-    mobile: "+1 (555) 876-5433",
-    leadSource: "Advertisement",
-    crmSource: "HubSpot",
-    pulledFrom: "HubSpot Inbound Webhook Node #4",
-    pulledAt: "2026-08-11 08:45 AM",
-    syncStatus: "Synced",
-    leadOwner: "Muhammad Kashif",
-    status: "Contacted",
-    rating: "Warm",
-    score: 88,
-    industry: "Textile & Apparel",
-    annualRevenue: "PKR 1,200,000.00",
-    website: "http://www.goodknits.com",
-    address: "742 Evergreen Terrace, Sector B",
-    description:
-      "Inbound campaign respondent interested in supply chain CRM routing.",
-    variant: "neutral",
-  },
-  {
-    id: "LD-9023",
-    name: "James Merced",
-    title: "Operations Director",
-    company: "Kwik Kopy Printing",
-    email: "james-merced@noemail.invalid",
-    phone: "+1 (555) 345-6789",
-    mobile: "+1 (555) 345-6790",
-    leadSource: "Web Download",
-    crmSource: "Zoho",
-    pulledFrom: "Zoho CRM Sync Pipeline",
-    pulledAt: "2026-08-10 11:20 PM",
-    syncStatus: "Conflict",
-    leadOwner: "Muhammad Kashif",
-    status: "Pre-Qualified",
-    rating: "Cold",
-    score: 74,
-    industry: "Printing & Media",
-    annualRevenue: "PKR 3,400,000.00",
-    website: "http://www.kwikkopy.com",
-    address: "Industrial Area Block 3, Lahore",
-    description:
-      "Downloaded API technical specification paper for CRM integration.",
-    variant: "purple",
-  },
-];
+interface PersistedContact {
+  id: string;
+  externalId: string;
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  phone: string | null;
+  company: string | null;
+  sourceCrm: Lead["crmSource"];
+  createdAt: string;
+  updatedAt: string;
+}
 
 export default function LeadsPage() {
-  const { activeClientAccount } = useClientAccount();
-  const [leads, setLeads] = useState<Lead[]>(initialLeads);
+  const { activeClientAccount, isClientAccountReady } = useClientAccount();
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCrm, setSelectedCrm] = useState("All");
@@ -160,30 +94,27 @@ export default function LeadsPage() {
 
   // CRM Import POC State
   const [isImporting, setIsImporting] = useState(false);
+  const [isLoadingContacts, setIsLoadingContacts] = useState(true);
+  const contactRequestVersion = useRef(0);
   const [importFeedback, setImportFeedback] = useState<{
     type: "success" | "error" | null;
     message: string;
   }>({ type: null, message: "" });
 
-  /**
-   * Temporary POC Frontend Adapter:
-   * Maps backend NormalizedContact to the existing Lead interface used by this UI.
-   * NOTE: This is temporary POC logic to avoid refactoring the existing frontend.
-   */
-  const mapNormalizedContactToLead = (contact: NormalizedContact): Lead => {
-    const fullName = `${contact.first_name} ${contact.last_name}`.trim() || "Unnamed Contact";
+  const mapPersistedContactToLead = useCallback((contact: PersistedContact): Lead => {
+    const fullName = `${contact.firstName} ${contact.lastName}`.trim() || "Unnamed Contact";
     return {
-      id: `${contact.source_crm}-${contact.id}`,
+      id: contact.id,
       name: fullName,
       title: "Contact",
       company: contact.company || "Independent",
-      email: contact.email || "no-email@hubspot.com",
+      email: contact.email || "no-email@crm.invalid",
       phone: contact.phone || "N/A",
       mobile: "N/A",
-      leadSource: `${contact.source_crm} Sync Import`,
-      crmSource: contact.source_crm,
-      pulledFrom: `${contact.source_crm} client-account sync`,
-      pulledAt: new Date().toLocaleString(),
+      leadSource: `${contact.sourceCrm} Sync Import`,
+      crmSource: contact.sourceCrm,
+      pulledFrom: `${contact.sourceCrm} client-account sync`,
+      pulledAt: new Date(contact.updatedAt).toLocaleString(),
       syncStatus: "Synced",
       leadOwner: `${activeClientAccount.name} Integration`,
       status: "Active Lead",
@@ -193,10 +124,50 @@ export default function LeadsPage() {
       annualRevenue: "N/A",
       website: "",
       address: `Imported for ${activeClientAccount.name}`,
-      description: `Imported via the ${activeClientAccount.name} client-account sync from ${contact.source_crm} Contact ID #${contact.id}`,
+      description: `Imported via the ${activeClientAccount.name} client-account sync from ${contact.sourceCrm} Contact ID #${contact.externalId}`,
       variant: "neutral",
     };
-  };
+  }, [activeClientAccount.name]);
+
+  const loadPersistedContacts = useCallback(async (): Promise<boolean> => {
+    if (!isClientAccountReady) return false;
+
+    const requestVersion = ++contactRequestVersion.current;
+    setIsLoadingContacts(true);
+    setSelectedLead(null);
+
+    try {
+      const response = await fetch("/api/contacts", { cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        const errorMessage =
+          typeof data.error === "string" ? data.error : data.error?.message;
+        throw new Error(errorMessage || "Unable to load contacts for the active client account.");
+      }
+
+      if (requestVersion !== contactRequestVersion.current) return false;
+
+      setLeads((data.contacts as PersistedContact[]).map(mapPersistedContactToLead));
+      return true;
+    } catch (error) {
+      if (requestVersion !== contactRequestVersion.current) return false;
+
+      setLeads([]);
+      setImportFeedback({
+        type: "error",
+        message: error instanceof Error ? error.message : "Unable to load contacts for the active client account.",
+      });
+      return false;
+    } finally {
+      if (requestVersion === contactRequestVersion.current) {
+        setIsLoadingContacts(false);
+      }
+    }
+  }, [isClientAccountReady, mapPersistedContactToLead]);
+
+  useEffect(() => {
+    void loadPersistedContacts();
+  }, [activeClientAccount.id, loadPersistedContacts]);
 
   /**
    * Trigger backend import from HubSpot CRM and merge newly fetched contacts
@@ -216,38 +187,16 @@ export default function LeadsPage() {
         throw new Error(errorMessage || "Failed to sync contacts for the active client account.");
       }
 
-      const importedContacts: NormalizedContact[] = data.contacts || [];
-
-      if (importedContacts.length === 0) {
-        setImportFeedback({
-          type: "success",
-          message: `${activeClientAccount.name} sync completed: No contacts found in its connected CRM.`,
-        });
-        return;
+      const contactsLoaded = await loadPersistedContacts();
+      if (!contactsLoaded) {
+        throw new Error("Sync completed, but the persisted contacts could not be reloaded.");
       }
 
-      // Convert imported contacts to the UI's Lead format
-      const convertedLeads = importedContacts.map(mapNormalizedContactToLead);
-
-      // Prevent obvious duplicates by filtering out any contact IDs already in state
-      setLeads((prevLeads) => {
-        const existingIds = new Set(prevLeads.map((l) => l.id));
-        const newUniqueLeads = convertedLeads.filter((l) => !existingIds.has(l.id));
-
-        if (newUniqueLeads.length === 0) {
-          setImportFeedback({
-            type: "success",
-            message: `All ${convertedLeads.length} synced contact(s) are already present in the directory.`,
-          });
-          return prevLeads;
-        }
-
-        setImportFeedback({
-          type: "success",
-          message: `Successfully synced ${newUniqueLeads.length} new contact(s) for ${activeClientAccount.name}.`,
-        });
-
-        return [...newUniqueLeads, ...prevLeads];
+      const created = data.sync?.recordsCreated ?? 0;
+      const updated = data.sync?.recordsUpdated ?? 0;
+      setImportFeedback({
+        type: "success",
+        message: `${activeClientAccount.name} sync complete: ${created} created, ${updated} updated.`,
       });
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : "Unable to complete the client-account sync.";
@@ -642,7 +591,9 @@ export default function LeadsPage() {
 
             <div className="p-4 border-t border-crm-border-strong bg-crm-inner/30 flex items-center justify-between text-xs font-mono text-crm-text-muted">
               <span>
-                Showing {filteredLeads.length} of {leads.length} records
+                {isLoadingContacts
+                  ? `Loading ${activeClientAccount.name} contacts...`
+                  : `Showing ${filteredLeads.length} of ${leads.length} records`}
               </span>
               <span className="text-[11px] text-slate-500">
                 Auto-synchronized with native CRM engines

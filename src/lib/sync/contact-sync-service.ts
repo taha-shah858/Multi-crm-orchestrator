@@ -20,6 +20,42 @@ export interface ContactSyncSummary {
   }>;
 }
 
+export interface PersistedContactSummary {
+  id: string;
+  externalId: string;
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  phone: string | null;
+  company: string | null;
+  sourceCrm: "HubSpot" | "Mock CRM" | "Salesforce" | "Zoho" | "Pipedrive";
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+function auditSourceForProvider(provider: string): "PLATFORM" | "HUBSPOT" | "MOCK" {
+  if (provider === "HUBSPOT") return "HUBSPOT";
+  if (provider === "MOCK") return "MOCK";
+  return "PLATFORM";
+}
+
+function sourceCrmForProvider(
+  provider: string,
+): PersistedContactSummary["sourceCrm"] {
+  switch (provider) {
+    case "HUBSPOT":
+      return "HubSpot";
+    case "MOCK":
+      return "Mock CRM";
+    case "ZOHO":
+      return "Zoho";
+    case "PIPEDRIVE":
+      return "Pipedrive";
+    default:
+      return "Salesforce";
+  }
+}
+
 async function assertClientAccess(context: RequestContext) {
   await ensureDevelopmentTenant(context);
 
@@ -39,6 +75,15 @@ async function assertClientAccess(context: RequestContext) {
       "You do not have access to the selected client account.",
     );
   }
+}
+
+/**
+ * Ensures the selected client account is ready for any tenant-scoped work.
+ * The route uses this before its first audit entry so a fresh development
+ * database is bootstrapped before foreign-key constrained writes occur.
+ */
+export async function prepareActiveClientSync(context: RequestContext) {
+  await assertClientAccess(context);
 }
 
 async function persistContacts(
@@ -105,7 +150,7 @@ export async function syncActiveClientContacts(
   context: RequestContext,
   requestId: string,
 ): Promise<ContactSyncSummary> {
-  await assertClientAccess(context);
+  await prepareActiveClientSync(context);
 
   const connections = await prisma.crmConnection.findMany({
     where: {
@@ -176,7 +221,7 @@ export async function syncActiveClientContacts(
         entityType: "SYNC_RUN",
         entityId: syncRun.id,
         requestId,
-        source: connection.provider === "HUBSPOT" ? "HUBSPOT" : "MOCK",
+        source: auditSourceForProvider(connection.provider),
         metadata: {
           provider: connection.provider,
           recordsRead: contacts.length,
@@ -201,26 +246,31 @@ export async function syncActiveClientContacts(
         entityType: "SYNC_RUN",
         entityId: syncRun.id,
         requestId,
-        source: connection.provider === "HUBSPOT" ? "HUBSPOT" : "MOCK",
+        source: auditSourceForProvider(connection.provider),
         metadata: { provider: connection.provider },
       });
 
       summary.recordsFailed += 1;
+      const safeError = error instanceof AppError
+        ? error.safeMessage
+        : "The CRM sync failed. Review sync history and retry manually.";
+
       summary.runs.push({
         id: syncRun.id,
         provider: connection.provider,
         status: "FAILED",
-        error: "The CRM sync failed. Review sync history and retry manually.",
+        error: safeError,
       });
     }
   }
 
   if (summary.runs.every((run) => run.status === "FAILED")) {
+    const firstFailure = summary.runs.find((run) => run.error)?.error;
     throw new AppError(
       "SYNC_FAILED",
       502,
       "All CRM sync runs failed.",
-      "The sync could not be completed. Review sync history and retry manually.",
+      firstFailure ?? "The sync could not be completed. Review sync history and retry manually.",
     );
   }
 
@@ -228,7 +278,7 @@ export async function syncActiveClientContacts(
 }
 
 export async function getActiveClientSyncHistory(context: RequestContext) {
-  await assertClientAccess(context);
+  await prepareActiveClientSync(context);
 
   return prisma.syncRun.findMany({
     where: {
@@ -250,5 +300,45 @@ export async function getActiveClientSyncHistory(context: RequestContext) {
       startedAt: true,
       completedAt: true,
     },
+  });
+}
+
+/** Returns canonical contacts persisted for the currently selected client only. */
+export async function getActiveClientContacts(
+  context: RequestContext,
+): Promise<PersistedContactSummary[]> {
+  await prepareActiveClientSync(context);
+
+  const contacts = await prisma.contact.findMany({
+    where: {
+      organizationId: context.user.organizationId,
+      clientAccountId: context.activeClientAccountId,
+    },
+    include: {
+      externalRecords: {
+        where: { clientAccountId: context.activeClientAccountId },
+        include: { connection: { select: { provider: true } } },
+        orderBy: { updatedAt: "desc" },
+      },
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  return contacts.flatMap((contact) => {
+    const externalRecord = contact.externalRecords[0];
+    if (!externalRecord) return [];
+
+    return [{
+      id: contact.id,
+      externalId: externalRecord.externalId,
+      firstName: contact.firstName,
+      lastName: contact.lastName,
+      email: contact.email,
+      phone: contact.phone,
+      company: contact.company,
+      sourceCrm: sourceCrmForProvider(externalRecord.connection.provider),
+      createdAt: contact.createdAt,
+      updatedAt: contact.updatedAt,
+    }];
   });
 }

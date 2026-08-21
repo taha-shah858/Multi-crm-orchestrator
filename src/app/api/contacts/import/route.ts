@@ -2,7 +2,10 @@ import type { NextRequest } from "next/server";
 import { requireRequestContext } from "@/lib/auth/request-context";
 import { recordAuditEvent } from "@/lib/audit/audit-log";
 import { withApiErrorHandling, success } from "@/lib/http/api-response";
-import { syncActiveClientContacts } from "@/lib/sync/contact-sync-service";
+import {
+  prepareActiveClientSync,
+  syncActiveClientContacts,
+} from "@/lib/sync/contact-sync-service";
 
 /**
  * GET /api/contacts/import
@@ -14,6 +17,8 @@ export const dynamic = "force-dynamic";
 async function handleManualSync(request: NextRequest) {
   return withApiErrorHandling(request, async (requestId) => {
     const context = requireRequestContext(request);
+    await prepareActiveClientSync(context);
+
     await recordAuditEvent(context, {
       action: "CONTACT_IMPORT_REQUESTED",
       entityType: "CONTACT",

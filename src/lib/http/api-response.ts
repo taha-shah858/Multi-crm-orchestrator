@@ -29,7 +29,14 @@ export async function withApiErrorHandling(
       );
     }
 
-    console.error(JSON.stringify({ event: "unhandled_api_error", requestId }));
+    console.error(
+      JSON.stringify({
+        event: "unhandled_api_error",
+        requestId,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      }),
+    );
     return Response.json(
       {
         success: false,

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { ACTIVE_CLIENT_ACCOUNT_COOKIE } from "@/lib/auth/request-context";
 import type { ClientAccountSummary } from "@/lib/models/canonical";
 
@@ -25,26 +25,41 @@ interface ClientAccountContextValue {
   clientAccounts: ClientAccountSummary[];
   activeClientAccount: ClientAccountSummary;
   selectClientAccount: (clientAccountId: string) => void;
+  isClientAccountReady: boolean;
 }
 
 const ClientAccountContext = createContext<ClientAccountContextValue | undefined>(undefined);
+
+function persistActiveClientAccount(clientAccountId: string) {
+  localStorage.setItem(ACTIVE_CLIENT_ACCOUNT_COOKIE, clientAccountId);
+  document.cookie = `${ACTIVE_CLIENT_ACCOUNT_COOKIE}=${encodeURIComponent(clientAccountId)}; path=/; max-age=86400; samesite=lax`;
+}
 
 export function ClientAccountProvider({ children }: { children: React.ReactNode }) {
   const [activeClientAccountId, setActiveClientAccountId] = useState(
     demoClientAccounts[0].id,
   );
+  const [isClientAccountReady, setIsClientAccountReady] = useState(false);
 
   useEffect(() => {
     const savedClientAccountId = localStorage.getItem(ACTIVE_CLIENT_ACCOUNT_COOKIE);
-    if (savedClientAccountId && demoClientAccounts.some(({ id }) => id === savedClientAccountId)) {
-      setActiveClientAccountId(savedClientAccountId);
-    }
+    const initialClientAccountId =
+      savedClientAccountId && demoClientAccounts.some(({ id }) => id === savedClientAccountId)
+        ? savedClientAccountId
+        : demoClientAccounts[0].id;
+
+    persistActiveClientAccount(initialClientAccountId);
+    setActiveClientAccountId(initialClientAccountId);
+    setIsClientAccountReady(true);
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem(ACTIVE_CLIENT_ACCOUNT_COOKIE, activeClientAccountId);
-    document.cookie = `${ACTIVE_CLIENT_ACCOUNT_COOKIE}=${encodeURIComponent(activeClientAccountId)}; path=/; max-age=86400; samesite=lax`;
-  }, [activeClientAccountId]);
+  const selectClientAccount = useCallback((clientAccountId: string) => {
+    if (!demoClientAccounts.some(({ id }) => id === clientAccountId)) return;
+
+    // Persist synchronously so client-scoped API reads use the newly selected account.
+    persistActiveClientAccount(clientAccountId);
+    setActiveClientAccountId(clientAccountId);
+  }, []);
 
   const value = useMemo(() => {
     const activeClientAccount =
@@ -53,9 +68,10 @@ export function ClientAccountProvider({ children }: { children: React.ReactNode 
     return {
       clientAccounts: demoClientAccounts,
       activeClientAccount,
-      selectClientAccount: setActiveClientAccountId,
+      selectClientAccount,
+      isClientAccountReady,
     };
-  }, [activeClientAccountId]);
+  }, [activeClientAccountId, isClientAccountReady, selectClientAccount]);
 
   return <ClientAccountContext.Provider value={value}>{children}</ClientAccountContext.Provider>;
 }

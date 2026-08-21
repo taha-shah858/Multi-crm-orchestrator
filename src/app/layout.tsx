@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ParticleWaveBackground from "@/components/ParticleWaveBackground";
-import ClientLayoutWrapper from "@/components/ClientLayoutWrapper";
 import AdvancedWidget from "@/components/AdvancedWidget"; // Import globally
 import { ClientAccountProvider } from "@/context/ClientAccountContext";
 import { SpatialProvider } from "@/context/SpatialContext";
@@ -29,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`dark ${geistSans.variable} ${geistMono.variable}`}>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body className="antialiased min-h-[100dvh] bg-crm-base text-crm-text relative overflow-x-hidden selection:bg-primary-cyan selection:text-slate-950 font-sans">
         <ThemeProvider>
           <ClientAccountProvider>
@@ -40,9 +39,9 @@ export default function RootLayout({
             {/* Deep Sea Undulating Particle Wave Mesh Background */}
             <ParticleWaveBackground />
 
-            {/* Client Wrapper handles Sidebar/Header vs Auth routes globally */}
+            {/* Route groups provide their own dashboard or auth shell. */}
             <div className="relative z-10 flex flex-col min-h-screen bg-transparent">
-              <ClientLayoutWrapper>{children}</ClientLayoutWrapper>
+              {children}
             </div>
 
             {/* Global Draggable Advanced Orchestrator Hub Orb */}
