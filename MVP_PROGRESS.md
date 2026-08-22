@@ -117,3 +117,26 @@
 - Twilio requires `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and, for outbound calls, `TWILIO_VOICE_URL`; these are read only in the server-side communication service and are never returned to the frontend.
 - Without a configured Twilio identity, the client-scoped MOCK identity still creates a persisted communication interaction for local verification. Agents can always use the explicit manual dial/SMS fallback when automated dispatch is unavailable.
 - External delivery identifiers and selected identity metadata are retained on the canonical Interaction, allowing the Phase 3 unified timeline to continue serving as the single communication history.
+
+## Phase 5 - Status
+
+### Completed
+- Inspected the completed client context, persisted contacts/interactions, and existing Copilot presentation before replacing its out-of-scope prototype behavior with the Phase 5 analysis workflow.
+- Added canonical, tenant- and client-account-scoped `LeadAnalysis` persistence linked optionally to a contact and/or existing interaction.
+- Added `GET`/`POST /api/lead-analyses` and `PATCH /api/lead-analyses/:id`. Routes enforce active-client access, persist analyses, and audit both creation and manual correction.
+- Added a server-side, deterministic and interpretable rules-engine analysis baseline that extracts budget, timeline, requirements, intent signals, objections, lead score, temperature, and deal probability from transcripts.
+- Replaced the Copilot prototype with an active-client workspace for pasted transcript intake or existing-interaction intake, generated assessment review, editable results/score, and saved analysis history.
+- Created and applied Prisma migration `20260822101409_phase5_ai_intelligence` and regenerated Prisma Client.
+- Verified route-level transcript analysis, field extraction, manual score/assessment correction, audit creation, and Atlas/Northstar isolation.
+- Passed `tsc --noEmit`, the Next.js production build, Prisma migration status, and whitespace validation.
+
+### In Progress
+- None. Phase 5 is complete and awaiting review.
+
+### Pending
+- Phase 6 and later MVP modules only.
+
+### Notes / Decisions
+- The implemented analysis baseline is an explicit rules engine rather than a claimed external LLM. It is deterministic, server-side, and designed to be replaced or supplemented by a provider adapter later without changing the Copilot API or UI contract.
+- Every generated field, score, temperature, probability, and summary remains editable. Saving a correction sets `isManualOverride` and creates a persisted audit record.
+- Phase 6 Sales Script Architect, including script generation and messaging templates, was intentionally not started.
