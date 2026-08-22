@@ -166,4 +166,31 @@
 - Script generation is a deterministic, server-side context/template engine so the output remains explainable and provider-independent. It can be replaced or augmented by an external model provider later without changing the API or editor contract.
 - Generated scripts are never sent automatically. Agents can edit every field, write a fully manual script, and save corrections; edits are marked as manual overrides and audited.
 - The Script Architect keeps its existing UI; the correction is limited to client-change request lifecycle and stale-response protection.
-- Phase 7 workflow and calendar scheduling was intentionally not started.
+- Phase 7 workflow and calendar scheduling was intentionally deferred until its dedicated phase.
+
+## Phase 7 - Status
+
+### Completed
+- Inspected the placeholder Calendar Planner, the active-client request context, canonical interactions, and the Phase 6 dependency graph before implementing workflow and scheduling.
+- Added canonical `Appointment` persistence scoped to organization and active client account, optionally linked to a contact and the interaction that initiated the scheduling workflow.
+- Added appointment status, source, provider, external-mapping fields, tenant indexes, and audit actions through migration `20260822115547_phase7_workflow_scheduling`; regenerated Prisma Client.
+- Added `GET /api/calendar/events`, `POST /api/calendar/schedule`, and `PATCH /api/calendar/events/:id`. All enforce active-client access, create/edit/cancel persisted appointments, and return safe errors.
+- Added deterministic, server-side scheduling-intent detection over canonical interactions. It proposes a scheduling candidate only; an agent must explicitly select date/time and create the appointment.
+- Added a calendar provider adapter boundary with a functioning local `MOCK` adapter and a no-dependency `MANUAL` calendar fallback. Google and Outlook have explicit server-side adapter slots and safely direct the agent to the manual fallback until configured.
+- Replaced the Calendar Planner's sample-only state with the persisted active-client schedule, intent candidates, contact-name search, agent-confirmed scheduling modal, meeting edits, confirmation status, and cancellation controls while preserving the existing dashboard design system.
+- Added client-change request cancellation and stale-response protection so an outgoing client calendar response cannot render over the newly selected client.
+- Verified a scheduling-language interaction produced an Atlas intent candidate; a MOCK appointment was created with `INTENT_DETECTED`, confirmed, cancelled, and audited. A separate manual appointment persisted across a fresh process, and neither appointment was visible or mutable through Northstar.
+- Passed `tsc --noEmit`, Prisma migration status, production build, and whitespace validation.
+- Phase 7 frontend refinement: restored the Calendar Planner's visual scheduling experience with persisted appointments rendered in interactive Day, Week, and Month grids. Clicking a slot starts the existing manual schedule flow; clicking an appointment opens the existing edit/confirm/cancel flow.
+- Scheduling signals are now a compact secondary panel beside the primary calendar canvas, and the explanatory implementation banner was removed from the user-facing page. TypeScript and the production build pass.
+
+### In Progress
+- None. Phase 7 is complete and awaiting review.
+
+### Pending
+- Phase 8 and later MVP modules only.
+
+### Notes / Decisions
+- Scheduling intent is deliberately advisory. The manual date/time modal is the required failsafe and remains available even when intent detection finds nothing or an external provider is unavailable.
+- The MVP's local calendar integration uses a persisted MOCK adapter; provider credentials and live Google/Outlook integrations are intentionally deferred until their server-side adapters are configured.
+- Phase 8 commissions and sales operations was not started.
