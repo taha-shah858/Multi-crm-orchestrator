@@ -194,3 +194,28 @@
 - Scheduling intent is deliberately advisory. The manual date/time modal is the required failsafe and remains available even when intent detection finds nothing or an external provider is unavailable.
 - The MVP's local calendar integration uses a persisted MOCK adapter; provider credentials and live Google/Outlook integrations are intentionally deferred until their server-side adapters are configured.
 - Phase 8 commissions and sales operations was not started.
+
+## Phase 8 - Status
+
+### Completed
+- Inspected the Phase 7 calendar, active-client boundary, existing telemetry presentation, and the MVP financial/operations requirements before implementing Sales Operations.
+- Added canonical, tenant- and active-client-scoped `Deal`, `CommissionRecord`, `CommissionLedgerEntry`, and `TimeLog` persistence with source deal, contact, user, status, currency, manual-override, and reconciliation relationships.
+- Added and applied Prisma migration `20260822122711_phase8_sales_operations`; regenerated Prisma Client.
+- Added `GET`/`POST /api/commissions`, `PATCH /api/commissions/:id`, `GET`/`POST /api/time-logs`, and `PATCH /api/time-logs/:id`. All enforce active-client access, keep accounting rules server-side, and return safe errors.
+- Added manual off-platform closed-deal entry, expected/received commission tracking, payment and expected-payout adjustment ledger entries, derived payment status, and persisted audit events.
+- Added manually created and corrected account time logs with contact validation and audit events.
+- Added `/operations` and a Sales Operations sidebar entry. The workspace uses the established glass/card system with a polished reconciliation hierarchy, payout metrics, traceable ledger rows, compact time ledger, contact-name selection, composed empty states, and CSV reconciliation export.
+- Verified an Atlas off-platform deal, partial payment, expected-payout correction, and corrected 90-minute time log. The persisted summary showed expected `100000`, received `60000`, and pending `40000` cents; a fresh process read both records successfully. Northstar could neither read nor update the Atlas commission.
+- Passed `tsc --noEmit`, Prisma migration status, production build, and whitespace validation.
+
+### In Progress
+- None. Phase 8 is complete and awaiting review.
+
+### Pending
+- Phase 9 and later MVP modules only.
+
+### Notes / Decisions
+- Financial amounts are stored as integer cents to avoid floating-point reconciliation errors; formatted currency is presentation-only.
+- Initial Phase 8 records are explicitly manual/off-platform. Payment and adjustment ledger entries are the manual failsafe and remain auditable; CRM-originated deal ingestion can be added later without changing the canonical data model.
+- Time logs are currently manually entered/corrected because the existing integrations do not supply a reliable duration signal. The model leaves room for measured automated sources later.
+- Phase 9 document and proposal generation was not started.

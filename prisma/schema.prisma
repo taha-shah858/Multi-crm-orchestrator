@@ -60,6 +60,12 @@ enum AuditAction {
   APPOINTMENT_CREATED
   APPOINTMENT_UPDATED
   APPOINTMENT_CANCELLED
+  DEAL_CREATED
+  COMMISSION_CREATED
+  COMMISSION_UPDATED
+  COMMISSION_LEDGER_ADJUSTED
+  TIME_LOG_CREATED
+  TIME_LOG_UPDATED
 }
 
 enum ScriptChannel {
@@ -127,6 +133,32 @@ enum AppointmentSource {
   INTENT_DETECTED
 }
 
+enum DealStatus {
+  OPEN
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+enum CommissionStatus {
+  PENDING
+  PARTIALLY_PAID
+  PAID
+}
+
+enum CommissionSource {
+  MANUAL
+}
+
+enum LedgerEntryType {
+  EXPECTED
+  PAYMENT
+  ADJUSTMENT
+}
+
+enum TimeLogSource {
+  MANUAL
+}
+
 enum SyncRunStatus {
   RUNNING
   COMPLETED
@@ -152,27 +184,35 @@ model Organization {
   leadAnalyses            LeadAnalysis[]
   salesScripts            SalesScript[]
   appointments            Appointment[]
+  deals                   Deal[]
+  commissionRecords       CommissionRecord[]
+  commissionLedgerEntries CommissionLedgerEntry[]
+  timeLogs                TimeLog[]
 }
 
 model User {
-  id             String             @id @default(cuid())
-  organizationId String
-  email          String             @unique
-  name           String
-  passwordHash   String?
-  role           UserRole           @default(AGENT)
-  status         UserStatus         @default(INVITED)
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  clientAccess   ClientAssignment[]
-  assignedLeads  Contact[]          @relation("AssignedContacts")
-  audits         AuditLog[]
-  syncRuns       SyncRun[]
-  interactions   Interaction[]
-  leadAnalyses   LeadAnalysis[]
-  salesScripts   SalesScript[]
-  appointments   Appointment[]
+  id                      String                  @id @default(cuid())
+  organizationId          String
+  email                   String                  @unique
+  name                    String
+  passwordHash            String?
+  role                    UserRole                @default(AGENT)
+  status                  UserStatus              @default(INVITED)
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+  organization            Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clientAccess            ClientAssignment[]
+  assignedLeads           Contact[]               @relation("AssignedContacts")
+  audits                  AuditLog[]
+  syncRuns                SyncRun[]
+  interactions            Interaction[]
+  leadAnalyses            LeadAnalysis[]
+  salesScripts            SalesScript[]
+  appointments            Appointment[]
+  deals                   Deal[]
+  commissionRecords       CommissionRecord[]
+  commissionLedgerEntries CommissionLedgerEntry[]
+  timeLogs                TimeLog[]
 
   @@index([organizationId])
 }
@@ -197,6 +237,10 @@ model ClientAccount {
   leadAnalyses            LeadAnalysis[]
   salesScripts            SalesScript[]
   appointments            Appointment[]
+  deals                   Deal[]
+  commissionRecords       CommissionRecord[]
+  commissionLedgerEntries CommissionLedgerEntry[]
+  timeLogs                TimeLog[]
 
   @@index([organizationId])
 }
@@ -251,6 +295,8 @@ model Contact {
   leadAnalyses    LeadAnalysis[]
   salesScripts    SalesScript[]
   appointments    Appointment[]
+  deals           Deal[]
+  timeLogs        TimeLog[]
 
   @@index([organizationId, clientAccountId])
   @@index([assignedAgentId])
@@ -453,4 +499,95 @@ model Appointment {
   @@index([organizationId, clientAccountId, startTime])
   @@index([contactId, startTime])
   @@index([interactionId])
+}
+
+model Deal {
+  id              String            @id @default(cuid())
+  organizationId  String
+  clientAccountId String
+  contactId       String?
+  userId          String?
+  title           String
+  valueCents      Int
+  currency        String            @default("USD")
+  status          DealStatus        @default(OPEN)
+  closedAt        DateTime?
+  notes           String?
+  isManual        Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clientAccount   ClientAccount     @relation(fields: [clientAccountId], references: [id], onDelete: Cascade)
+  contact         Contact?          @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  user            User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  commission      CommissionRecord?
+
+  @@index([organizationId, clientAccountId, status])
+  @@index([contactId])
+}
+
+model CommissionRecord {
+  id               String                  @id @default(cuid())
+  organizationId   String
+  clientAccountId  String
+  dealId           String?                 @unique
+  userId           String?
+  expectedCents    Int
+  receivedCents    Int                     @default(0)
+  currency         String                  @default("USD")
+  status           CommissionStatus        @default(PENDING)
+  source           CommissionSource        @default(MANUAL)
+  notes            String?
+  isManualOverride Boolean                 @default(false)
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  organization     Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clientAccount    ClientAccount           @relation(fields: [clientAccountId], references: [id], onDelete: Cascade)
+  deal             Deal?                   @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  user             User?                   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  ledgerEntries    CommissionLedgerEntry[]
+
+  @@index([organizationId, clientAccountId, status])
+}
+
+model CommissionLedgerEntry {
+  id              String           @id @default(cuid())
+  organizationId  String
+  clientAccountId String
+  commissionId    String
+  userId          String?
+  type            LedgerEntryType
+  amountCents     Int
+  note            String
+  occurredAt      DateTime         @default(now())
+  createdAt       DateTime         @default(now())
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clientAccount   ClientAccount    @relation(fields: [clientAccountId], references: [id], onDelete: Cascade)
+  commission      CommissionRecord @relation(fields: [commissionId], references: [id], onDelete: Cascade)
+  user            User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, clientAccountId, occurredAt])
+  @@index([commissionId, occurredAt])
+}
+
+model TimeLog {
+  id               String        @id @default(cuid())
+  organizationId   String
+  clientAccountId  String
+  contactId        String?
+  userId           String?
+  source           TimeLogSource @default(MANUAL)
+  minutes          Int
+  description      String
+  loggedAt         DateTime      @default(now())
+  isManualOverride Boolean       @default(false)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  organization     Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clientAccount    ClientAccount @relation(fields: [clientAccountId], references: [id], onDelete: Cascade)
+  contact          Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  user             User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, clientAccountId, loggedAt])
+  @@index([contactId, loggedAt])
 }

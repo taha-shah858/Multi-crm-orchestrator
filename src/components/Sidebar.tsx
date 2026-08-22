@@ -11,6 +11,7 @@ import {
   TrendingUp,
   Bot,
   BarChart2,
+  WalletCards,
   Calendar,
   Sparkles,
   FileText,
@@ -28,6 +29,7 @@ const navigation = [
   { name: "Script Architect", href: "/scripts", icon: FileText },
   { name: "Telemetry & Logs", href: "/telemetry", icon: BarChart2 },
   { name: "Calendar Planner", href: "/calendar", icon: Calendar },
+  { name: "Sales Operations", href: "/operations", icon: WalletCards },
   { name: "Multi-CRM Suite", href: "/multi-crm", icon: Sparkles }, // <--- Updated route and title
 ];
 
