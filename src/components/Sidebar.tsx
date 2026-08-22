@@ -30,6 +30,7 @@ const navigation = [
   { name: "Telemetry & Logs", href: "/telemetry", icon: BarChart2 },
   { name: "Calendar Planner", href: "/calendar", icon: Calendar },
   { name: "Sales Operations", href: "/operations", icon: WalletCards },
+  { name: "Documents & Proposals", href: "/documents", icon: FileText },
   { name: "Multi-CRM Suite", href: "/multi-crm", icon: Sparkles }, // <--- Updated route and title
 ];
 

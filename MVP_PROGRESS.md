@@ -219,3 +219,28 @@
 - Initial Phase 8 records are explicitly manual/off-platform. Payment and adjustment ledger entries are the manual failsafe and remain auditable; CRM-originated deal ingestion can be added later without changing the canonical data model.
 - Time logs are currently manually entered/corrected because the existing integrations do not supply a reliable duration signal. The model leaves room for measured automated sources later.
 - Phase 9 document and proposal generation was not started.
+
+## Phase 9 - Status
+
+### Completed
+- Inspected the Phase 8 deal/commission context, Phase 5 lead analyses, Phase 6 scripts, Phase 7 appointments, and active-client request boundary before implementing the Document & Proposal Generator.
+- Added canonical, tenant- and active-client-scoped `Document` persistence with optional contact, lead-analysis, deal, user, generated-context snapshot, draft/final status, manual-override state, and PostgreSQL-backed PDF bytes for uploaded source proposals.
+- Added and applied Prisma migration `20260822124628_phase9_documents`; regenerated Prisma Client.
+- Added `GET`/`POST /api/documents`, `POST /api/documents/generate`, `PATCH /api/documents/:id`, `POST /api/documents/upload`, and authenticated `GET /api/documents/:id/download`.
+- Added deterministic server-side generation for proposals, follow-up emails, and follow-up messages using only the active client’s brand, optional contact, lead-analysis requirements/timeline, and deal context. Generated documents are always saved as drafts for review.
+- Added manual document creation and editing, agent replacement of generated content, final-status control, PDF upload validation (PDF only, up to 5 MB), persistent file storage, and download support.
+- Added `/documents` and a Documents & Proposals sidebar entry. The workspace preserves the existing design system while providing one-click draft types, context selectors, contact-name search, full manual editor, upload workflow, saved document library, and explicit review checkpoint.
+- Verified an Atlas generated brand-aware proposal, manual follow-up, final manual override, PDF upload/download, persisted records across a fresh process, audit events, and Atlas/Northstar isolation. Northstar could not read or patch Atlas documents.
+- Passed `tsc --noEmit`, Prisma migration status, production build, and whitespace validation.
+
+### In Progress
+- None. Phase 9 is complete and awaiting review.
+
+### Pending
+- Phase 10 end-to-end integration and system testing only.
+
+### Notes / Decisions
+- The document generator is a deterministic server-side template engine. It makes the source context visible through the resulting draft without representing an unconfigured external AI provider.
+- Generated content is never sent automatically. Manual creation, editing, source-PDF upload, and finalization are the required agent-controlled failsafes.
+- PDFs are stored in PostgreSQL for the MVP with a strict 5 MB limit. A production deployment can move this field to private object storage without changing the client/API contract.
+- Phase 10 was not started.

@@ -66,6 +66,10 @@ enum AuditAction {
   COMMISSION_LEDGER_ADJUSTED
   TIME_LOG_CREATED
   TIME_LOG_UPDATED
+  DOCUMENT_CREATED
+  DOCUMENT_GENERATED
+  DOCUMENT_UPDATED
+  DOCUMENT_UPLOADED
 }
 
 enum ScriptChannel {
@@ -159,6 +163,25 @@ enum TimeLogSource {
   MANUAL
 }
 
+enum DocumentType {
+  PROPOSAL
+  FOLLOW_UP_EMAIL
+  FOLLOW_UP_MESSAGE
+  MANUAL_NOTE
+  FILE_UPLOAD
+}
+
+enum DocumentSource {
+  GENERATED
+  MANUAL
+  UPLOADED
+}
+
+enum DocumentStatus {
+  DRAFT
+  FINAL
+}
+
 enum SyncRunStatus {
   RUNNING
   COMPLETED
@@ -188,6 +211,7 @@ model Organization {
   commissionRecords       CommissionRecord[]
   commissionLedgerEntries CommissionLedgerEntry[]
   timeLogs                TimeLog[]
+  documents               Document[]
 }
 
 model User {
@@ -213,6 +237,7 @@ model User {
   commissionRecords       CommissionRecord[]
   commissionLedgerEntries CommissionLedgerEntry[]
   timeLogs                TimeLog[]
+  documents               Document[]
 
   @@index([organizationId])
 }
@@ -241,6 +266,7 @@ model ClientAccount {
   commissionRecords       CommissionRecord[]
   commissionLedgerEntries CommissionLedgerEntry[]
   timeLogs                TimeLog[]
+  documents               Document[]
 
   @@index([organizationId])
 }
@@ -297,6 +323,7 @@ model Contact {
   appointments    Appointment[]
   deals           Deal[]
   timeLogs        TimeLog[]
+  documents       Document[]
 
   @@index([organizationId, clientAccountId])
   @@index([assignedAgentId])
@@ -419,6 +446,7 @@ model LeadAnalysis {
   interaction      Interaction?         @relation(fields: [interactionId], references: [id], onDelete: SetNull)
   user             User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
   salesScripts     SalesScript[]
+  documents        Document[]
 
   @@index([organizationId, clientAccountId, createdAt])
   @@index([contactId, createdAt])
@@ -521,6 +549,7 @@ model Deal {
   contact         Contact?          @relation(fields: [contactId], references: [id], onDelete: SetNull)
   user            User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
   commission      CommissionRecord?
+  documents       Document[]
 
   @@index([organizationId, clientAccountId, status])
   @@index([contactId])
@@ -590,4 +619,37 @@ model TimeLog {
 
   @@index([organizationId, clientAccountId, loggedAt])
   @@index([contactId, loggedAt])
+}
+
+model Document {
+  id               String         @id @default(cuid())
+  organizationId   String
+  clientAccountId  String
+  contactId        String?
+  leadAnalysisId   String?
+  dealId           String?
+  userId           String?
+  type             DocumentType
+  source           DocumentSource
+  status           DocumentStatus @default(DRAFT)
+  title            String
+  content          String?
+  fileName         String?
+  mimeType         String?
+  fileData         Bytes?
+  contextSnapshot  Json?
+  isManualOverride Boolean        @default(false)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  organization     Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clientAccount    ClientAccount  @relation(fields: [clientAccountId], references: [id], onDelete: Cascade)
+  contact          Contact?       @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  leadAnalysis     LeadAnalysis?  @relation(fields: [leadAnalysisId], references: [id], onDelete: SetNull)
+  deal             Deal?          @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  user             User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, clientAccountId, updatedAt])
+  @@index([contactId, updatedAt])
+  @@index([leadAnalysisId])
+  @@index([dealId])
 }

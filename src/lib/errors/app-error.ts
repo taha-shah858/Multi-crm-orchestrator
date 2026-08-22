@@ -25,6 +25,9 @@ export type ErrorCode =
   | "INVALID_LEDGER_ENTRY"
   | "INVALID_TIME_LOG_INPUT"
   | "TIME_LOG_NOT_FOUND"
+  | "INVALID_DOCUMENT_INPUT"
+  | "DOCUMENT_NOT_FOUND"
+  | "DOCUMENT_FILE_INVALID"
   | "INTERNAL_ERROR";
 
 export class AppError extends Error {
