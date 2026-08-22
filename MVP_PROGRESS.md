@@ -140,3 +140,30 @@
 - The implemented analysis baseline is an explicit rules engine rather than a claimed external LLM. It is deterministic, server-side, and designed to be replaced or supplemented by a provider adapter later without changing the Copilot API or UI contract.
 - Every generated field, score, temperature, probability, and summary remains editable. Saving a correction sets `isManualOverride` and creates a persisted audit record.
 - Phase 6 Sales Script Architect, including script generation and messaging templates, was intentionally not started.
+
+## Phase 6 - Status
+
+### Completed
+- Inspected the completed Phase 5 Copilot, canonical contact/interaction context, and lead-analysis data before implementing the Sales Script Architect as a dedicated dashboard workspace.
+- Added tenant- and client-account-scoped `SalesScript` persistence linked optionally to a contact and lead analysis, with channel, origin, template key, context snapshot, and manual-override state.
+- Added `GET`/`POST /api/scripts`, `POST /api/scripts/generate`, `GET /api/scripts/templates`, and `PATCH /api/scripts/:id` with active-client authorization and persisted audit logging.
+- Added server-side context retrieval from the active brand, selected contact, recent interactions, and optional Phase 5 lead analysis; generated CALL, SMS, and EMAIL content is saved as an editable script.
+- Added three reusable templates: discovery follow-up, value check-in, and objection-handling call.
+- Added a dedicated `/scripts` workspace and sidebar entry that provides context selectors, template generation, a complete manual editor, save/edit flows, and a client-scoped saved-script library.
+- Created and applied Prisma migration `20260822112949_phase6_sales_scripts` and regenerated Prisma Client.
+- Verified generated and manual scripts, generated active-brand content, manual edit persistence, audit records, and Atlas/Northstar isolation through route handlers.
+- Passed `tsc --noEmit`, production build, Prisma migration status, and whitespace validation.
+- Phase 6 tenant-isolation correction: Script Architect now clears client-scoped workspace state immediately when the active client changes, aborts the prior account's requests, and accepts list, generation, or save responses only when their request version and client account still match the current selection.
+- Re-verified `GET /api/scripts` directly for Northstar and Atlas: each response returned only its active client account's persisted scripts (zero cross-tenant rows). Persisted script records remain correctly partitioned between Atlas and Northstar, with audit events intact.
+
+### In Progress
+- None. Phase 6 is complete and awaiting review.
+
+### Pending
+- Phase 7 and later MVP modules only.
+
+### Notes / Decisions
+- Script generation is a deterministic, server-side context/template engine so the output remains explainable and provider-independent. It can be replaced or augmented by an external model provider later without changing the API or editor contract.
+- Generated scripts are never sent automatically. Agents can edit every field, write a fully manual script, and save corrections; edits are marked as manual overrides and audited.
+- The Script Architect keeps its existing UI; the correction is limited to client-change request lifecycle and stale-response protection.
+- Phase 7 workflow and calendar scheduling was intentionally not started.

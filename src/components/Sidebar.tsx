@@ -13,6 +13,7 @@ import {
   BarChart2,
   Calendar,
   Sparkles,
+  FileText,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
@@ -24,6 +25,7 @@ const navigation = [
   { name: "Twilio Smart Dialer", href: "/dialer", icon: Phone },
   { name: "Aggregation Timeline", href: "/timeline", icon: TrendingUp },
   { name: "AI Copilot Suite", href: "/copilot", icon: Bot },
+  { name: "Script Architect", href: "/scripts", icon: FileText },
   { name: "Telemetry & Logs", href: "/telemetry", icon: BarChart2 },
   { name: "Calendar Planner", href: "/calendar", icon: Calendar },
   { name: "Multi-CRM Suite", href: "/multi-crm", icon: Sparkles }, // <--- Updated route and title

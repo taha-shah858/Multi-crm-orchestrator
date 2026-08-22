@@ -55,6 +55,20 @@ enum AuditAction {
   COMMUNICATION_MANUALLY_LOGGED
   LEAD_ANALYSIS_CREATED
   LEAD_ANALYSIS_UPDATED
+  SCRIPT_CREATED
+  SCRIPT_UPDATED
+}
+
+enum ScriptChannel {
+  CALL
+  SMS
+  EMAIL
+}
+
+enum ScriptSource {
+  GENERATED
+  MANUAL
+  TEMPLATE
 }
 
 enum InteractionType {
@@ -115,6 +129,7 @@ model Organization {
   interactions Interaction[]
   communicationIdentities CommunicationIdentity[]
   leadAnalyses LeadAnalysis[]
+  salesScripts SalesScript[]
 }
 
 model User {
@@ -134,6 +149,7 @@ model User {
   syncRuns       SyncRun[]
   interactions   Interaction[]
   leadAnalyses   LeadAnalysis[]
+  salesScripts   SalesScript[]
 
   @@index([organizationId])
 }
@@ -156,6 +172,7 @@ model ClientAccount {
   interactions             Interaction[]
   communicationIdentities  CommunicationIdentity[]
   leadAnalyses             LeadAnalysis[]
+  salesScripts             SalesScript[]
 
   @@index([organizationId])
 }
@@ -208,6 +225,7 @@ model Contact {
   externalRecords ExternalRecord[]
   interactions     Interaction[]
   leadAnalyses     LeadAnalysis[]
+  salesScripts     SalesScript[]
 
   @@index([organizationId, clientAccountId])
   @@index([assignedAgentId])
@@ -328,10 +346,39 @@ model LeadAnalysis {
   contact         Contact?              @relation(fields: [contactId], references: [id], onDelete: SetNull)
   interaction     Interaction?          @relation(fields: [interactionId], references: [id], onDelete: SetNull)
   user            User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
+  salesScripts    SalesScript[]
 
   @@index([organizationId, clientAccountId, createdAt])
   @@index([contactId, createdAt])
   @@index([interactionId])
+}
+
+model SalesScript {
+  id              String        @id @default(cuid())
+  organizationId  String
+  clientAccountId String
+  contactId       String?
+  leadAnalysisId  String?
+  userId          String?
+  channel         ScriptChannel
+  source          ScriptSource
+  templateKey     String?
+  title           String
+  purpose         String
+  content         String
+  contextSnapshot Json?
+  isManualOverride Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clientAccount   ClientAccount  @relation(fields: [clientAccountId], references: [id], onDelete: Cascade)
+  contact         Contact?       @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  leadAnalysis    LeadAnalysis?  @relation(fields: [leadAnalysisId], references: [id], onDelete: SetNull)
+  user            User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, clientAccountId, createdAt])
+  @@index([contactId, createdAt])
+  @@index([leadAnalysisId])
 }
 
 model CommunicationIdentity {

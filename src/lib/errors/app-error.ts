@@ -13,6 +13,8 @@ export type ErrorCode =
   | "COMMUNICATION_PROVIDER_UNAVAILABLE"
   | "INVALID_LEAD_ANALYSIS_INPUT"
   | "LEAD_ANALYSIS_NOT_FOUND"
+  | "INVALID_SCRIPT_INPUT"
+  | "SCRIPT_NOT_FOUND"
   | "INTERNAL_ERROR";
 
 export class AppError extends Error {
