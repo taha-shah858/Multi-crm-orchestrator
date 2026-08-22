@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import {
   GitCommit,
   Filter,
@@ -276,11 +276,23 @@ export default function TimelinePage() {
   const [interactionError, setInteractionError] = useState<string | null>(null);
   const [isSavingInteraction, setIsSavingInteraction] = useState(false);
   const [drawerNotice, setDrawerNotice] = useState<string | null>(null);
+  const requestVersion = useRef(0);
+  const currentClientAccountId = useRef(activeClientAccount.id);
 
-  const loadInteractions = useCallback(async () => {
+  useEffect(() => {
+    currentClientAccountId.current = activeClientAccount.id;
+  }, [activeClientAccount.id]);
+
+  const loadInteractions = useCallback(async (clearWorkspace = false) => {
     if (!isClientAccountReady) return;
+    const version = ++requestVersion.current;
+    const clientAccountId = activeClientAccount.id;
+    if (clearWorkspace) {
+      setEvents([]); setContacts([]); setIsLogModalOpen(false); setSelectedPayloadEvent(null); setDrawerEvent(null); setIsSavingInteraction(false);
+    }
     const response = await fetch("/api/interactions", { cache: "no-store" });
     const data = await response.json();
+    if (version !== requestVersion.current || currentClientAccountId.current !== clientAccountId) return;
     if (!response.ok || !data.success) return;
     setEvents(data.interactions.map((interaction: { id: string; type: string; direction: string; source: string; subject: string | null; body: string; occurredAt: string; contact: { id: string; firstName: string; lastName: string; company: string | null; email: string | null } | null }) => {
       const type = interaction.type.toLowerCase();
@@ -290,9 +302,13 @@ export default function TimelinePage() {
     }));
   }, [activeClientAccount.id, isClientAccountReady]);
 
-  useEffect(() => { void loadInteractions(); }, [loadInteractions]);
+  useEffect(() => {
+    void loadInteractions(true);
+  }, [loadInteractions]);
 
   const openManualLog = async () => {
+    const version = requestVersion.current;
+    const clientAccountId = activeClientAccount.id;
     setInteractionForm(emptyInteractionForm());
     setContactSearch("");
     setInteractionError(null);
@@ -302,6 +318,8 @@ export default function TimelinePage() {
     try {
       const response = await fetch("/api/contacts", { cache: "no-store" });
       const data = await response.json();
+
+      if (version !== requestVersion.current || currentClientAccountId.current !== clientAccountId) return;
 
       if (!response.ok || !data.success) {
         setContacts([]);
@@ -313,15 +331,18 @@ export default function TimelinePage() {
 
       setContacts(data.contacts ?? []);
     } catch {
+      if (version !== requestVersion.current || currentClientAccountId.current !== clientAccountId) return;
       setContacts([]);
       setInteractionError("Contacts could not be loaded for this client account.");
     } finally {
-      setIsLoadingContacts(false);
+      if (version === requestVersion.current && currentClientAccountId.current === clientAccountId) setIsLoadingContacts(false);
     }
   };
 
   const handleManualLog = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const version = requestVersion.current;
+    const clientAccountId = activeClientAccount.id;
     setInteractionError(null);
     setIsSavingInteraction(true);
 
@@ -338,6 +359,7 @@ export default function TimelinePage() {
         }),
       });
       const data = await response.json();
+      if (version !== requestVersion.current || currentClientAccountId.current !== clientAccountId) return;
 
       if (!response.ok || !data.success) {
         setInteractionError(
@@ -346,9 +368,10 @@ export default function TimelinePage() {
         return;
       }
 
-      await loadInteractions();
       setIsLogModalOpen(false);
+      await loadInteractions();
     } catch {
+      if (version !== requestVersion.current || currentClientAccountId.current !== clientAccountId) return;
       setInteractionError("The interaction could not be saved. Try again.");
     } finally {
       setIsSavingInteraction(false);
@@ -357,9 +380,8 @@ export default function TimelinePage() {
 
   const handleRefreshStream = async () => {
     setIsRefreshing(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
-    }, 650);
+    await loadInteractions();
+    setIsRefreshing(false);
   };
 
   const handleCopyId = (id: string, e: React.MouseEvent) => {

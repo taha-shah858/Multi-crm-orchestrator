@@ -69,9 +69,13 @@ export async function updateCommission(context: RequestContext, id: string, inpu
     if (!type || !note || amountCents === 0) throw new AppError("INVALID_LEDGER_ENTRY", 422, "Ledger entry details are required.", "Choose an entry type, enter an amount, and explain the adjustment.");
     const nextExpected = type === "ADJUSTMENT" ? existing.expectedCents + amountCents : existing.expectedCents; const nextReceived = type === "PAYMENT" ? existing.receivedCents + amountCents : existing.receivedCents;
     if (nextExpected < 0 || nextReceived < 0) throw new AppError("INVALID_LEDGER_ENTRY", 422, "Ledger entry would make a total negative.", "Use an amount that keeps commission totals at zero or above.");
-    const commission = await prisma.$transaction(async (transaction) => { await transaction.commissionLedgerEntry.create({ data: { organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, commissionId: existing.id, userId: context.user.id, type, amountCents, note } }); return transaction.commissionRecord.update({ where: { id }, data: { expectedCents: nextExpected, receivedCents: nextReceived, status: commissionStatus(nextExpected, nextReceived), isManualOverride: true }, include: { deal: { include: { contact: contactSelection } }, ledgerEntries: { orderBy: { occurredAt: "desc" }, take: 10 } } }); });
-    await recordAuditEvent(context, { action: "COMMISSION_LEDGER_ADJUSTED", entityType: "COMMISSION_LEDGER_ENTRY", entityId: commission.id, requestId, source: "PLATFORM", metadata: { type, amountCents } });
-    return commission;
+    const result = await prisma.$transaction(async (transaction) => {
+      const ledgerEntry = await transaction.commissionLedgerEntry.create({ data: { organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, commissionId: existing.id, userId: context.user.id, type, amountCents, note } });
+      const commission = await transaction.commissionRecord.update({ where: { id }, data: { expectedCents: nextExpected, receivedCents: nextReceived, status: commissionStatus(nextExpected, nextReceived), isManualOverride: true }, include: { deal: { include: { contact: contactSelection } }, ledgerEntries: { orderBy: { occurredAt: "desc" }, take: 10 } } });
+      return { commission, ledgerEntryId: ledgerEntry.id };
+    });
+    await recordAuditEvent(context, { action: "COMMISSION_LEDGER_ADJUSTED", entityType: "COMMISSION_LEDGER_ENTRY", entityId: result.ledgerEntryId, requestId, source: "PLATFORM", metadata: { type, amountCents } });
+    return result.commission;
   }
   const expectedCents = input.expectedCommission === undefined ? existing.expectedCents : cents(input.expectedCommission, "INVALID_COMMISSION_INPUT"); const receivedCents = input.receivedCommission === undefined ? existing.receivedCents : cents(input.receivedCommission, "INVALID_COMMISSION_INPUT");
   if (expectedCents <= 0) throw new AppError("INVALID_COMMISSION_INPUT", 422, "Expected commission must be positive.", "Enter an expected commission greater than zero.");

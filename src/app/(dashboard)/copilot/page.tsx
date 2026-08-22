@@ -1,12 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { BrainCircuit, CheckCircle2, ClipboardPaste, DollarSign, Lightbulb, Save, Sparkles, Target, UserRound } from "lucide-react";
 import { MultiCrmCard, MultiCrmInnerPanel, MultiCrmTag } from "@/components/ui/MultiCrmCard";
 import { useClientAccount } from "@/context/ClientAccountContext";
 
 interface Contact { id: string; firstName: string; lastName: string; company: string | null; }
-interface Interaction { id: string; type: string; body: string; subject: string | null; contact: { firstName: string; lastName: string } | null; occurredAt: string; }
+interface Interaction { id: string; type: string; body: string; subject: string | null; contact: { id: string; firstName: string; lastName: string } | null; occurredAt: string; }
 interface Analysis {
   id: string; transcript: string; summary: string; budget: string | null; timeline: string | null; requirements: string | null; intent: string | null; objections: string | null;
   leadScore: number; temperature: string; dealProbability: number; isManualOverride: boolean; createdAt: string;
@@ -35,55 +35,71 @@ export default function CopilotPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
+  const requestVersion = useRef(0);
+  const currentClientAccountId = useRef(activeClientAccount.id);
+
+  useEffect(() => {
+    currentClientAccountId.current = activeClientAccount.id;
+  }, [activeClientAccount.id]);
 
   const load = useCallback(async () => {
     if (!isClientAccountReady) return;
+    const version = ++requestVersion.current;
+    const clientAccountId = activeClientAccount.id;
     setIsLoading(true);
+    setContacts([]); setInteractions([]); setAnalyses([]); setContactId(""); setInteractionId(""); setTranscript(""); setSelectedAnalysis(null); setEdit(null); setMessage(null);
     try {
       const [contactsResponse, interactionsResponse, analysesResponse] = await Promise.all([
         fetch("/api/contacts", { cache: "no-store" }), fetch("/api/interactions", { cache: "no-store" }), fetch("/api/lead-analyses", { cache: "no-store" }),
       ]);
       const [contactsData, interactionsData, analysesData] = await Promise.all([contactsResponse.json(), interactionsResponse.json(), analysesResponse.json()]);
+      if (version !== requestVersion.current || currentClientAccountId.current !== clientAccountId) return;
       if (!contactsResponse.ok || !interactionsResponse.ok || !analysesResponse.ok || !contactsData.success || !interactionsData.success || !analysesData.success) throw new Error("AI workspace data could not be loaded for this client account.");
       setContacts(contactsData.contacts); setInteractions(interactionsData.interactions); setAnalyses(analysesData.analyses);
-      setSelectedAnalysis((current) => analysesData.analyses.find((item: Analysis) => item.id === current?.id) ?? analysesData.analyses[0] ?? null);
-      setEdit((current) => current && analysesData.analyses.some((item: Analysis) => item.id === selectedAnalysis?.id) ? current : (analysesData.analyses[0] ? editableFrom(analysesData.analyses[0]) : null));
-    } catch (error) { setMessage({ tone: "error", text: error instanceof Error ? error.message : "AI workspace data could not be loaded." }); }
-    finally { setIsLoading(false); }
-  }, [activeClientAccount.id, isClientAccountReady, selectedAnalysis?.id]);
+      const firstAnalysis = analysesData.analyses[0] as Analysis | undefined;
+      setSelectedAnalysis(firstAnalysis ?? null); setEdit(firstAnalysis ? editableFrom(firstAnalysis) : null);
+    } catch (error) { if (version === requestVersion.current && currentClientAccountId.current === clientAccountId) setMessage({ tone: "error", text: error instanceof Error ? error.message : "AI workspace data could not be loaded." }); }
+    finally { if (version === requestVersion.current && currentClientAccountId.current === clientAccountId) setIsLoading(false); }
+  }, [activeClientAccount.id, isClientAccountReady]);
 
   useEffect(() => { void load(); }, [load]);
 
   const selectInteraction = (id: string) => {
     setInteractionId(id);
     const interaction = interactions.find((item) => item.id === id);
-    if (interaction) { setTranscript(interaction.body); setContactId(contacts.find((contact) => `${contact.firstName} ${contact.lastName}` === `${interaction.contact?.firstName} ${interaction.contact?.lastName}`)?.id ?? ""); }
+    if (interaction) { setTranscript(interaction.body); setContactId(interaction.contact?.id ?? ""); }
   };
 
   const analyze = async () => {
     if (!transcript.trim()) return;
+    const version = requestVersion.current;
+    const clientAccountId = activeClientAccount.id;
     setIsAnalyzing(true); setMessage(null);
     try {
       const response = await fetch("/api/lead-analyses", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ transcript, contactId: contactId || undefined, interactionId: interactionId || undefined }) });
       const data = await response.json();
+      if (version !== requestVersion.current || currentClientAccountId.current !== clientAccountId) return;
       if (!response.ok || !data.success) throw new Error(data?.error?.message ?? "The transcript could not be analyzed.");
       const created = data.analysis as Analysis;
       setAnalyses((current) => [created, ...current]); setSelectedAnalysis(created); setEdit(editableFrom(created)); setMessage({ tone: "success", text: "Analysis created. Review and correct the generated fields before using them." });
-    } catch (error) { setMessage({ tone: "error", text: error instanceof Error ? error.message : "The transcript could not be analyzed." }); }
-    finally { setIsAnalyzing(false); }
+    } catch (error) { if (version === requestVersion.current && currentClientAccountId.current === clientAccountId) setMessage({ tone: "error", text: error instanceof Error ? error.message : "The transcript could not be analyzed." }); }
+    finally { if (version === requestVersion.current && currentClientAccountId.current === clientAccountId) setIsAnalyzing(false); }
   };
 
   const selectAnalysis = (analysis: Analysis) => { setSelectedAnalysis(analysis); setEdit(editableFrom(analysis)); };
   const saveCorrection = async () => {
     if (!selectedAnalysis || !edit) return;
+    const version = requestVersion.current;
+    const clientAccountId = activeClientAccount.id;
     setIsSaving(true); setMessage(null);
     try {
       const response = await fetch(`/api/lead-analyses/${selectedAnalysis.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(edit) });
       const data = await response.json();
+      if (version !== requestVersion.current || currentClientAccountId.current !== clientAccountId) return;
       if (!response.ok || !data.success) throw new Error(data?.error?.message ?? "The analysis could not be saved.");
       const updated = data.analysis as Analysis; setAnalyses((current) => current.map((item) => item.id === updated.id ? updated : item)); setSelectedAnalysis(updated); setEdit(editableFrom(updated)); setMessage({ tone: "success", text: "Manual correction saved and audited." });
-    } catch (error) { setMessage({ tone: "error", text: error instanceof Error ? error.message : "The analysis could not be saved." }); }
-    finally { setIsSaving(false); }
+    } catch (error) { if (version === requestVersion.current && currentClientAccountId.current === clientAccountId) setMessage({ tone: "error", text: error instanceof Error ? error.message : "The analysis could not be saved." }); }
+    finally { if (version === requestVersion.current && currentClientAccountId.current === clientAccountId) setIsSaving(false); }
   };
 
   return <div className="space-y-6 text-crm-text font-sans">

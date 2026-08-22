@@ -96,6 +96,7 @@ export default function LeadsPage() {
   const [isImporting, setIsImporting] = useState(false);
   const [isLoadingContacts, setIsLoadingContacts] = useState(true);
   const contactRequestVersion = useRef(0);
+  const currentClientAccountId = useRef(activeClientAccount.id);
   const [importFeedback, setImportFeedback] = useState<{
     type: "success" | "error" | null;
     message: string;
@@ -129,10 +130,11 @@ export default function LeadsPage() {
     };
   }, [activeClientAccount.name]);
 
-  const loadPersistedContacts = useCallback(async (): Promise<boolean> => {
+  const loadPersistedContacts = useCallback(async (resetPendingSync = false): Promise<boolean> => {
     if (!isClientAccountReady) return false;
 
     const requestVersion = ++contactRequestVersion.current;
+    if (resetPendingSync) setIsImporting(false);
     setIsLoadingContacts(true);
     setSelectedLead(null);
 
@@ -166,7 +168,8 @@ export default function LeadsPage() {
   }, [isClientAccountReady, mapPersistedContactToLead]);
 
   useEffect(() => {
-    void loadPersistedContacts();
+    currentClientAccountId.current = activeClientAccount.id;
+    void loadPersistedContacts(true);
   }, [activeClientAccount.id, loadPersistedContacts]);
 
   /**
@@ -174,12 +177,15 @@ export default function LeadsPage() {
    * while preventing duplicates based on the unique HubSpot Contact ID.
    */
   const handleManualClientSync = async () => {
+    const clientAccountId = activeClientAccount.id;
+    const clientAccountName = activeClientAccount.name;
     setIsImporting(true);
     setImportFeedback({ type: null, message: "" });
 
     try {
       const res = await fetch("/api/contacts/import", { method: "POST" });
       const data = await res.json();
+      if (currentClientAccountId.current !== clientAccountId) return;
 
       if (!res.ok || !data.success) {
         const errorMessage =
@@ -188,6 +194,7 @@ export default function LeadsPage() {
       }
 
       const contactsLoaded = await loadPersistedContacts();
+      if (currentClientAccountId.current !== clientAccountId) return;
       if (!contactsLoaded) {
         throw new Error("Sync completed, but the persisted contacts could not be reloaded.");
       }
@@ -196,16 +203,17 @@ export default function LeadsPage() {
       const updated = data.sync?.recordsUpdated ?? 0;
       setImportFeedback({
         type: "success",
-        message: `${activeClientAccount.name} sync complete: ${created} created, ${updated} updated.`,
+        message: `${clientAccountName} sync complete: ${created} created, ${updated} updated.`,
       });
     } catch (err: unknown) {
+      if (currentClientAccountId.current !== clientAccountId) return;
       const errMsg = err instanceof Error ? err.message : "Unable to complete the client-account sync.";
       setImportFeedback({
         type: "error",
         message: errMsg,
       });
     } finally {
-      setIsImporting(false);
+      if (currentClientAccountId.current === clientAccountId) setIsImporting(false);
     }
   };
 

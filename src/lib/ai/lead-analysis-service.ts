@@ -61,13 +61,16 @@ export async function createLeadAnalysis(context: RequestContext, input: Analysi
   const contactId = typeof input.contactId === "string" && input.contactId ? input.contactId : null;
   const interactionId = typeof input.interactionId === "string" && input.interactionId ? input.interactionId : null;
   if (!transcript) throw new AppError("INVALID_LEAD_ANALYSIS_INPUT", 422, "Transcript is required.", "Paste a transcript or interaction summary before running analysis.");
-  await activeContact(context, contactId);
-  if (interactionId) {
-    const interaction = await prisma.interaction.findFirst({ where: { id: interactionId, organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId }, select: { id: true } });
-    if (!interaction) throw new AppError("INVALID_LEAD_ANALYSIS_INPUT", 422, "Interaction is outside active client.", "Choose an interaction from the active client account.");
+  const contact = await activeContact(context, contactId);
+  const interaction = interactionId
+    ? await prisma.interaction.findFirst({ where: { id: interactionId, organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId }, select: { id: true, contactId: true } })
+    : null;
+  if (interactionId && !interaction) throw new AppError("INVALID_LEAD_ANALYSIS_INPUT", 422, "Interaction is outside active client.", "Choose an interaction from the active client account.");
+  if (contact && interaction?.contactId && contact.id !== interaction.contactId) {
+    throw new AppError("LEAD_ANALYSIS_LINK_MISMATCH", 422, "Contact and interaction do not match.", "Use the contact associated with the selected interaction.");
   }
   const result = analyzeTranscript(transcript);
-  const analysis = await prisma.leadAnalysis.create({ data: { organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, contactId, interactionId, userId: context.user.id, source: interactionId ? "INTERACTION" : "MANUAL_TRANSCRIPT", provider: "RULES_ENGINE", transcript, ...result } });
+  const analysis = await prisma.leadAnalysis.create({ data: { organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, contactId: contact?.id ?? interaction?.contactId ?? null, interactionId, userId: context.user.id, source: interactionId ? "INTERACTION" : "MANUAL_TRANSCRIPT", provider: "RULES_ENGINE", transcript, ...result } });
   await recordAuditEvent(context, { action: "LEAD_ANALYSIS_CREATED", entityType: "LEAD_ANALYSIS", entityId: analysis.id, requestId, source: "PLATFORM", metadata: { provider: analysis.provider, leadScore: analysis.leadScore } });
   return analysis;
 }

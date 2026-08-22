@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Building2, MessageSquare, PhoneCall, Search, ShieldCheck, User } from "lucide-react";
 import { MultiCrmCard, MultiCrmInnerPanel, MultiCrmTag } from "@/components/ui/MultiCrmCard";
 import { useClientAccount } from "@/context/ClientAccountContext";
@@ -35,11 +35,26 @@ export default function SmartDialerPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [feedback, setFeedback] = useState<{ tone: "success" | "error"; text: string } | null>(null);
+  const requestVersion = useRef(0);
+  const currentClientAccountId = useRef(activeClientAccount.id);
+
+  useEffect(() => {
+    currentClientAccountId.current = activeClientAccount.id;
+  }, [activeClientAccount.id]);
 
   const loadGateway = useCallback(async () => {
     if (!isClientAccountReady) return;
+    const version = ++requestVersion.current;
+    const clientAccountId = activeClientAccount.id;
     setIsLoading(true);
     setFeedback(null);
+    setIdentities([]);
+    setContacts([]);
+    setIdentityId("");
+    setContactId("");
+    setPhoneNumber("");
+    setContactSearch("");
+    setIsSending(false);
 
     try {
       const [identityResponse, contactResponse] = await Promise.all([
@@ -50,6 +65,7 @@ export default function SmartDialerPage() {
         identityResponse.json(),
         contactResponse.json(),
       ]);
+      if (version !== requestVersion.current || currentClientAccountId.current !== clientAccountId) return;
 
       if (!identityResponse.ok || !identityData.success) {
         throw new Error(identityData?.error?.message ?? "Outgoing identities could not be loaded.");
@@ -70,6 +86,7 @@ export default function SmartDialerPage() {
       setPhoneNumber("");
       setContactSearch("");
     } catch (error) {
+      if (version !== requestVersion.current || currentClientAccountId.current !== clientAccountId) return;
       setIdentities([]);
       setContacts([]);
       setFeedback({
@@ -77,7 +94,7 @@ export default function SmartDialerPage() {
         text: error instanceof Error ? error.message : "The communication gateway could not be loaded.",
       });
     } finally {
-      setIsLoading(false);
+      if (version === requestVersion.current && currentClientAccountId.current === clientAccountId) setIsLoading(false);
     }
   }, [isClientAccountReady, activeClientAccount.id]);
 
@@ -100,6 +117,8 @@ export default function SmartDialerPage() {
 
   const dispatch = async (kind: "CALL" | "SMS", mode: "AUTOMATED" | "MANUAL") => {
     if (!identityId || !destination || (kind === "SMS" && !smsBody.trim())) return;
+    const version = requestVersion.current;
+    const clientAccountId = activeClientAccount.id;
     setIsSending(true);
     setFeedback(null);
 
@@ -117,6 +136,7 @@ export default function SmartDialerPage() {
         }),
       });
       const data = await response.json();
+      if (version !== requestVersion.current || currentClientAccountId.current !== clientAccountId) return;
       if (!response.ok || !data.success) {
         throw new Error(data?.error?.message ?? "The communication could not be recorded.");
       }
@@ -135,12 +155,13 @@ export default function SmartDialerPage() {
       });
       if (kind === "SMS") setSmsBody("");
     } catch (error) {
+      if (version !== requestVersion.current || currentClientAccountId.current !== clientAccountId) return;
       setFeedback({
         tone: "error",
         text: error instanceof Error ? error.message : "The communication could not be completed.",
       });
     } finally {
-      setIsSending(false);
+      if (version === requestVersion.current && currentClientAccountId.current === clientAccountId) setIsSending(false);
     }
   };
 

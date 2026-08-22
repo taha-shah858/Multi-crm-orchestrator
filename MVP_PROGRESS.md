@@ -244,3 +244,33 @@
 - Generated content is never sent automatically. Manual creation, editing, source-PDF upload, and finalization are the required agent-controlled failsafes.
 - PDFs are stored in PostgreSQL for the MVP with a strict 5 MB limit. A production deployment can move this field to private object storage without changing the client/API contract.
 - Phase 10 was not started.
+
+## Phase 10 - Status
+
+### Completed
+- Read `Architecture.md`, `MVP.md`, and `MVP_PROGRESS.md` in full and treated the completed Phase 1–9 implementation as the system under test.
+- Mapped the cross-module flow from active client account through CRM sync, canonical contacts, interactions, lead analyses, scripts, appointments, deals/commissions, time logs, documents, and audit records.
+- Added the focused repeatable `npm run test:system` check. It exercises the authenticated App Router handlers against the configured development PostgreSQL database without deleting existing data, then supports a fresh-process persistence read with `node scripts/phase10-system-test.cjs --verify <marker>`.
+- Verified the end-to-end workflow for Atlas: manual CRM sync, persisted contact consumption, manual interaction, manual communication fallback, lead analysis, generated-and-edited script, scheduling/confirmation, manual closed deal and ledger payment, corrected time log, generated-and-reviewed proposal, and uploaded/downloaded PDF.
+- Verified Atlas and Northstar server-side isolation for contacts, sync results, interactions, analyses, scripts, appointments, commissions, time logs, and documents. Cross-client reads are absent; attempted cross-client creates and updates return safe, structured 404/422 errors.
+- Added canonical relationship validation so a lead analysis cannot attach an interaction to a different contact; scripts inherit a linked analysis contact and reject mismatches; documents reject inconsistent contact/analysis/deal combinations and infer a valid linked contact when one is supplied by the selected context.
+- Corrected Copilot interaction selection to use the interaction's canonical contact ID rather than matching first/last names.
+- Added active-client request-version guards and immediate state clearing to Dialer, Copilot, Timeline, and the Leads manual-sync flow so a late response from the prior account cannot overwrite the newly selected client's workspace.
+- Corrected commission-ledger audit records to identify the actual `CommissionLedgerEntry`, not the parent `CommissionRecord`; the system test verifies this canonical audit link.
+- Verified persistence with a separate Node process after creation. The confirmed marker `phase10-1787406590439` was readable after process restart across contacts, interactions, analyses, scripts, appointments, commissions, time logs, documents, and sync history.
+- Verified Prisma schema validation, migration status, Prisma Client generation, `tsc --noEmit`, and two clean production builds. All nine migrations are applied to PostgreSQL database `multicrm`, schema `public`.
+- Performed authenticated production route smoke checks for `/`, `/integrations`, `/leads`, `/dialer`, `/timeline`, `/copilot`, `/scripts`, `/telemetry`, `/calendar`, `/operations`, `/documents`, and `/multi-crm`: every route returned 200, remained on its requested URL, and rendered its expected page content.
+
+### In Progress
+- None. All ten MVP phases are complete and awaiting review.
+
+### Pending
+- Post-MVP refinements only; do not begin them automatically.
+
+### Notes / Decisions
+- PostgreSQL inspection confirmed tenant-partitioned development data. At the final check, Northstar had 12 contacts/12 external records and Atlas had 2 contacts/2 external records; all later canonical entities also remained independently scoped by `clientAccountId`.
+- `npm run lint` was run but does not currently pass because of existing repository-wide frontend lint violations and an unscoped lint command that exceeded the command timeout. Broader legacy lint remediation is not required for MVP functionality and was not expanded in this phase.
+- A `pg` deprecation warning appears during the direct concurrent handler system runner. Its trace terminates inside Prisma 7.9.1's `@prisma/adapter-pg` transaction implementation (`PgTransaction.performIO`); the end-to-end test, persistence read, TypeScript check, and production build remain successful. Track adapter/driver compatibility for a future dependency upgrade.
+- The production smoke check is route/content-level HTTP verification. A browser-rendered visual QA pass remains appropriate before release, especially for responsive interactions and client switching, but no route 404 or shared-layout regression was found.
+- Existing provider boundaries remain intentional: HubSpot/MOCK CRM, MOCK/manual communication and calendar flows, and deterministic server-side rules/template engines are verified; live Twilio, Google/Outlook Calendar, additional CRMs, email providers, and external LLMs were not added.
+- Post-MVP refinements recorded: editable canonical lead fields with optional CRM write-back; Admin/Manager versus Agent RBAC for company-wide operations/commissions/reconciliation; final product distinction between client analytics/telemetry and internal sales operations; live provider connections; and complete server-backed authentication replacing the development bootstrap session.

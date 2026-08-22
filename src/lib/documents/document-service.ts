@@ -17,17 +17,25 @@ const status = (value: unknown, fallback: DocumentStatus = "DRAFT") => value ===
 
 async function documentContext(context: RequestContext, input: Input) {
   const contactId = text(input.contactId) || null; const leadAnalysisId = text(input.leadAnalysisId) || null; const dealId = text(input.dealId) || null;
-  const [account, contact, leadAnalysis, deal] = await Promise.all([
+  const [account, requestedContact, leadAnalysis, deal] = await Promise.all([
     prisma.clientAccount.findFirst({ where: { id: context.activeClientAccountId, organizationId: context.user.organizationId }, select: { name: true, brandName: true } }),
     contactId ? prisma.contact.findFirst({ where: { id: contactId, organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId }, select: { id: true, firstName: true, lastName: true, email: true, company: true } }) : null,
-    leadAnalysisId ? prisma.leadAnalysis.findFirst({ where: { id: leadAnalysisId, organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId }, select: { id: true, summary: true, requirements: true, timeline: true, budget: true, leadScore: true } }) : null,
-    dealId ? prisma.deal.findFirst({ where: { id: dealId, organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId }, select: { id: true, title: true, valueCents: true, currency: true, status: true } }) : null,
+    leadAnalysisId ? prisma.leadAnalysis.findFirst({ where: { id: leadAnalysisId, organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId }, select: { id: true, contactId: true, summary: true, requirements: true, timeline: true, budget: true, leadScore: true } }) : null,
+    dealId ? prisma.deal.findFirst({ where: { id: dealId, organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId }, select: { id: true, contactId: true, title: true, valueCents: true, currency: true, status: true } }) : null,
   ]);
   if (!account) throw new AppError("CLIENT_CONTEXT_REQUIRED", 404, "Active client account was not found.", "Select an active client account before creating a document.");
-  if (contactId && !contact) throw new AppError("CONTACT_NOT_FOUND", 404, "Contact is outside active client.", "Choose a contact from the active client account.");
+  if (contactId && !requestedContact) throw new AppError("CONTACT_NOT_FOUND", 404, "Contact is outside active client.", "Choose a contact from the active client account.");
   if (leadAnalysisId && !leadAnalysis) throw new AppError("LEAD_ANALYSIS_NOT_FOUND", 404, "Analysis is outside active client.", "Choose an analysis from the active client account.");
   if (dealId && !deal) throw new AppError("INVALID_DOCUMENT_INPUT", 404, "Deal is outside active client.", "Choose a deal from the active client account.");
-  return { account, contact, leadAnalysis, deal, contactId, leadAnalysisId, dealId };
+  const relatedContactIds = [leadAnalysis?.contactId, deal?.contactId].filter((id): id is string => Boolean(id));
+  const canonicalContactId = contactId ?? relatedContactIds[0] ?? null;
+  if (relatedContactIds.some((id) => id !== canonicalContactId)) {
+    throw new AppError("DOCUMENT_CONTEXT_LINK_MISMATCH", 422, "Selected document context is inconsistent.", "Use a contact, deal, and lead analysis that belong to the same lead.");
+  }
+  const contact = requestedContact ?? (canonicalContactId
+    ? await prisma.contact.findFirst({ where: { id: canonicalContactId, organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId }, select: { id: true, firstName: true, lastName: true, email: true, company: true } })
+    : null);
+  return { account, contact, leadAnalysis, deal, contactId: canonicalContactId, leadAnalysisId, dealId };
 }
 
 function generatedDocument(type: Exclude<DocumentKind, "MANUAL_NOTE" | "FILE_UPLOAD">, data: Awaited<ReturnType<typeof documentContext>>) {

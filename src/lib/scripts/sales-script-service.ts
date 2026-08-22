@@ -21,14 +21,20 @@ function channel(value: unknown): Channel {
 async function contextFor(context: RequestContext, input: ScriptInput) {
   const contactId = typeof input.contactId === "string" && input.contactId ? input.contactId : null;
   const analysisId = typeof input.leadAnalysisId === "string" && input.leadAnalysisId ? input.leadAnalysisId : null;
-  const [account, contact, analysis] = await Promise.all([
+  const [account, requestedContact, analysis] = await Promise.all([
     prisma.clientAccount.findFirst({ where: { id: context.activeClientAccountId, organizationId: context.user.organizationId }, select: { name: true, brandName: true } }),
     contactId ? prisma.contact.findFirst({ where: { id: contactId, organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId } }) : null,
     analysisId ? prisma.leadAnalysis.findFirst({ where: { id: analysisId, organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId } }) : null,
   ]);
   if (!account) throw new AppError("CLIENT_CONTEXT_REQUIRED", 404, "Active client account was not found.", "Select an active client account before creating a script.");
-  if (contactId && !contact) throw new AppError("CONTACT_NOT_FOUND", 404, "Contact is outside active client.", "Choose a contact from the active client account.");
+  if (contactId && !requestedContact) throw new AppError("CONTACT_NOT_FOUND", 404, "Contact is outside active client.", "Choose a contact from the active client account.");
   if (analysisId && !analysis) throw new AppError("LEAD_ANALYSIS_NOT_FOUND", 404, "Analysis is outside active client.", "Choose an analysis from the active client account.");
+  if (requestedContact && analysis?.contactId && requestedContact.id !== analysis.contactId) {
+    throw new AppError("LEAD_ANALYSIS_LINK_MISMATCH", 422, "Contact and lead analysis do not match.", "Use the contact associated with the selected lead analysis.");
+  }
+  const contact = requestedContact ?? (analysis?.contactId
+    ? await prisma.contact.findFirst({ where: { id: analysis.contactId, organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId } })
+    : null);
   const interactions = await prisma.interaction.findMany({ where: { organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, ...(contact ? { contactId: contact.id } : {}) }, orderBy: { occurredAt: "desc" }, take: 5, select: { type: true, body: true, occurredAt: true } });
   return { account, contact, analysis, interactions };
 }
