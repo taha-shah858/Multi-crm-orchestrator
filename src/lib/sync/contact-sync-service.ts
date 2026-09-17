@@ -1,5 +1,6 @@
 import { AppError } from "@/lib/errors/app-error";
 import { getCrmAdapter } from "@/lib/integrations/registry";
+import type { ContactWriteInput } from "@/lib/integrations/types";
 import type { NormalizedContact } from "@/lib/models/contact";
 import type { RequestContext } from "@/lib/models/canonical";
 import { prisma } from "@/lib/db/prisma";
@@ -31,6 +32,21 @@ export interface PersistedContactSummary {
   sourceCrm: "HubSpot" | "Mock CRM" | "Salesforce" | "Zoho" | "Pipedrive";
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface ContactUpdateInput {
+  firstName?: unknown;
+  lastName?: unknown;
+  email?: unknown;
+  phone?: unknown;
+  company?: unknown;
+}
+
+export interface OutboundContactSyncResult {
+  status: "COMPLETED" | "FAILED" | "NOT_MAPPED";
+  provider?: "HUBSPOT";
+  retryable: boolean;
+  error?: string;
 }
 
 function auditSourceForProvider(provider: string): "PLATFORM" | "HUBSPOT" | "MOCK" {
@@ -202,7 +218,7 @@ export async function syncActiveClientContacts(
     });
 
     try {
-      const contacts = await getCrmAdapter(connection.provider).listContacts({ limit: 100 });
+      const contacts = await getCrmAdapter(connection.provider).listContacts(connection, { limit: 100 });
       const persisted = await persistContacts(context, connection.id, contacts);
 
       await prisma.syncRun.update({
@@ -275,6 +291,165 @@ export async function syncActiveClientContacts(
   }
 
   return summary;
+}
+
+function normalizeContactUpdate(input: ContactUpdateInput): ContactWriteInput {
+  const fields = ["firstName", "lastName", "email", "phone", "company"] as const;
+  const provided = fields.filter((field) => input[field] !== undefined);
+  if (provided.length === 0) {
+    throw new AppError("INVALID_CONTACT_INPUT", 422, "No editable contact fields were supplied.", "Enter at least one contact field to save.");
+  }
+
+  const readRequired = (field: "firstName" | "lastName") => {
+    const value = input[field];
+    if (typeof value !== "string" || !value.trim()) {
+      throw new AppError("INVALID_CONTACT_INPUT", 422, `${field} must be a non-empty string.`, "First and last name are required.");
+    }
+    return value.trim();
+  };
+  const readNullable = (field: "email" | "phone" | "company") => {
+    const value = input[field];
+    if (value === null) return null;
+    if (typeof value !== "string") {
+      throw new AppError("INVALID_CONTACT_INPUT", 422, `${field} must be a string or null.`, "Contact details must contain valid text.");
+    }
+    return value.trim() || null;
+  };
+
+  return {
+    firstName: readRequired("firstName"),
+    lastName: readRequired("lastName"),
+    email: readNullable("email"),
+    phone: readNullable("phone"),
+    company: readNullable("company"),
+  };
+}
+
+async function syncContactToHubSpot(
+  context: RequestContext,
+  contact: { id: string; firstName: string; lastName: string; email: string | null; phone: string | null; company: string | null },
+  requestId: string,
+): Promise<OutboundContactSyncResult> {
+  const mappings = await prisma.externalRecord.findMany({
+    where: {
+      contactId: contact.id,
+      clientAccountId: context.activeClientAccountId,
+      connection: {
+        organizationId: context.user.organizationId,
+        clientAccountId: context.activeClientAccountId,
+        provider: "HUBSPOT",
+        status: "CONNECTED",
+      },
+    },
+    include: { connection: true },
+  });
+
+  if (mappings.length === 0) {
+    return { status: "NOT_MAPPED", retryable: false };
+  }
+
+  const mapping = mappings[0];
+  const syncRun = await prisma.syncRun.create({
+    data: {
+      organizationId: context.user.organizationId,
+      clientAccountId: context.activeClientAccountId,
+      connectionId: mapping.connectionId,
+      userId: context.user.id,
+      provider: "HUBSPOT",
+      trigger: "MANUAL",
+      status: "RUNNING",
+    },
+  });
+
+  try {
+    await getCrmAdapter("HUBSPOT").updateContact(mapping.connection, mapping.externalId, contact);
+    await prisma.$transaction([
+      prisma.externalRecord.update({ where: { id: mapping.id }, data: { lastSyncedAt: new Date() } }),
+      prisma.syncRun.update({
+        where: { id: syncRun.id },
+        data: { status: "COMPLETED", recordsUpdated: 1, completedAt: new Date() },
+      }),
+    ]);
+    await recordAuditEvent(context, {
+      action: "CONTACT_OUTBOUND_SYNC_COMPLETED",
+      entityType: "CONTACT",
+      entityId: contact.id,
+      requestId,
+      source: "HUBSPOT",
+      metadata: { provider: "HUBSPOT", direction: "OUTBOUND", externalId: mapping.externalId },
+    });
+    return { status: "COMPLETED", provider: "HUBSPOT", retryable: false };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "HubSpot contact update failed.";
+    const safeMessage = error instanceof AppError
+      ? error.safeMessage
+      : "HubSpot could not update this contact. Your local edit is saved; retry when the connection is available.";
+    await prisma.syncRun.update({
+      where: { id: syncRun.id },
+      data: { status: "FAILED", recordsFailed: 1, errorMessage: message, completedAt: new Date() },
+    });
+    await recordAuditEvent(context, {
+      action: "CONTACT_OUTBOUND_SYNC_FAILED",
+      entityType: "CONTACT",
+      entityId: contact.id,
+      requestId,
+      source: "HUBSPOT",
+      metadata: { provider: "HUBSPOT", direction: "OUTBOUND", externalId: mapping.externalId },
+    });
+    return { status: "FAILED", provider: "HUBSPOT", retryable: true, error: safeMessage };
+  }
+}
+
+/** Saves the canonical record first, then best-effort writes its mapped HubSpot record. */
+export async function updateActiveClientContact(
+  context: RequestContext,
+  contactId: string,
+  input: ContactUpdateInput,
+  requestId: string,
+) {
+  await prepareActiveClientSync(context);
+  const existing = await prisma.contact.findFirst({
+    where: {
+      id: contactId,
+      organizationId: context.user.organizationId,
+      clientAccountId: context.activeClientAccountId,
+    },
+  });
+  if (!existing) {
+    throw new AppError("CONTACT_NOT_FOUND", 404, "Contact is outside active client.", "This contact is not available for the selected client account.");
+  }
+
+  const data = normalizeContactUpdate({ ...existing, ...input });
+  const persisted = await prisma.contact.update({ where: { id: contactId }, data });
+  await recordAuditEvent(context, {
+    action: "CONTACT_UPDATED",
+    entityType: "CONTACT",
+    entityId: contactId,
+    requestId,
+    source: "PLATFORM",
+  });
+  const outboundSync = await syncContactToHubSpot(context, persisted, requestId);
+  return { contact: persisted, outboundSync };
+}
+
+/** Retries a previously failed outbound write without changing the canonical record. */
+export async function retryActiveClientContactOutboundSync(
+  context: RequestContext,
+  contactId: string,
+  requestId: string,
+) {
+  await prepareActiveClientSync(context);
+  const contact = await prisma.contact.findFirst({
+    where: {
+      id: contactId,
+      organizationId: context.user.organizationId,
+      clientAccountId: context.activeClientAccountId,
+    },
+  });
+  if (!contact) {
+    throw new AppError("CONTACT_NOT_FOUND", 404, "Contact is outside active client.", "This contact is not available for the selected client account.");
+  }
+  return { contact, outboundSync: await syncContactToHubSpot(context, contact, requestId) };
 }
 
 export async function getActiveClientSyncHistory(context: RequestContext) {

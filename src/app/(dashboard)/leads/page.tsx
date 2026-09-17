@@ -65,6 +65,9 @@ interface Lead {
   address: string;
   description: string;
   variant: "cyan" | "purple" | "magenta" | "neutral";
+  firstName?: string;
+  lastName?: string;
+  isPersisted?: boolean;
 }
 
 interface PersistedContact {
@@ -91,6 +94,10 @@ export default function LeadsPage() {
     "overview"
   );
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [isSavingContact, setIsSavingContact] = useState(false);
+  const [contactSyncFeedback, setContactSyncFeedback] = useState("");
+  const [editContact, setEditContact] = useState({ firstName: "", lastName: "", email: "", phone: "", company: "" });
 
   // CRM Import POC State
   const [isImporting, setIsImporting] = useState(false);
@@ -107,6 +114,9 @@ export default function LeadsPage() {
     return {
       id: contact.id,
       name: fullName,
+      firstName: contact.firstName,
+      lastName: contact.lastName,
+      isPersisted: true,
       title: "Contact",
       company: contact.company || "Independent",
       email: contact.email || "no-email@crm.invalid",
@@ -214,6 +224,81 @@ export default function LeadsPage() {
       });
     } finally {
       if (currentClientAccountId.current === clientAccountId) setIsImporting(false);
+    }
+  };
+
+  const openContactEditor = () => {
+    if (!selectedLead?.isPersisted) return;
+    setContactSyncFeedback("");
+    setEditContact({
+      firstName: selectedLead.firstName || selectedLead.name.split(" ")[0] || "",
+      lastName: selectedLead.lastName || selectedLead.name.split(" ").slice(1).join(" ") || "",
+      email: selectedLead.email === "no-email@crm.invalid" ? "" : selectedLead.email,
+      phone: selectedLead.phone === "N/A" ? "" : selectedLead.phone,
+      company: selectedLead.company === "Independent" ? "" : selectedLead.company,
+    });
+    setShowEditModal(true);
+  };
+
+  const saveContactEdit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!selectedLead) return;
+    setIsSavingContact(true);
+    setContactSyncFeedback("");
+    try {
+      const response = await fetch(`/api/contacts/${selectedLead.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editContact),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error?.message || "Unable to save this contact.");
+      }
+      const outbound = data.outboundSync;
+      setSelectedLead({
+        ...selectedLead,
+        name: `${editContact.firstName} ${editContact.lastName}`.trim(),
+        firstName: editContact.firstName,
+        lastName: editContact.lastName,
+        email: editContact.email || "no-email@crm.invalid",
+        phone: editContact.phone || "N/A",
+        company: editContact.company || "Independent",
+        pulledAt: new Date().toLocaleString(),
+      });
+      await loadPersistedContacts();
+      setShowEditModal(false);
+      setContactSyncFeedback(
+        outbound.status === "COMPLETED"
+          ? "Contact saved locally and updated in HubSpot."
+          : outbound.status === "FAILED"
+            ? `Contact saved locally. HubSpot update failed: ${outbound.error}`
+            : "Contact saved locally. This contact has no connected HubSpot mapping.",
+      );
+    } catch (error) {
+      setContactSyncFeedback(error instanceof Error ? error.message : "Unable to save this contact.");
+    } finally {
+      setIsSavingContact(false);
+    }
+  };
+
+  const retryHubSpotContactSync = async () => {
+    if (!selectedLead?.isPersisted) return;
+    setIsSavingContact(true);
+    try {
+      const response = await fetch(`/api/contacts/${selectedLead.id}/sync`, { method: "POST" });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error?.message || "Unable to retry HubSpot sync.");
+      setContactSyncFeedback(
+        data.outboundSync.status === "COMPLETED"
+          ? "HubSpot update completed."
+          : data.outboundSync.error || "HubSpot update is still unavailable; your local edit remains saved.",
+      );
+      await loadPersistedContacts();
+    } catch (error) {
+      setContactSyncFeedback(error instanceof Error ? error.message : "Unable to retry HubSpot sync.");
+    } finally {
+      setIsSavingContact(false);
     }
   };
 
@@ -643,7 +728,12 @@ export default function LeadsPage() {
               <button className="px-3.5 py-1.5 rounded-xl bg-primary-cyan/20 border border-primary-cyan/40 text-primary-cyan flex items-center gap-1.5 cursor-pointer">
                 <Send className="w-3.5 h-3.5" /> Direct Email
               </button>
-              <button className="px-3.5 py-1.5 rounded-xl bg-crm-inner border border-crm-border-strong text-crm-text-muted flex items-center gap-1.5 cursor-pointer">
+              <button
+                onClick={openContactEditor}
+                disabled={!selectedLead.isPersisted}
+                className="px-3.5 py-1.5 rounded-xl bg-crm-inner border border-crm-border-strong text-crm-text-muted flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                title={selectedLead.isPersisted ? "Edit canonical contact and sync HubSpot" : "Temporary leads cannot be edited after refresh"}
+              >
                 <Edit3 className="w-3.5 h-3.5" /> Edit Record
               </button>
             </div>
@@ -805,6 +895,16 @@ export default function LeadsPage() {
               </MultiCrmInnerPanel>
             </MultiCrmCard>
           </div>
+          {contactSyncFeedback && (
+            <div className="flex items-center gap-3 rounded-xl border border-primary-cyan/30 bg-primary-cyan/10 px-4 py-3 text-xs font-mono text-crm-text-muted">
+              <span>{contactSyncFeedback}</span>
+              {contactSyncFeedback.includes("HubSpot update failed") && (
+                <button onClick={retryHubSpotContactSync} disabled={isSavingContact} className="ml-auto rounded-lg border border-primary-cyan/40 px-2.5 py-1 text-primary-cyan hover:bg-primary-cyan/10 disabled:opacity-50">
+                  Retry HubSpot
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -1090,6 +1190,31 @@ export default function LeadsPage() {
                   Save Lead Record
                 </button>
               </div>
+            </form>
+          </MultiCrmCard>
+        </div>
+      )}
+
+      {showEditModal && selectedLead && (
+        <div className="dashboard-overlay bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <MultiCrmCard className="w-full max-w-lg p-6 space-y-5 border border-primary-cyan/40 shadow-2xl">
+            <div className="flex items-start justify-between border-b border-crm-border-strong pb-3">
+              <div>
+                <h2 className="text-lg font-bold text-crm-text">Edit canonical contact</h2>
+                <p className="mt-1 text-xs font-mono text-crm-text-muted">Saves locally first, then writes the mapped HubSpot contact.</p>
+              </div>
+              <button onClick={() => setShowEditModal(false)} className="text-crm-text-muted hover:text-crm-text"><X className="h-5 w-5" /></button>
+            </div>
+            <form onSubmit={saveContactEdit} className="space-y-4 font-mono text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                {[['firstName', 'First name'], ['lastName', 'Last name']].map(([field, label]) => (
+                  <label key={field} className="space-y-1 text-crm-text-muted"><span>{label}</span><input required value={editContact[field as 'firstName' | 'lastName']} onChange={(event) => setEditContact({ ...editContact, [field]: event.target.value })} className="w-full rounded-xl border border-crm-border-strong bg-crm-inner px-3 py-2 text-crm-text outline-none focus:border-primary-cyan/60" /></label>
+                ))}
+              </div>
+              {[['email', 'Email'], ['phone', 'Phone'], ['company', 'Company']].map(([field, label]) => (
+                <label key={field} className="block space-y-1 text-crm-text-muted"><span>{label}</span><input type={field === 'email' ? 'email' : 'text'} value={editContact[field as 'email' | 'phone' | 'company']} onChange={(event) => setEditContact({ ...editContact, [field]: event.target.value })} className="w-full rounded-xl border border-crm-border-strong bg-crm-inner px-3 py-2 text-crm-text outline-none focus:border-primary-cyan/60" /></label>
+              ))}
+              <div className="flex justify-end gap-3 pt-2"><button type="button" onClick={() => setShowEditModal(false)} className="rounded-xl border border-crm-border-strong px-4 py-2 text-crm-text-muted">Cancel</button><button disabled={isSavingContact} className="rounded-xl bg-primary-cyan px-4 py-2 font-semibold text-slate-950 disabled:opacity-50">{isSavingContact ? 'Saving…' : 'Save & Sync HubSpot'}</button></div>
             </form>
           </MultiCrmCard>
         </div>

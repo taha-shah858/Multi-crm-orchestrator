@@ -32,4 +32,8 @@ export const mockCrmAdapter: CrmAdapter = {
       },
     ];
   },
+  async updateContact() {
+    // The mock provider deliberately has no remote state. Keeping the write
+    // capability makes local-first contact editing testable without an API key.
+  },
 };

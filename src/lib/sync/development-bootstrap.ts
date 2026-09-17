@@ -77,7 +77,7 @@ export async function ensureDevelopmentTenant(context: RequestContext) {
       create: { clientAccountId: client.id, userId: context.user.id },
     });
 
-    await prisma.crmConnection.upsert({
+    const connection = await prisma.crmConnection.upsert({
       where: {
         clientAccountId_provider: {
           clientAccountId: client.id,
@@ -92,6 +92,16 @@ export async function ensureDevelopmentTenant(context: RequestContext) {
         status: "CONNECTED",
       },
     });
+
+    // This is a server-only reference, never a token value. It preserves the
+    // current development setup while allowing each connection to point at a
+    // distinct HubSpot credential such as env:HUBSPOT_NORTHSTAR_ACCESS_TOKEN.
+    if (client.provider === "HUBSPOT" && !connection.encryptedAccessToken) {
+      await prisma.crmConnection.update({
+        where: { id: connection.id },
+        data: { encryptedAccessToken: "env:HUBSPOT_ACCESS_TOKEN" },
+      });
+    }
 
     await prisma.communicationIdentity.upsert({
       where: {
