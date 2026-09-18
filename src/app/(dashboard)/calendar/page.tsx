@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Calendar as CalendarIcon, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock3, Edit3, Plus, Sparkles, X } from "lucide-react";
 import { MultiCrmCard, MultiCrmInnerPanel, MultiCrmTag } from "@/components/ui/MultiCrmCard";
 import { useClientAccount } from "@/context/ClientAccountContext";
+import { readApiJson } from "@/lib/http/client-api";
 
 type Provider = "MANUAL" | "MOCK";
 type Status = "SCHEDULED" | "CONFIRMED" | "CANCELLED";
@@ -37,7 +38,18 @@ export default function CalendarPage() {
     const controller = new AbortController(); const version = ++requestVersion.current; const clientId = activeClientAccount.id;
     setIsLoading(true); setAppointments([]); setIntents([]); setContacts([]); setMessage(null); setIsModalOpen(false); setEditing(null);
     const load = async () => {
-      try { const responses = await Promise.all([fetch("/api/calendar/events", { cache: "no-store", signal: controller.signal }), fetch("/api/contacts", { cache: "no-store", signal: controller.signal })]); const [calendar, contactsPayload] = await Promise.all(responses.map((response) => response.json())); if (controller.signal.aborted || version !== requestVersion.current || currentClientId.current !== clientId) return; if (!responses[0].ok || !calendar.success || !responses[1].ok || !contactsPayload.success) throw new Error("The calendar could not be loaded for this client account."); setAppointments(calendar.appointments); setIntents(calendar.intents); setContacts(contactsPayload.contacts); }
+      try {
+        const [calendarResponse, contactsResponse] = await Promise.all([
+          fetch("/api/calendar/events", { cache: "no-store", signal: controller.signal }),
+          fetch("/api/contacts", { cache: "no-store", signal: controller.signal }),
+        ]);
+        const [calendar, contactsPayload] = await Promise.all([
+          readApiJson<{ success: true; appointments: Appointment[]; intents: Intent[] }>(calendarResponse),
+          readApiJson<{ success: true; contacts: Contact[] }>(contactsResponse),
+        ]);
+        if (controller.signal.aborted || version !== requestVersion.current || currentClientId.current !== clientId) return;
+        setAppointments(calendar.appointments); setIntents(calendar.intents); setContacts(contactsPayload.contacts);
+      }
       catch (error) { if (controller.signal.aborted || version !== requestVersion.current || currentClientId.current !== clientId) return; setMessage({ tone: "error", text: error instanceof Error ? error.message : "The calendar could not be loaded." }); }
       finally { if (!controller.signal.aborted && version === requestVersion.current && currentClientId.current === clientId) setIsLoading(false); }
     };
@@ -57,7 +69,7 @@ export default function CalendarPage() {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault(); const version = requestVersion.current; const clientId = activeClientAccount.id; setIsWorking(true); setMessage(null);
-    try { const submittedInteractionId = form.interactionId; const response = await fetch(editing ? `/api/calendar/events/${editing.id}` : "/api/calendar/schedule", { method: editing ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, startTime: new Date(form.startTime).toISOString(), endTime: new Date(form.endTime).toISOString(), contactId: form.contactId || undefined, interactionId: form.interactionId || undefined }) }); const data = await response.json(); if (version !== requestVersion.current || currentClientId.current !== clientId) return; if (!response.ok || !data.success) throw new Error(data?.error?.message ?? "The appointment could not be saved."); const appointment = data.appointment as Appointment; setAppointments((items) => items.some((item) => item.id === appointment.id) ? items.map((item) => item.id === appointment.id ? appointment : item) : [...items, appointment].sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())); setIntents((items) => items.filter((intent) => intent.id !== submittedInteractionId)); setIsModalOpen(false); setMessage({ tone: "success", text: editing ? "Meeting updated." : "Meeting scheduled and saved." }); }
+    try { const submittedInteractionId = form.interactionId; const response = await fetch(editing ? `/api/calendar/events/${editing.id}` : "/api/calendar/schedule", { method: editing ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, startTime: new Date(form.startTime).toISOString(), endTime: new Date(form.endTime).toISOString(), contactId: form.contactId || undefined, interactionId: form.interactionId || undefined }) }); const data = await readApiJson<{ success: true; appointment: Appointment }>(response); if (version !== requestVersion.current || currentClientId.current !== clientId) return; const appointment = data.appointment; setAppointments((items) => items.some((item) => item.id === appointment.id) ? items.map((item) => item.id === appointment.id ? appointment : item) : [...items, appointment].sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())); setIntents((items) => items.filter((intent) => intent.id !== submittedInteractionId)); setIsModalOpen(false); setMessage({ tone: "success", text: editing ? "Meeting updated." : "Meeting scheduled and saved." }); }
     catch (error) { if (version !== requestVersion.current || currentClientId.current !== clientId) return; setMessage({ tone: "error", text: error instanceof Error ? error.message : "The appointment could not be saved." }); }
     finally { if (version === requestVersion.current && currentClientId.current === clientId) setIsWorking(false); }
   };

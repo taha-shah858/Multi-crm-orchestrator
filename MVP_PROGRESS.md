@@ -278,3 +278,29 @@
 - The production smoke check is route/content-level HTTP verification. A browser-rendered visual QA pass remains appropriate before release, especially for responsive interactions and client switching, but no route 404 or shared-layout regression was found.
 - Existing provider boundaries remain intentional: HubSpot/MOCK CRM, MOCK/manual communication and calendar flows, and deterministic server-side rules/template engines are verified; live Twilio, Google/Outlook Calendar, additional CRMs, email providers, and external LLMs were not added.
 - Post-MVP refinements recorded: editable canonical lead fields with optional CRM write-back; Admin/Manager versus Agent RBAC for company-wide operations/commissions/reconciliation; final product distinction between client analytics/telemetry and internal sales operations; live provider connections; and complete server-backed authentication replacing the development bootstrap session.
+
+## Post-MVP Stage 1 - Status
+
+### Completed
+- Read the architecture, MVP, completed implementation state, and post-MVP plan before starting Stage 1.
+- Preserved the existing canonical-contact write-back implementation and its HubSpot adapter boundary; supported CRM fields remain first name, last name, email, phone, and company only.
+- Extended Unified Leads to load the active client account's persisted lead analyses alongside canonical contacts, attach each contact's latest analysis, and show real lead score, temperature, deal probability, budget, timeline, summary, intent, requirements, objections, and manual-override state.
+- Added an in-app assessment editor in the existing Leads design system. It reuses `PATCH /api/lead-analyses/:id`, marks the saved assessment as a manual override, and preserves the existing audit trail without writing internal AI fields to HubSpot.
+- Kept CRM contact editing and HubSpot retry controls separate from internal assessment editing, so an agent can explicitly choose the appropriate manual control.
+- Verified authenticated active-client contacts and analyses responses for Northstar (12 contacts, 1 analysis) and Atlas (2 contacts, 6 analyses); every contact-linked analysis belonged to its selected client account.
+- Passed `tsc --noEmit`, production build, and whitespace validation.
+- Corrected the Stage 1 dashboard API-response regression in Dialer, Sales Script Architect, and Calendar Planner. Their nested API endpoints now return JSON after a fresh server start, unknown `/api/*` paths return the standard JSON 404 contract, and each affected client validates `response.ok` and `content-type` before parsing JSON so failures appear as in-app feedback.
+- Verified authenticated JSON responses for `/api/communications/identities`, `/api/scripts/templates`, `/api/calendar/events`, `/api/contacts`, and `/api/scripts`; verified JSON 401 for an unauthenticated API request and JSON 404 for an unknown API path. Passed `tsc --noEmit`, production build, the Phase 10 system test, and its fresh-process persistence check (`phase10-1789748872686`).
+
+### In Progress
+- None. Stage 1 is complete and awaiting review.
+
+### Pending
+- Stage 2 - Authentication & RBAC and later post-MVP stages only.
+
+### Notes / Decisions
+- The latest persisted analysis per contact is the assessment shown in Unified Leads; complete analysis history remains available in Copilot.
+- AI analysis is intentionally a platform-owned/manual-override assessment, not a HubSpot contact property. Only the established canonical contact fields participate in HubSpot write-back.
+- Bidirectional data behavior remains: HubSpot manual import updates canonical contacts without duplicate mappings; local canonical edits attempt an outbound HubSpot PATCH and retain local changes with an auditable retry on provider failure.
+- The configured Northstar HubSpot token can read contacts but previously returned 403 on PATCH because it lacks `crm.objects.contacts.write`. Grant that scope and use the existing Leads "Save & Sync HubSpot" / "Retry HubSpot" controls to complete the live provider-success test; no credentials are exposed to the frontend.
+- Regression root cause: the existing live `next dev` process had a stale nested App Router route table. It served Next's HTML 404 document for valid nested API routes even though their route files were present in the generated route manifest. `proxy.ts` explicitly excludes `/api`, so this was not an authentication, RBAC, redirect, or active-client failure. Restarting the server restored those handlers; the JSON fallback and client boundary make this failure mode safe and visible if it recurs.

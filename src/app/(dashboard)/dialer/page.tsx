@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Building2, MessageSquare, PhoneCall, Search, ShieldCheck, User } from "lucide-react";
 import { MultiCrmCard, MultiCrmInnerPanel, MultiCrmTag } from "@/components/ui/MultiCrmCard";
 import { useClientAccount } from "@/context/ClientAccountContext";
+import { readApiJson } from "@/lib/http/client-api";
 
 interface CommunicationIdentity {
   id: string;
@@ -62,17 +63,10 @@ export default function SmartDialerPage() {
         fetch("/api/contacts", { cache: "no-store" }),
       ]);
       const [identityData, contactData] = await Promise.all([
-        identityResponse.json(),
-        contactResponse.json(),
+        readApiJson<{ success: true; identities: CommunicationIdentity[] }>(identityResponse),
+        readApiJson<{ success: true; contacts: Contact[] }>(contactResponse),
       ]);
       if (version !== requestVersion.current || currentClientAccountId.current !== clientAccountId) return;
-
-      if (!identityResponse.ok || !identityData.success) {
-        throw new Error(identityData?.error?.message ?? "Outgoing identities could not be loaded.");
-      }
-      if (!contactResponse.ok || !contactData.success) {
-        throw new Error(contactData?.error?.message ?? "Contacts could not be loaded.");
-      }
 
       const availableIdentities = identityData.identities as CommunicationIdentity[];
       setIdentities(availableIdentities);
@@ -135,11 +129,8 @@ export default function SmartDialerPage() {
           body: smsBody,
         }),
       });
-      const data = await response.json();
+      const data = await readApiJson<{ success: true; delivery: { provider: string } }>(response);
       if (version !== requestVersion.current || currentClientAccountId.current !== clientAccountId) return;
-      if (!response.ok || !data.success) {
-        throw new Error(data?.error?.message ?? "The communication could not be recorded.");
-      }
 
       if (kind === "CALL" && mode === "MANUAL") {
         window.location.href = `tel:${destination}`;

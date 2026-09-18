@@ -68,6 +68,7 @@ interface Lead {
   firstName?: string;
   lastName?: string;
   isPersisted?: boolean;
+  analysis?: PersistedLeadAnalysis;
 }
 
 interface PersistedContact {
@@ -82,6 +83,24 @@ interface PersistedContact {
   createdAt: string;
   updatedAt: string;
 }
+
+interface PersistedLeadAnalysis {
+  id: string;
+  contact: { id: string; firstName: string; lastName: string; company: string | null } | null;
+  summary: string;
+  budget: string | null;
+  timeline: string | null;
+  requirements: string | null;
+  intent: string | null;
+  objections: string | null;
+  leadScore: number;
+  temperature: "Hot" | "Warm" | "Cold" | string;
+  dealProbability: number;
+  isManualOverride: boolean;
+  updatedAt: string;
+}
+
+type AssessmentForm = Pick<PersistedLeadAnalysis, "summary" | "budget" | "timeline" | "requirements" | "intent" | "objections" | "leadScore" | "temperature" | "dealProbability">;
 
 export default function LeadsPage() {
   const { activeClientAccount, isClientAccountReady } = useClientAccount();
@@ -98,6 +117,10 @@ export default function LeadsPage() {
   const [isSavingContact, setIsSavingContact] = useState(false);
   const [contactSyncFeedback, setContactSyncFeedback] = useState("");
   const [editContact, setEditContact] = useState({ firstName: "", lastName: "", email: "", phone: "", company: "" });
+  const [showAssessmentModal, setShowAssessmentModal] = useState(false);
+  const [isSavingAssessment, setIsSavingAssessment] = useState(false);
+  const [assessmentFeedback, setAssessmentFeedback] = useState("");
+  const [assessmentForm, setAssessmentForm] = useState<AssessmentForm | null>(null);
 
   // CRM Import POC State
   const [isImporting, setIsImporting] = useState(false);
@@ -109,7 +132,7 @@ export default function LeadsPage() {
     message: string;
   }>({ type: null, message: "" });
 
-  const mapPersistedContactToLead = useCallback((contact: PersistedContact): Lead => {
+  const mapPersistedContactToLead = useCallback((contact: PersistedContact, analysis?: PersistedLeadAnalysis): Lead => {
     const fullName = `${contact.firstName} ${contact.lastName}`.trim() || "Unnamed Contact";
     return {
       id: contact.id,
@@ -117,6 +140,7 @@ export default function LeadsPage() {
       firstName: contact.firstName,
       lastName: contact.lastName,
       isPersisted: true,
+      analysis,
       title: "Contact",
       company: contact.company || "Independent",
       email: contact.email || "no-email@crm.invalid",
@@ -129,8 +153,8 @@ export default function LeadsPage() {
       syncStatus: "Synced",
       leadOwner: `${activeClientAccount.name} Integration`,
       status: "Active Lead",
-      rating: "Unrated", // Real data: no fabricated rating
-      score: null, // Real data: no fabricated score
+      rating: analysis?.temperature === "Hot" || analysis?.temperature === "Warm" || analysis?.temperature === "Cold" ? analysis.temperature : "Unrated",
+      score: analysis?.leadScore ?? null,
       industry: "General",
       annualRevenue: "N/A",
       website: "",
@@ -140,26 +164,34 @@ export default function LeadsPage() {
     };
   }, [activeClientAccount.name]);
 
-  const loadPersistedContacts = useCallback(async (resetPendingSync = false): Promise<boolean> => {
+  const loadPersistedContacts = useCallback(async (resetPendingSync = false, clearSelection = true): Promise<boolean> => {
     if (!isClientAccountReady) return false;
 
     const requestVersion = ++contactRequestVersion.current;
     if (resetPendingSync) setIsImporting(false);
     setIsLoadingContacts(true);
-    setSelectedLead(null);
+    if (clearSelection) setSelectedLead(null);
 
     try {
-      const response = await fetch("/api/contacts", { cache: "no-store" });
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        const errorMessage =
-          typeof data.error === "string" ? data.error : data.error?.message;
+      const [contactResponse, analysisResponse] = await Promise.all([
+        fetch("/api/contacts", { cache: "no-store" }),
+        fetch("/api/lead-analyses", { cache: "no-store" }),
+      ]);
+      const [contactData, analysisData] = await Promise.all([contactResponse.json(), analysisResponse.json()]);
+      if (!contactResponse.ok || !contactData.success || !analysisResponse.ok || !analysisData.success) {
+        const errorMessage = typeof contactData.error === "string" ? contactData.error : contactData.error?.message;
         throw new Error(errorMessage || "Unable to load contacts for the active client account.");
       }
 
       if (requestVersion !== contactRequestVersion.current) return false;
 
-      setLeads((data.contacts as PersistedContact[]).map(mapPersistedContactToLead));
+      const latestAnalysisByContact = new Map<string, PersistedLeadAnalysis>();
+      for (const analysis of analysisData.analyses as PersistedLeadAnalysis[]) {
+        if (analysis.contact && !latestAnalysisByContact.has(analysis.contact.id)) {
+          latestAnalysisByContact.set(analysis.contact.id, analysis);
+        }
+      }
+      setLeads((contactData.contacts as PersistedContact[]).map((contact) => mapPersistedContactToLead(contact, latestAnalysisByContact.get(contact.id))));
       return true;
     } catch (error) {
       if (requestVersion !== contactRequestVersion.current) return false;
@@ -266,7 +298,7 @@ export default function LeadsPage() {
         company: editContact.company || "Independent",
         pulledAt: new Date().toLocaleString(),
       });
-      await loadPersistedContacts();
+      await loadPersistedContacts(false, false);
       setShowEditModal(false);
       setContactSyncFeedback(
         outbound.status === "COMPLETED"
@@ -294,11 +326,56 @@ export default function LeadsPage() {
           ? "HubSpot update completed."
           : data.outboundSync.error || "HubSpot update is still unavailable; your local edit remains saved.",
       );
-      await loadPersistedContacts();
+      await loadPersistedContacts(false, false);
     } catch (error) {
       setContactSyncFeedback(error instanceof Error ? error.message : "Unable to retry HubSpot sync.");
     } finally {
       setIsSavingContact(false);
+    }
+  };
+
+  const openAssessmentEditor = () => {
+    const analysis = selectedLead?.analysis;
+    if (!analysis) return;
+    setAssessmentFeedback("");
+    setAssessmentForm({
+      summary: analysis.summary,
+      budget: analysis.budget,
+      timeline: analysis.timeline,
+      requirements: analysis.requirements,
+      intent: analysis.intent,
+      objections: analysis.objections,
+      leadScore: analysis.leadScore,
+      temperature: analysis.temperature,
+      dealProbability: analysis.dealProbability,
+    });
+    setShowAssessmentModal(true);
+  };
+
+  const saveAssessment = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const analysis = selectedLead?.analysis;
+    if (!analysis || !assessmentForm) return;
+    setIsSavingAssessment(true);
+    setAssessmentFeedback("");
+    try {
+      const response = await fetch(`/api/lead-analyses/${analysis.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(assessmentForm),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error?.message || "Unable to save the AI assessment.");
+      const updatedAnalysis = { ...analysis, ...data.analysis, contact: analysis.contact, isManualOverride: true } as PersistedLeadAnalysis;
+      const rating = updatedAnalysis.temperature === "Hot" || updatedAnalysis.temperature === "Warm" || updatedAnalysis.temperature === "Cold" ? updatedAnalysis.temperature : "Unrated";
+      setSelectedLead((lead) => lead ? { ...lead, analysis: updatedAnalysis, score: updatedAnalysis.leadScore, rating } : lead);
+      setLeads((items) => items.map((lead) => lead.id === selectedLead.id ? { ...lead, analysis: updatedAnalysis, score: updatedAnalysis.leadScore, rating } : lead));
+      setShowAssessmentModal(false);
+      setAssessmentFeedback("AI assessment saved as a manual override. CRM contact fields were not changed.");
+    } catch (error) {
+      setAssessmentFeedback(error instanceof Error ? error.message : "Unable to save the AI assessment.");
+    } finally {
+      setIsSavingAssessment(false);
     }
   };
 
@@ -795,6 +872,18 @@ export default function LeadsPage() {
                   </span>
                 </div>
               </MultiCrmInnerPanel>
+              <MultiCrmInnerPanel className="space-y-3 p-3 font-mono text-xs">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-crm-text-muted">Assessment context</span>
+                  {selectedLead.analysis && <button onClick={openAssessmentEditor} className="rounded-lg border border-primary-cyan/30 px-2 py-1 text-[10px] text-primary-cyan hover:bg-primary-cyan/10 cursor-pointer">Edit assessment</button>}
+                </div>
+                {selectedLead.analysis ? <>
+                  <div className="grid grid-cols-2 gap-2"><span className="text-slate-500">Probability</span><span className="text-right font-bold text-emerald-400">{selectedLead.analysis.dealProbability}%</span><span className="text-slate-500">Budget</span><span className="text-right text-crm-text">{selectedLead.analysis.budget || "—"}</span><span className="text-slate-500">Timeline</span><span className="text-right text-crm-text">{selectedLead.analysis.timeline || "—"}</span></div>
+                  <p className="border-t border-crm-border-strong pt-3 text-[11px] leading-relaxed text-crm-text-muted">{selectedLead.analysis.summary}</p>
+                  <div className="space-y-1 text-[10px] leading-relaxed text-crm-text-muted"><p><span className="text-slate-500">Intent:</span> {selectedLead.analysis.intent || "—"}</p><p><span className="text-slate-500">Requirements:</span> {selectedLead.analysis.requirements || "—"}</p><p><span className="text-slate-500">Objections:</span> {selectedLead.analysis.objections || "—"}</p></div>
+                  {selectedLead.analysis.isManualOverride && <span className="inline-flex rounded-full border border-secondary-pink/30 bg-secondary-pink/10 px-2 py-0.5 text-[10px] text-secondary-pink">Manual override</span>}
+                </> : <p className="text-[11px] leading-relaxed text-crm-text-muted">No saved assessment. Create one in Copilot to expose qualification context here.</p>}
+              </MultiCrmInnerPanel>
             </MultiCrmCard>
 
             {/* Right Main Details Panel */}
@@ -1215,6 +1304,27 @@ export default function LeadsPage() {
                 <label key={field} className="block space-y-1 text-crm-text-muted"><span>{label}</span><input type={field === 'email' ? 'email' : 'text'} value={editContact[field as 'email' | 'phone' | 'company']} onChange={(event) => setEditContact({ ...editContact, [field]: event.target.value })} className="w-full rounded-xl border border-crm-border-strong bg-crm-inner px-3 py-2 text-crm-text outline-none focus:border-primary-cyan/60" /></label>
               ))}
               <div className="flex justify-end gap-3 pt-2"><button type="button" onClick={() => setShowEditModal(false)} className="rounded-xl border border-crm-border-strong px-4 py-2 text-crm-text-muted">Cancel</button><button disabled={isSavingContact} className="rounded-xl bg-primary-cyan px-4 py-2 font-semibold text-slate-950 disabled:opacity-50">{isSavingContact ? 'Saving…' : 'Save & Sync HubSpot'}</button></div>
+            </form>
+          </MultiCrmCard>
+        </div>
+      )}
+
+      {showAssessmentModal && selectedLead?.analysis && assessmentForm && (
+        <div className="dashboard-overlay bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <MultiCrmCard className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 space-y-5 border border-primary-cyan/40 shadow-2xl">
+            <div className="flex items-start justify-between border-b border-crm-border-strong pb-3">
+              <div><h2 className="text-lg font-bold text-crm-text">Edit AI assessment</h2><p className="mt-1 text-xs font-mono text-crm-text-muted">This is a manual internal override. It does not overwrite CRM contact properties.</p></div>
+              <button type="button" onClick={() => setShowAssessmentModal(false)} className="text-crm-text-muted hover:text-crm-text"><X className="h-5 w-5" /></button>
+            </div>
+            <form onSubmit={saveAssessment} className="space-y-4 font-mono text-xs">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <label className="space-y-1"><span className="text-[10px] text-crm-text-muted">Lead score</span><input required type="number" min="0" max="100" value={assessmentForm.leadScore} onChange={(event) => setAssessmentForm({ ...assessmentForm, leadScore: Number(event.target.value) })} className="w-full rounded-xl border border-crm-border-strong bg-crm-inner p-2 text-crm-text" /></label>
+                <label className="space-y-1"><span className="text-[10px] text-crm-text-muted">Temperature</span><select value={assessmentForm.temperature} onChange={(event) => setAssessmentForm({ ...assessmentForm, temperature: event.target.value })} className="w-full rounded-xl border border-crm-border-strong bg-crm-inner p-2 text-crm-text"><option>Hot</option><option>Warm</option><option>Cold</option></select></label>
+                <label className="space-y-1"><span className="text-[10px] text-crm-text-muted">Deal probability</span><input required type="number" min="0" max="100" value={assessmentForm.dealProbability} onChange={(event) => setAssessmentForm({ ...assessmentForm, dealProbability: Number(event.target.value) })} className="w-full rounded-xl border border-crm-border-strong bg-crm-inner p-2 text-crm-text" /></label>
+              </div>
+              <label className="block space-y-1"><span className="text-[10px] text-crm-text-muted">Assessment summary</span><textarea required rows={3} value={assessmentForm.summary} onChange={(event) => setAssessmentForm({ ...assessmentForm, summary: event.target.value })} className="w-full rounded-xl border border-crm-border-strong bg-crm-inner p-2 text-crm-text" /></label>
+              {[['budget', 'Budget'], ['timeline', 'Timeline'], ['requirements', 'Requirements'], ['intent', 'Intent signals'], ['objections', 'Objections']].map(([field, label]) => <label key={field} className="block space-y-1"><span className="text-[10px] text-crm-text-muted">{label}</span><input value={assessmentForm[field as 'budget' | 'timeline' | 'requirements' | 'intent' | 'objections'] || ""} onChange={(event) => setAssessmentForm({ ...assessmentForm, [field]: event.target.value || null })} className="w-full rounded-xl border border-crm-border-strong bg-crm-inner p-2 text-crm-text" /></label>)}
+              <div className="flex justify-end gap-3 border-t border-crm-border-strong pt-4"><button type="button" onClick={() => setShowAssessmentModal(false)} className="rounded-xl border border-crm-border-strong bg-crm-inner px-4 py-2 text-crm-text-muted">Cancel</button><button disabled={isSavingAssessment} className="rounded-xl bg-primary-cyan px-4 py-2 font-semibold text-slate-950 disabled:opacity-50">{isSavingAssessment ? "Saving…" : "Save manual override"}</button></div>
             </form>
           </MultiCrmCard>
         </div>
