@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 /** Returns canonical contacts for the agent's currently selected client account. */
 export async function GET(request: NextRequest) {
   return withApiErrorHandling(request, async (requestId) => {
-    const context = requireRequestContext(request);
+    const context = await requireRequestContext(request);
     const contacts = await getActiveClientContacts(context);
     return success({ contacts }, requestId);
   });

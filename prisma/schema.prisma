@@ -44,6 +44,13 @@ enum ConnectionStatus {
 }
 
 enum AuditAction {
+  AUTH_SIGNED_IN
+  AUTH_SIGNED_OUT
+  USER_CREATED
+  USER_UPDATED
+  CLIENT_ACCOUNT_CREATED
+  CLIENT_ACCOUNT_UPDATED
+  CLIENT_ASSIGNMENTS_UPDATED
   CLIENT_ACCOUNT_SELECTED
   CONTACT_IMPORT_REQUESTED
   CONTACT_IMPORT_COMPLETED
@@ -241,8 +248,21 @@ model User {
   commissionLedgerEntries CommissionLedgerEntry[]
   timeLogs                TimeLog[]
   documents               Document[]
+  sessions                AuthSession[]
 
   @@index([organizationId])
+}
+
+model AuthSession {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
 }
 
 model ClientAccount {

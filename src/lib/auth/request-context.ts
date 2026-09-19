@@ -1,19 +1,18 @@
 import type { NextRequest } from "next/server";
 import { AppError } from "@/lib/errors/app-error";
+import { assertClientAccess, findAuthenticatedUser } from "@/lib/auth/auth-service";
 import type { RequestContext } from "@/lib/models/canonical";
 
 export const SESSION_COOKIE = "multi_crm_session";
 export const ACTIVE_CLIENT_ACCOUNT_COOKIE = "multi_crm_active_client";
 
 /**
- * The current UI still creates a presentation-only session cookie. During local
- * development this preserves the existing workflow while giving server routes a
- * single request-context boundary. Production rejects this bootstrap identity
- * until database-backed login is introduced.
+ * Resolves the persisted server session and validates both organization and
+ * active-client access before domain services perform any query.
  */
-export function requireRequestContext(request: NextRequest): RequestContext {
-  const session = request.cookies.get(SESSION_COOKIE)?.value;
-  if (session !== "active") {
+export async function requireAuthenticatedUser(request: NextRequest) {
+  const user = await findAuthenticatedUser(request.cookies.get(SESSION_COOKIE)?.value);
+  if (!user) {
     throw new AppError(
       "UNAUTHENTICATED",
       401,
@@ -22,14 +21,11 @@ export function requireRequestContext(request: NextRequest): RequestContext {
     );
   }
 
-  if (process.env.NODE_ENV === "production") {
-    throw new AppError(
-      "UNAUTHENTICATED",
-      401,
-      "Bootstrap sessions are disabled in production.",
-      "A server-backed session is required in this environment.",
-    );
-  }
+  return user;
+}
+
+export async function requireRequestContext(request: NextRequest): Promise<RequestContext> {
+  const user = await requireAuthenticatedUser(request);
 
   const activeClientAccountId = request.cookies.get(ACTIVE_CLIENT_ACCOUNT_COOKIE)?.value;
   if (!activeClientAccountId) {
@@ -41,14 +37,12 @@ export function requireRequestContext(request: NextRequest): RequestContext {
     );
   }
 
-  return {
-    user: {
-      id: "dev-agent-operator",
-      organizationId: "dev-company-zenith",
-      name: "Operator",
-      email: "operator@zenith.core",
-      role: "AGENT",
-    },
-    activeClientAccountId,
-  };
+  await assertClientAccess(user, activeClientAccountId);
+  return { user, activeClientAccountId };
+}
+
+export function requireRole(context: RequestContext, roles: Array<RequestContext["user"]["role"]>) {
+  if (!roles.includes(context.user.role)) {
+    throw new AppError("FORBIDDEN", 403, "This action requires elevated access.", "Ask an administrator or manager for access.");
+  }
 }

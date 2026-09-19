@@ -151,9 +151,9 @@ export default function HomeDashboard() {
   const [apiKey, setApiKey] = useState("");
   const [isConnecting, setIsConnecting] = useState(false);
 
-  const handleLogout = () => {
-    document.cookie = "multi_crm_session=; path=/; max-age=0";
-    router.push("/login");
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.replace("/login");
   };
 
   const handleForceSync = () => {

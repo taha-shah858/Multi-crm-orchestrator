@@ -10,7 +10,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   return withApiErrorHandling(request, async (requestId) => {
-    const context = requireRequestContext(request);
+    const context = await requireRequestContext(request);
     const { id } = await params;
     const result = await updateActiveClientContact(context, id, await request.json(), requestId);
     return success(result, requestId);

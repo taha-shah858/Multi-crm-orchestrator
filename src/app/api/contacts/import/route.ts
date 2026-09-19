@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 
 async function handleManualSync(request: NextRequest) {
   return withApiErrorHandling(request, async (requestId) => {
-    const context = requireRequestContext(request);
+    const context = await requireRequestContext(request);
     await prepareActiveClientSync(context);
 
     await recordAuditEvent(context, {

@@ -4,5 +4,5 @@ import { createAppointment } from "@/lib/calendar/calendar-service";
 import { withApiErrorHandling, success } from "@/lib/http/api-response";
 
 export async function POST(request: NextRequest) {
-  return withApiErrorHandling(request, async (requestId) => success({ appointment: await createAppointment(requireRequestContext(request), await request.json(), requestId) }, requestId, 201));
+  return withApiErrorHandling(request, async (requestId) => success({ appointment: await createAppointment(await requireRequestContext(request), await request.json(), requestId) }, requestId, 201));
 }

@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest) {
   return withApiErrorHandling(request, async (requestId) =>
     success(
-      await dispatchCommunication(requireRequestContext(request), await request.json(), requestId),
+      await dispatchCommunication(await requireRequestContext(request), await request.json(), requestId),
       requestId,
       201,
     ),

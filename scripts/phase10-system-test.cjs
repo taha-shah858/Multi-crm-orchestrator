@@ -11,6 +11,7 @@ const path = require("path");
 const Module = require("module");
 const ts = require("typescript");
 const { File } = require("node:buffer");
+const { createHash, randomBytes } = require("node:crypto");
 
 const root = path.resolve(__dirname, "..");
 const marker = process.argv[3] || `phase10-${Date.now()}`;
@@ -61,8 +62,10 @@ const routes = {
   generateDocument: route("documents/generate"),
   uploadDocument: route("documents/upload"),
   downloadDocument: route("documents/[id]/download"),
+  adminDashboard: route("admin/dashboard"),
 };
 const { prisma } = require(path.join(root, "src", "lib", "db", "prisma.ts"));
+let sessionToken = "";
 
 const assert = (condition, message) => {
   if (!condition) throw new Error(message);
@@ -73,12 +76,19 @@ function request(clientId, pathname, method = "GET", body, headers = {}) {
   return new NextRequest(`http://localhost${pathname}`, {
     method,
     headers: {
-      cookie: `multi_crm_session=active; multi_crm_active_client=${clientId}`,
+      cookie: `multi_crm_session=${sessionToken}; multi_crm_active_client=${clientId}`,
       ...(hasJsonBody ? { "content-type": "application/json" } : {}),
       ...headers,
     },
     body: hasJsonBody ? JSON.stringify(body) : body,
   });
+}
+
+async function createStoredTestSession() {
+  const user = await prisma.user.findUnique({ where: { id: "dev-agent-operator" }, select: { id: true } });
+  if (!user) throw new Error("The persisted development test agent is missing.");
+  sessionToken = randomBytes(32).toString("base64url");
+  await prisma.authSession.create({ data: { userId: user.id, tokenHash: createHash("sha256").update(sessionToken).digest("hex"), expiresAt: new Date(Date.now() + 60 * 60 * 1000) } });
 }
 
 async function invoke(handler, clientId, pathname, method = "GET", body, params) {
@@ -102,6 +112,7 @@ async function expectError(handler, clientId, pathname, method, body, status, co
 }
 
 async function verifyPersistence() {
+  await createStoredTestSession();
   const [contacts, interactions, analyses, scripts, calendar, operations, documents, history] = await Promise.all([
     expectSuccess(routes.contacts, atlas, "/api/contacts"),
     expectSuccess(routes.interactions, atlas, "/api/interactions"),
@@ -127,11 +138,14 @@ async function verifyPersistence() {
 }
 
 async function run() {
+  await createStoredTestSession();
   if (process.argv[2] === "--verify") return verifyPersistence();
 
   const unauthenticated = await routes.contacts.GET(new NextRequest("http://localhost/api/contacts"));
   const unauthenticatedData = await unauthenticated.json();
   assert(unauthenticated.status === 401 && unauthenticatedData.error?.code === "UNAUTHENTICATED", "Unauthenticated API access was not rejected safely.");
+
+  await expectError(routes.adminDashboard, atlas, "/api/admin/dashboard", "GET", undefined, 403, "FORBIDDEN");
 
   await expectSuccess(routes.sync, atlas, "/api/contacts/import", "POST");
   await expectSuccess(routes.sync, northstar, "/api/contacts/import", "POST");

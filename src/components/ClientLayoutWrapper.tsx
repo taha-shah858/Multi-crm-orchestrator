@@ -1,7 +1,6 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import ClientAccountSwitcher from "@/components/ClientAccountSwitcher";
 
@@ -10,20 +9,8 @@ export default function ClientLayoutWrapper({
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-
-  // Safely check if route includes login or signup (handles trailing slashes & subpaths)
-  const isAuthPage =
-    pathname?.includes("/login") || pathname?.includes("/signup");
-
   return (
-    <>
-      {isAuthPage ? (
-        <main className="relative z-10 w-full min-h-screen flex flex-col items-center justify-center bg-transparent">
-          {children}
-        </main>
-      ) : (
-        <div
+    <div
           className="flex h-dvh w-full bg-transparent"
           style={{ "--dashboard-header-height": "4rem" } as CSSProperties}
         >
@@ -56,8 +43,6 @@ export default function ClientLayoutWrapper({
               {children}
             </main>
           </div>
-        </div>
-      )}
-    </>
+    </div>
   );
 }

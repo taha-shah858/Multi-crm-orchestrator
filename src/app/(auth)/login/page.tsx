@@ -1,129 +1,118 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Shield, Key, ArrowRight, Lock } from "lucide-react";
+import { ArrowRight, Building2, Key, Lock, Shield, UserRound } from "lucide-react";
 import { MultiCrmCard } from "@/components/ui/MultiCrmCard";
+import { workspaceHomeForRole, type WorkspaceRole } from "@/lib/auth/roles";
+import type { AuthenticatedUser } from "@/lib/models/canonical";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("operator@zenith.core");
+  const [workspaceRole, setWorkspaceRole] = useState<WorkspaceRole | "">("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [statelessSession, setStatelessSession] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Set the session cookie required by the middleware proxy
-    document.cookie = "multi_crm_session=active; path=/; max-age=86400";
-    router.push("/");
+  const handleLogin = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!workspaceRole) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email, password, workspaceRole }),
+      });
+      const payload = await response.json().catch(() => null) as { success?: boolean; user?: AuthenticatedUser; error?: { message?: string } } | null;
+      if (!response.ok || !payload?.success || !payload.user) throw new Error(payload?.error?.message ?? "Sign in failed.");
+      router.replace(workspaceHomeForRole(payload.user.role));
+      router.refresh();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Sign in failed.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-transparent flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background glow effects */}
-      <div className="absolute w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none translate-x-32 translate-y-32" />
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-transparent p-4">
+      <div className="pointer-events-none absolute h-96 w-96 rounded-full bg-cyan-500/10 blur-3xl" />
+      <div className="pointer-events-none absolute h-96 w-96 translate-x-32 translate-y-32 rounded-full bg-purple-500/10 blur-3xl" />
 
-      <MultiCrmCard className="w-full max-w-md p-8 space-y-8 relative z-10 border-cyan-500/20 bg-crm-base/80 backdrop-blur-xl shadow-2xl">
-        {/* Header Logo & Title */}
-        <div className="text-center space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-mono text-xs shadow-inner">
-            <Shield className="w-4 h-4" />
+      <MultiCrmCard className="relative z-10 w-full max-w-md space-y-7 border-cyan-500/20 bg-crm-base/80 p-8 shadow-2xl backdrop-blur-xl">
+        <div className="space-y-3 text-center">
+          <div className="inline-flex items-center gap-2 rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 font-mono text-xs text-cyan-400 shadow-inner">
+            <Shield className="h-4 w-4" />
             <span>MULTI-CRM ORCHESTRATOR</span>
           </div>
-          <p className="text-[10px] font-mono tracking-widest text-crm-text-muted uppercase">
-            Secure Vault Authentication
-          </p>
+          <p className="text-[10px] font-mono uppercase tracking-widest text-crm-text-muted">Secure workspace authentication</p>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleLogin} className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-[11px] font-mono font-medium text-crm-text-muted tracking-wider">
-              EMAIL
+        <label className="block space-y-2">
+          <span className="text-[11px] font-mono font-medium tracking-wider text-crm-text-muted">CHOOSE YOUR WORKSPACE ROLE</span>
+          <select
+            aria-label="Workspace role"
+            value={workspaceRole}
+            onChange={(event) => { setWorkspaceRole(event.target.value as WorkspaceRole | ""); setError(null); }}
+            className="w-full rounded-xl border border-crm-border bg-crm-inner/90 px-4 py-3 text-xs font-mono text-crm-text shadow-inner outline-none transition focus:border-cyan-500/60"
+          >
+            <option value="">Select Admin / Manager or Sales Agent</option>
+            <option value="ADMIN">Admin / Manager workspace</option>
+            <option value="AGENT">Sales Agent workspace</option>
+          </select>
+        </label>
+
+        {!workspaceRole && (
+          <div className="rounded-2xl border border-crm-border bg-crm-inner/55 p-5 text-center">
+            <Shield className="mx-auto h-5 w-5 text-primary-cyan" />
+            <p className="mt-3 text-xs text-crm-text">Select your role to continue</p>
+            <p className="mt-1 text-[10px] font-mono leading-relaxed text-crm-text-muted">Your stored account role will be verified by the server before a session is created.</p>
+          </div>
+        )}
+
+        {workspaceRole && (
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div className="flex items-center gap-3 rounded-xl border border-crm-border bg-crm-inner/60 p-3">
+              {workspaceRole === "ADMIN" ? <Building2 className="h-4 w-4 text-purple-300" /> : <UserRound className="h-4 w-4 text-cyan-300" />}
+              <div>
+                <p className="text-xs font-medium text-crm-text">{workspaceRole === "ADMIN" ? "Admin / Manager workspace" : "Sales Agent workspace"}</p>
+                <p className="mt-0.5 text-[10px] font-mono text-crm-text-muted">ROLE MATCH REQUIRED</p>
+              </div>
+            </div>
+
+            <label className="block space-y-2">
+              <span className="text-[11px] font-mono font-medium tracking-wider text-crm-text-muted">EMAIL</span>
+              <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required autoComplete="email" className="w-full rounded-xl border border-crm-border bg-crm-inner/90 px-4 py-3 text-xs font-mono text-crm-text shadow-inner outline-none transition focus:border-cyan-500/60" />
             </label>
-            <div className="relative">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full bg-crm-inner/90 border border-crm-border rounded-xl px-4 py-3 text-xs text-crm-text font-mono focus:outline-none focus:border-cyan-500/60 transition-all shadow-inner"
-              />
-              <span className="absolute right-3.5 top-3.5 text-slate-500 font-mono text-xs">
-                @
+
+            <label className="block space-y-2">
+              <span className="text-[11px] font-mono font-medium tracking-wider text-crm-text-muted">PASSWORD</span>
+              <span className="relative block">
+                <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required autoComplete="current-password" className="w-full rounded-xl border border-crm-border bg-crm-inner/90 px-4 py-3 pr-11 text-xs font-mono text-crm-text shadow-inner outline-none transition focus:border-cyan-500/60" />
+                <Key className="absolute right-3.5 top-3.5 h-4 w-4 text-slate-500" />
               </span>
-            </div>
-          </div>
+            </label>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-[11px] font-mono font-medium text-crm-text-muted tracking-wider">
-                PASSWORD
-              </label>
-              <a
-                href="#forgot"
-                className="text-[10px] font-mono text-pink-400 hover:text-pink-300 transition-colors cursor-pointer"
-              >
-                FORGOT PASSWORD?
-              </a>
+            <div className="flex items-center justify-between rounded-xl border border-crm-border bg-crm-inner/60 p-3">
+              <div><p className="text-xs font-medium text-crm-text">Server-backed session</p><p className="text-[10px] font-mono text-crm-text-muted">Secure cookie · 7-day expiry</p></div>
+              <Lock className="h-4 w-4 text-emerald-400" />
             </div>
-            <div className="relative">
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••••••"
-                required
-                className="w-full bg-crm-inner/90 border border-crm-border rounded-xl px-4 py-3 text-xs text-crm-text font-mono focus:outline-none focus:border-cyan-500/60 transition-all shadow-inner"
-              />
-              <Key className="absolute right-3.5 top-3.5 w-4 h-4 text-slate-500" />
-            </div>
-          </div>
 
-          {/* Stateless Session Toggle */}
-          <div className="flex items-center justify-between p-3 rounded-xl bg-crm-inner/60 border border-crm-border">
-            <div>
-              <p className="text-xs font-medium text-crm-text">
-                Stateless Client Session
-              </p>
-              <p className="text-[10px] text-crm-text-muted font-mono">
-                Wipe Cache on Logout
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setStatelessSession(!statelessSession)}
-              className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors cursor-pointer ${
-                statelessSession ? "bg-cyan-500" : "bg-crm-surface"
-              }`}
-            >
-              <div
-                className={`bg-crm-base w-4 h-4 rounded-full shadow-md transform transition-transform ${
-                  statelessSession ? "translate-x-5" : "translate-x-0"
-                }`}
-              />
+            {error && <p role="alert" className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs font-mono text-rose-200">{error}</p>}
+
+            <button type="submit" disabled={isLoading} className="flex w-full items-center justify-center gap-2 rounded-xl bg-linear-to-r from-cyan-500 to-purple-500 px-4 py-3.5 text-xs font-bold tracking-wider text-slate-950 shadow-[0_0_25px_rgba(6,182,212,0.3)] transition hover:from-cyan-400 hover:to-purple-400 disabled:opacity-50">
+              <span>{isLoading ? "AUTHENTICATING…" : `OPEN ${workspaceRole === "ADMIN" ? "ADMIN" : "AGENT"} WORKSPACE`}</span>
+              <ArrowRight className="h-4 w-4" />
             </button>
-          </div>
+          </form>
+        )}
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            className="w-full py-3.5 px-4 rounded-xl bg-linear-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-slate-950 font-bold text-xs font-mono tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-all shadow-[0_0_25px_rgba(6,182,212,0.3)]"
-          >
-            <span>AUTHENTICATE & OPEN VAULT</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        </form>
-
-        {/* Footer Link */}
-        <div className="text-center pt-2">
-          <a
-            href="/signup"
-            className="text-xs font-mono text-cyan-400 hover:text-cyan-300 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
-          >
-            Create an Agent Account <ArrowRight className="w-3 h-3" />
-          </a>
+        <div className="border-t border-crm-border pt-4 text-center">
+          <Link href="/signup" className="inline-flex items-center gap-1.5 text-xs font-mono text-cyan-400 transition hover:text-cyan-300">Choose a signup path <ArrowRight className="h-3 w-3" /></Link>
         </div>
       </MultiCrmCard>
     </div>

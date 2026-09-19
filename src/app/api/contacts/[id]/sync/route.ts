@@ -11,7 +11,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   return withApiErrorHandling(request, async (requestId) => {
-    const context = requireRequestContext(request);
+    const context = await requireRequestContext(request);
     const { id } = await params;
     const result = await retryActiveClientContactOutboundSync(context, id, requestId);
     return success(result, requestId);

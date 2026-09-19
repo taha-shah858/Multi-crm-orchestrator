@@ -304,3 +304,64 @@
 - Bidirectional data behavior remains: HubSpot manual import updates canonical contacts without duplicate mappings; local canonical edits attempt an outbound HubSpot PATCH and retain local changes with an auditable retry on provider failure.
 - The configured Northstar HubSpot token can read contacts but previously returned 403 on PATCH because it lacks `crm.objects.contacts.write`. Grant that scope and use the existing Leads "Save & Sync HubSpot" / "Retry HubSpot" controls to complete the live provider-success test; no credentials are exposed to the frontend.
 - Regression root cause: the existing live `next dev` process had a stale nested App Router route table. It served Next's HTML 404 document for valid nested API routes even though their route files were present in the generated route manifest. `proxy.ts` explicitly excludes `/api`, so this was not an authentication, RBAC, redirect, or active-client failure. Restarting the server restored those handlers; the JSON fallback and client boundary make this failure mode safe and visible if it recurs.
+
+## Post-MVP Stage 2 - Status
+
+### Completed
+- Read `Architecture.md`, `MVP.md`, `MVP_PROGRESS.md`, and `POST_MVP_PLAN.md` in full before starting the authentication and RBAC work. Used the existing dependency graph to trace session, proxy, active-client, API, and dashboard boundaries.
+- Replaced the development/browser bootstrap identity with PostgreSQL-backed `AuthSession` records. Passwords use salted Node `scrypt` hashes; session tokens are random, stored only as SHA-256 hashes, use secure HTTP-only cookies, and expire after seven days.
+- Added real JSON auth endpoints: `POST /api/auth/signup`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`, and validated `POST /api/auth/client-account`. Signup creates an active organization administrator and a first client account; client selection is always validated server-side.
+- Updated every existing domain API route to await the persisted request context. The request boundary verifies the active user, account status, organization, role, and selected-client access before any domain service query runs.
+- Replaced the static demo client selector with the authenticated user’s assigned client accounts. Agents can select only assigned active clients; Admins and Managers can select active clients in their organization. Client selection now uses a server-set cookie instead of a browser-writable authority boundary.
+- Implemented server-enforced Admin/Manager access to company-wide dashboard data: agents, client coverage, all commissions, time logs, sync runs, and audit events. Added admin-only user create/update APIs, including client assignment validation and audit entries.
+- Restricted the existing client Operations API for Sales Agents to records they created themselves. Admins and Managers retain company/client-level visibility. This is enforced in the service layer, not just hidden in the UI.
+- Added `/admin` using the established design system for company analytics, operations reconciliation, team/client coverage, and telemetry/audit activity. Removed Telemetry & Logs from agent navigation and redirected the legacy `/telemetry` route to the elevated admin workspace.
+- Added and applied Prisma migration `20260918120000_post_mvp_stage2_auth_rbac`; regenerated Prisma Client. Updated the system runner to use a genuine stored test session rather than the retired bootstrap cookie.
+- Verified production HTTP signup creates an `ADMIN` and assigned first client; an Admin can create an assigned `AGENT`; that Agent can sign in and sees only its assigned client; and the Agent receives structured `403 FORBIDDEN` from `/api/admin/dashboard`.
+- Passed Prisma migration status, `npx tsc --noEmit`, `npm run build`, `npm run test:system`, and fresh-process persistence verification for marker `phase10-1789750358468`.
+
+### In Progress
+- None. Stage 2 is complete and awaiting review.
+
+### Pending
+- Stage 3 - UI / UX Refinement and later post-MVP stages only.
+
+### Notes / Decisions
+- Session lookup is database-backed on every protected request so suspension and role changes take effect without trusting browser claims. The proxy remains an optimistic navigation guard; the API request context is authoritative.
+- Authentication cookies are HTTP-only. The active client account remains server-validated even if a browser attempts to alter its cookie value.
+- Managers have company-wide read access to the admin workspace but user creation, role changes, and assignment changes remain Admin-only.
+- The legacy development operator account no longer bypasses authentication. Use the signup screen to create a real administrator account; the Admin control center provides company visibility, while the protected Admin user APIs create users and manage their assignments.
+- No Stage 3 visual-polish work or external-provider work was started.
+
+## Post-MVP Stage 2 RBAC Workspace Correction - Status
+
+### Completed
+- Corrected the Stage 2 workspace architecture so Admin/Manager and Agent users no longer share a dashboard layout or sidebar. Existing Agent routes now live in the `(agent)` route group, while `/admin` and its child routes live in the independent `(admin)` route group.
+- Added server-rendered workspace guards backed by the existing PostgreSQL `AuthSession` lookup. Unauthenticated page requests go to `/login`; `ADMIN`/`MANAGER` users are routed to `/admin`; `AGENT` users are routed to `/`; stale or browser-authored role claims are never trusted.
+- Moved `ClientAccountProvider`, the client selector, and the existing Agent shell entirely into the Agent layout. The Agent sidebar now contains only Home, Leads, Dialer, Timeline, Copilot, Scripts, Calendar, My Sales Operations, Documents, and the existing Agent integration tools; it has no Admin entry.
+- Added a dedicated responsive Admin shell and navigation for Dashboard, Agents / Team, Client Accounts, Assignments, Company Sales Operations, Commissions / Reconciliation, Business Analytics, Integrations / Sync Health, and Audit Logs.
+- Preserved and reused the Stage 2 Admin service authorization boundary. `AGENT` requests to Admin APIs return JSON `403 FORBIDDEN`; `MANAGER` access is company-wide but read-only for access administration; user, assignment, and client-account mutations remain `ADMIN`-only.
+- Added Admin UI controls and organization-scoped APIs for creating team members, assigning Agents to client accounts, creating client accounts, and changing client-account status. Added auditable `CLIENT_ACCOUNT_CREATED` and `CLIENT_ACCOUNT_UPDATED` actions through migration `20260918173000_stage2_workspace_separation`.
+- Kept all Agent module URLs and functionality intact: Leads, HubSpot sync, Timeline, Dialer, Copilot, Script Architect, Calendar, Sales Operations, Documents, Integrations, and active-client switching remain in the Agent workspace.
+- Corrected login/signup routing and language: login uses the server-returned role to enter the correct workspace; signup provisions a company Administrator and opens `/admin`; authenticated visits to auth pages are redirected by the server-backed role.
+- Added a required role dropdown to both authentication screens. Login reveals the credential form only after choosing Admin / Manager or Sales Agent, sends the intended workspace to the server, and creates a session only when that selection matches the persisted user role.
+- Added role-aware signup paths. Company Administrators can self-register a new company; Sales Agents are directed to use credentials provisioned from Admin Workspace → Agents / Team. The signup API independently rejects Agent self-registration so an unaffiliated user cannot join a company or bypass client assignments.
+- Verified the role-selection contract over the production HTTP server: missing role returned 422; Admin-as-Agent and Agent-as-Admin attempts returned 403 without session cookies; correct Admin, Manager, and Agent logins returned 200 and opened their respective workspaces; Agent self-signup returned 422. Both `/login` and `/signup` rendered their expected role options.
+- Explicit production HTTP authorization tests passed: Admin `/` redirected to `/admin`, Admin pages/APIs returned 200, Agent `/` returned 200, Agent direct `/admin/agents` returned 307 to `/`, Agent direct Admin API returned 403, forged unassigned-client access returned 403, cross-company user mutation returned 404, and cross-company assignment returned 422.
+- Restart verification passed: persisted Admin and Agent credentials retained their roles, workspace access, API authorization, and Agent assignment count after a full production-server restart. The two temporary test organizations were then removed from PostgreSQL.
+- Production route smoke passed for `/`, `/integrations`, `/leads`, `/dialer`, `/timeline`, `/copilot`, `/scripts`, `/calendar`, `/operations`, `/documents`, and `/multi-crm` as an Agent. Every preserved route returned 200, the rendered Agent shell contained no Admin navigation, and `/admin` redirected back to `/`.
+- Passed Prisma schema validation, migration deployment, Prisma Client generation, `npx tsc --noEmit`, `npm run test:system`, production build, route-manifest inspection, and whitespace validation.
+
+### In Progress
+- None. The Stage 2 RBAC architecture correction is complete and awaiting review.
+
+### Pending
+- Post-MVP Stage 3 UI / UX Refinement and later stages only. Do not begin automatically.
+
+### Notes / Decisions
+- Route groups organize the separate workspaces without changing established Agent URLs. `/admin/*` is the only Admin page namespace.
+- Page authorization is enforced in server layouts using the same database-backed session and role helpers used by authentication. API authorization remains independently enforced in the Admin service, so hiding navigation is never treated as a security boundary.
+- Admin/Manager pages do not mount or depend on active-client state. Their queries are scoped by `organizationId`; Agent domain requests continue to require an assigned active client and Agent operational queries continue to filter by `userId` where appropriate.
+- The role dropdown is a workspace choice, not an authorization claim. Authorization continues to come exclusively from the database-backed user and session; a mismatched dropdown selection is denied before session creation.
+- The legacy `/telemetry` Agent URL now returns Agents to `/`; telemetry, sync health, and audit activity are available only inside the protected Admin workspace.
+- No Stage 3 visual redesign or external-provider implementation was started.

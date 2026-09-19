@@ -16,7 +16,15 @@
 - Enforce permissions server-side, not only in UI
 - move telemetry and logs from the current client side to admin panel
 - create dashboards for analytics and operations in admin panel
-- 
+
+### Stage 2 workspace correction — completed
+- Authentication now routes `ADMIN` and `MANAGER` users to a dedicated Admin workspace and `AGENT` users to a dedicated Agent workspace.
+- Agent and Admin pages use separate App Router route groups, server-protected layouts, and separate navigation shells.
+- Login and signup require an explicit Admin / Manager or Sales Agent selection before showing the relevant form. Login verifies the selection against the persisted server role; public signup remains Administrator-only and Agent accounts are provisioned inside the Admin workspace.
+- The Agent workspace has no Admin navigation. Direct Agent requests to Admin pages redirect to the Agent workspace, and Admin APIs return structured `403 FORBIDDEN` responses.
+- The Admin workspace contains company dashboard, team, client accounts, assignments, sales operations, commissions/reconciliation, analytics, integrations/sync health, and audit-log sections.
+- Client-account context is mounted only in the Agent workspace. Agent client access and operational ownership remain server-enforced; Admin queries remain organization-scoped.
+- Stage 3 was not started as part of this correction.
 
 ## Stage 3 — UI / UX Refinement
 - Full visual QA

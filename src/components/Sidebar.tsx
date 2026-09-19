@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useClientAccount } from "@/context/ClientAccountContext";
 import {
   LayoutGrid,
   Network,
@@ -10,7 +11,6 @@ import {
   Phone,
   TrendingUp,
   Bot,
-  BarChart2,
   WalletCards,
   Calendar,
   Sparkles,
@@ -19,7 +19,7 @@ import {
   PanelLeftOpen,
 } from "lucide-react";
 
-const navigation = [
+const workspaceNavigation = [
   { name: "Home Dashboard", href: "/", icon: LayoutGrid },
   { name: "Integrations Hub", href: "/integrations", icon: Network },
   { name: "Unified Lead Directory", href: "/leads", icon: Users },
@@ -27,15 +27,15 @@ const navigation = [
   { name: "Aggregation Timeline", href: "/timeline", icon: TrendingUp },
   { name: "AI Copilot Suite", href: "/copilot", icon: Bot },
   { name: "Script Architect", href: "/scripts", icon: FileText },
-  { name: "Telemetry & Logs", href: "/telemetry", icon: BarChart2 },
   { name: "Calendar Planner", href: "/calendar", icon: Calendar },
   { name: "Sales Operations", href: "/operations", icon: WalletCards },
   { name: "Documents & Proposals", href: "/documents", icon: FileText },
-  { name: "Multi-CRM Suite", href: "/multi-crm", icon: Sparkles }, // <--- Updated route and title
+  { name: "Multi-CRM Suite", href: "/multi-crm", icon: Sparkles },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { user } = useClientAccount();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(256); // Default 256px (w-64)
   const [isResizing, setIsResizing] = useState(false);
@@ -120,7 +120,7 @@ export default function Sidebar() {
 
         {/* Navigation Items */}
         <nav className="p-3 space-y-1.5 flex-1 overflow-y-auto">
-          {navigation.map((item) => {
+          {workspaceNavigation.map((item) => {
             const isActive = pathname === item.href;
             const Icon = item.icon;
             return (
@@ -163,10 +163,10 @@ export default function Sidebar() {
             {!isCollapsed && (
               <div className="overflow-hidden">
                 <p className="text-xs font-medium text-crm-text truncate">
-                  Agent
+                  {user?.name ?? "Loading user"}
                 </p>
                 <p className="text-[10px] text-slate-500 font-mono truncate">
-                  Top Tier Sales
+                  Sales agent
                 </p>
               </div>
             )}

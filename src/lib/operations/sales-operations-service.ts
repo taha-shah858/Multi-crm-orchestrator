@@ -32,7 +32,7 @@ async function contactFor(context: RequestContext, contactId: unknown) {
 
 export async function listSalesOperations(context: RequestContext) {
   await prepareActiveClientSync(context);
-  const where = { organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId };
+  const where = { organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, ...(context.user.role === "AGENT" ? { userId: context.user.id } : {}) };
   const [commissions, timeLogs] = await Promise.all([
     prisma.commissionRecord.findMany({ where, include: { deal: { include: { contact: contactSelection } }, ledgerEntries: { orderBy: { occurredAt: "desc" }, take: 10 } }, orderBy: { updatedAt: "desc" }, take: 100 }),
     prisma.timeLog.findMany({ where, include: { contact: contactSelection }, orderBy: { loggedAt: "desc" }, take: 100 }),
@@ -60,7 +60,7 @@ export async function createManualCommission(context: RequestContext, input: Inp
 
 export async function updateCommission(context: RequestContext, id: string, input: Input, requestId: string) {
   await prepareActiveClientSync(context);
-  const existing = await prisma.commissionRecord.findFirst({ where: { id, organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId } });
+  const existing = await prisma.commissionRecord.findFirst({ where: { id, organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, ...(context.user.role === "AGENT" ? { userId: context.user.id } : {}) } });
   if (!existing) throw new AppError("COMMISSION_NOT_FOUND", 404, "Commission is outside active client.", "Choose a commission from the active client account.");
   const action = text(input.action);
   if (action === "LEDGER") {
@@ -84,12 +84,12 @@ export async function updateCommission(context: RequestContext, id: string, inpu
   return commission;
 }
 
-export async function listTimeLogs(context: RequestContext) { await prepareActiveClientSync(context); return prisma.timeLog.findMany({ where: { organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId }, include: { contact: contactSelection }, orderBy: { loggedAt: "desc" }, take: 100 }); }
+export async function listTimeLogs(context: RequestContext) { await prepareActiveClientSync(context); return prisma.timeLog.findMany({ where: { organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, ...(context.user.role === "AGENT" ? { userId: context.user.id } : {}) }, include: { contact: contactSelection }, orderBy: { loggedAt: "desc" }, take: 100 }); }
 
 export async function createManualTimeLog(context: RequestContext, input: Input, requestId: string) {
   await prepareActiveClientSync(context); const minutes = Number(input.minutes); const description = text(input.description); if (!Number.isInteger(minutes) || minutes < 1 || minutes > 1440 || !description) throw new AppError("INVALID_TIME_LOG_INPUT", 422, "Invalid time log.", "Enter a description and a duration between 1 and 1,440 minutes."); const contactId = await contactFor(context, input.contactId); const timeLog = await prisma.timeLog.create({ data: { organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, contactId, userId: context.user.id, source: "MANUAL", minutes, description, loggedAt: input.loggedAt ? date(input.loggedAt, "logged date") : new Date() }, include: { contact: contactSelection } }); await recordAuditEvent(context, { action: "TIME_LOG_CREATED", entityType: "TIME_LOG", entityId: timeLog.id, requestId, source: "PLATFORM", metadata: { minutes, source: timeLog.source } }); return timeLog;
 }
 
 export async function updateTimeLog(context: RequestContext, id: string, input: Input, requestId: string) {
-  await prepareActiveClientSync(context); const existing = await prisma.timeLog.findFirst({ where: { id, organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId } }); if (!existing) throw new AppError("TIME_LOG_NOT_FOUND", 404, "Time log is outside active client.", "Choose a time log from the active client account."); const minutes = input.minutes === undefined ? existing.minutes : Number(input.minutes); const description = input.description === undefined ? existing.description : text(input.description); if (!Number.isInteger(minutes) || minutes < 1 || minutes > 1440 || !description) throw new AppError("INVALID_TIME_LOG_INPUT", 422, "Invalid time log.", "Enter a description and a duration between 1 and 1,440 minutes."); const timeLog = await prisma.timeLog.update({ where: { id }, data: { minutes, description, loggedAt: input.loggedAt === undefined ? existing.loggedAt : date(input.loggedAt, "logged date"), isManualOverride: true }, include: { contact: contactSelection } }); await recordAuditEvent(context, { action: "TIME_LOG_UPDATED", entityType: "TIME_LOG", entityId: timeLog.id, requestId, source: "PLATFORM", metadata: { minutes, manualOverride: true } }); return timeLog;
+  await prepareActiveClientSync(context); const existing = await prisma.timeLog.findFirst({ where: { id, organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, ...(context.user.role === "AGENT" ? { userId: context.user.id } : {}) } }); if (!existing) throw new AppError("TIME_LOG_NOT_FOUND", 404, "Time log is outside active client.", "Choose a time log from the active client account."); const minutes = input.minutes === undefined ? existing.minutes : Number(input.minutes); const description = input.description === undefined ? existing.description : text(input.description); if (!Number.isInteger(minutes) || minutes < 1 || minutes > 1440 || !description) throw new AppError("INVALID_TIME_LOG_INPUT", 422, "Invalid time log.", "Enter a description and a duration between 1 and 1,440 minutes."); const timeLog = await prisma.timeLog.update({ where: { id }, data: { minutes, description, loggedAt: input.loggedAt === undefined ? existing.loggedAt : date(input.loggedAt, "logged date"), isManualOverride: true }, include: { contact: contactSelection } }); await recordAuditEvent(context, { action: "TIME_LOG_UPDATED", entityType: "TIME_LOG", entityId: timeLog.id, requestId, source: "PLATFORM", metadata: { minutes, manualOverride: true } }); return timeLog;
 }

@@ -7,6 +7,6 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   return withApiErrorHandling(request, async (requestId) =>
-    success({ identities: await listCommunicationIdentities(requireRequestContext(request)) }, requestId),
+    success({ identities: await listCommunicationIdentities(await requireRequestContext(request)) }, requestId),
   );
 }

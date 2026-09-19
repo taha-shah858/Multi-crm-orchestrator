@@ -5,7 +5,7 @@ import type { NormalizedContact } from "@/lib/models/contact";
 import type { RequestContext } from "@/lib/models/canonical";
 import { prisma } from "@/lib/db/prisma";
 import { recordAuditEvent } from "@/lib/audit/audit-log";
-import { ensureDevelopmentTenant } from "@/lib/sync/development-bootstrap";
+import { assertClientAccess } from "@/lib/auth/auth-service";
 
 export interface ContactSyncSummary {
   contacts: NormalizedContact[];
@@ -72,34 +72,12 @@ function sourceCrmForProvider(
   }
 }
 
-async function assertClientAccess(context: RequestContext) {
-  await ensureDevelopmentTenant(context);
-
-  const assignment = await prisma.clientAssignment.findFirst({
-    where: {
-      clientAccountId: context.activeClientAccountId,
-      userId: context.user.id,
-      clientAccount: { organizationId: context.user.organizationId },
-    },
-  });
-
-  if (!assignment) {
-    throw new AppError(
-      "CLIENT_CONTEXT_REQUIRED",
-      403,
-      "The active client account is not assigned to the current agent.",
-      "You do not have access to the selected client account.",
-    );
-  }
-}
-
 /**
- * Ensures the selected client account is ready for any tenant-scoped work.
- * The route uses this before its first audit entry so a fresh development
- * database is bootstrapped before foreign-key constrained writes occur.
+ * Re-validates the selected client account for service callers that may be
+ * invoked outside their normal route handler boundary.
  */
 export async function prepareActiveClientSync(context: RequestContext) {
-  await assertClientAccess(context);
+  await assertClientAccess(context.user, context.activeClientAccountId);
 }
 
 async function persistContacts(
