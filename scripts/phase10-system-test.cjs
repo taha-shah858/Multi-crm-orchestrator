@@ -23,9 +23,17 @@ for (const line of fs.readFileSync(path.join(root, ".env.local"), "utf8").split(
   if (match && !process.env[match[1]]) process.env[match[1]] = match[2].replace(/^"|"$/g, "");
 }
 if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required for the Phase 10 system test.");
+process.env.INTEGRATION_ENCRYPTION_KEY ||= randomBytes(32).toString("base64");
 process.env.NODE_ENV = "development";
 
 const originalResolve = Module._resolveFilename;
+const originalLoad = Module._load;
+Module._load = function loadServerBoundary(request, parent, isMain) {
+  // Next.js provides this compile-time sentinel. The direct Node test harness
+  // has no bundler, so stub only the marker while keeping the server modules.
+  if (request === "server-only") return {};
+  return originalLoad.call(this, request, parent, isMain);
+};
 Module._resolveFilename = function resolveAlias(request, parent, isMain, options) {
   if (request.startsWith("@/")) request = path.join(root, "src", request.slice(2));
   return originalResolve.call(this, request, parent, isMain, options);
@@ -41,6 +49,7 @@ const { NextRequest } = require("next/server");
 const route = (relativePath) => require(path.join(root, "src", "app", "api", ...relativePath.split("/"), "route.ts"));
 const routes = {
   contacts: route("contacts"),
+  contact: route("contacts/[id]"),
   sync: route("contacts/import"),
   history: route("sync/history"),
   interactions: route("interactions"),
@@ -63,8 +72,14 @@ const routes = {
   uploadDocument: route("documents/upload"),
   downloadDocument: route("documents/[id]/download"),
   adminDashboard: route("admin/dashboard"),
+  integrations: route("integrations"),
+  integrationSync: route("integrations/[id]/sync"),
+  integrationRetry: route("integrations/[id]/retry"),
+  integrationDisconnect: route("integrations/[id]/disconnect"),
+  hubSpotConnect: route("integrations/hubspot/connect"),
 };
 const { prisma } = require(path.join(root, "src", "lib", "db", "prisma.ts"));
+const { encryptIntegrationSecret, decryptIntegrationSecret } = require(path.join(root, "src", "lib", "integrations", "credential-crypto.ts"));
 let sessionToken = "";
 
 const assert = (condition, message) => {
@@ -141,20 +156,48 @@ async function run() {
   await createStoredTestSession();
   if (process.argv[2] === "--verify") return verifyPersistence();
 
+  const encryptedProbe = encryptIntegrationSecret(`stage-2.5-${marker}`);
+  assert(!encryptedProbe.includes(marker) && decryptIntegrationSecret(encryptedProbe) === `stage-2.5-${marker}`, "Integration credential encryption round-trip failed.");
+
   const unauthenticated = await routes.contacts.GET(new NextRequest("http://localhost/api/contacts"));
   const unauthenticatedData = await unauthenticated.json();
   assert(unauthenticated.status === 401 && unauthenticatedData.error?.code === "UNAUTHENTICATED", "Unauthenticated API access was not rejected safely.");
+  const unauthenticatedIntegrations = await routes.integrations.GET(new NextRequest("http://localhost/api/integrations"));
+  const unauthenticatedIntegrationsData = await unauthenticatedIntegrations.json();
+  assert(unauthenticatedIntegrations.status === 401 && unauthenticatedIntegrationsData.error?.code === "UNAUTHENTICATED", "Unauthenticated integration API access was not rejected as JSON.");
 
   await expectError(routes.adminDashboard, atlas, "/api/admin/dashboard", "GET", undefined, 403, "FORBIDDEN");
 
   await expectSuccess(routes.sync, atlas, "/api/contacts/import", "POST");
   await expectSuccess(routes.sync, northstar, "/api/contacts/import", "POST");
+  const integrationWorkspace = await expectSuccess(routes.integrations, atlas, "/api/integrations");
+  const serializedIntegrations = JSON.stringify(integrationWorkspace);
+  assert(!serializedIntegrations.includes("encryptedAccessToken") && !serializedIntegrations.includes("encryptedRefreshToken"), "Integration API exposed credential fields.");
+  assert(!integrationWorkspace.connections.some((connection) => connection.clientAccountId === northstar), "Integration API leaked the non-active client connection.");
+  await expectError(routes.hubSpotConnect, atlas, "/api/integrations/hubspot/connect", "POST", { ownershipType: "CLIENT_ACCOUNT" }, 403, "FORBIDDEN");
+  const [atlasConnection, northstarConnection] = await Promise.all([
+    prisma.integrationConnection.findFirst({ where: { organizationId: "dev-company-zenith", clientAccountId: atlas } }),
+    prisma.integrationConnection.findFirst({ where: { organizationId: "dev-company-zenith", clientAccountId: northstar } }),
+  ]);
+  assert(atlasConnection && northstarConnection, "Integration framework test connections are missing.");
+  await expectSuccess(routes.integrationRetry, atlas, `/api/integrations/${atlasConnection.id}/retry`, "POST", undefined, { id: atlasConnection.id });
+  await expectError(routes.integrationSync, atlas, `/api/integrations/${northstarConnection.id}/sync`, "POST", undefined, 403, "CLIENT_ACCESS_DENIED", { id: northstarConnection.id });
+  await expectError(routes.integrationDisconnect, northstar, `/api/integrations/${northstarConnection.id}/disconnect`, "POST", undefined, 403, "FORBIDDEN", { id: northstarConnection.id });
   const atlasContacts = (await expectSuccess(routes.contacts, atlas, "/api/contacts")).contacts;
   const northstarContacts = (await expectSuccess(routes.contacts, northstar, "/api/contacts")).contacts;
   assert(atlasContacts.length >= 2 && northstarContacts.length >= 1, "Both client accounts need persisted contacts for Phase 10 testing.");
   const atlasContact = atlasContacts[0];
   const atlasOtherContact = atlasContacts.find((contact) => contact.id !== atlasContact.id);
   assert(!northstarContacts.some((contact) => contact.id === atlasContact.id), "Contact list leaked an Atlas record into Northstar.");
+  const hubSpotContact = northstarContacts[0];
+  const outbound = await expectSuccess(routes.contact, northstar, `/api/contacts/${hubSpotContact.id}`, "PATCH", {
+    firstName: hubSpotContact.firstName,
+    lastName: hubSpotContact.lastName,
+    email: hubSpotContact.email,
+    phone: hubSpotContact.phone,
+    company: hubSpotContact.company,
+  }, { id: hubSpotContact.id });
+  assert(outbound.outboundSync?.status === "COMPLETED", "HubSpot outbound contact synchronization did not complete.");
 
   const interaction = (await expectSuccess(routes.interactions, atlas, "/api/interactions", "POST", {
     type: "CALL", direction: "OUTBOUND", contactId: atlasContact.id, subject: `Discovery call ${marker}`,

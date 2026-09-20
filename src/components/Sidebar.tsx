@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useClientAccount } from "@/context/ClientAccountContext";
 import {
   LayoutGrid,
@@ -17,6 +17,7 @@ import {
   FileText,
   PanelLeftClose,
   PanelLeftOpen,
+  LogOut,
 } from "lucide-react";
 
 const workspaceNavigation = [
@@ -35,10 +36,12 @@ const workspaceNavigation = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { user } = useClientAccount();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(256); // Default 256px (w-64)
   const [isResizing, setIsResizing] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const sidebarRef = useRef<HTMLElement>(null);
 
   // Handle smooth mouse-dragging for custom width resizing
@@ -65,6 +68,19 @@ export default function Sidebar() {
       window.removeEventListener("mouseup", handleMouseUp);
     };
   }, [isResizing]);
+
+  const signOut = async () => {
+    if (isSigningOut) return;
+    setIsSigningOut(true);
+    try {
+      const response = await fetch("/api/auth/logout", { method: "POST" });
+      if (!response.ok) throw new Error("Logout failed");
+      router.replace("/login");
+      router.refresh();
+    } catch {
+      setIsSigningOut(false);
+    }
+  };
 
   return (
     <aside
@@ -151,7 +167,7 @@ export default function Sidebar() {
         {/* User Profile Bar */}
         <div
           className={`border-t border-crm-border-strong m-2 rounded-xl bg-black/20 shrink-0 transition-all ${
-            isCollapsed ? "p-2 flex justify-center" : "p-4"
+            isCollapsed ? "p-2 flex flex-col items-center" : "p-4"
           }`}
         >
           <div className="flex items-center gap-3 overflow-hidden">
@@ -171,6 +187,18 @@ export default function Sidebar() {
               </div>
             )}
           </div>
+          <button
+            type="button"
+            onClick={() => void signOut()}
+            disabled={isSigningOut}
+            title={isCollapsed ? "Sign out" : undefined}
+            className={`mt-3 flex items-center rounded-lg border border-crm-border text-[10px] font-mono text-crm-text-muted transition hover:border-rose-400/40 hover:bg-rose-500/10 hover:text-rose-300 disabled:cursor-wait disabled:opacity-50 ${
+              isCollapsed ? "h-8 w-8 justify-center" : "w-full justify-center gap-2 px-3 py-2"
+            }`}
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            {!isCollapsed && <span>{isSigningOut ? "SIGNING OUT…" : "SIGN OUT"}</span>}
+          </button>
         </div>
       </div>
 

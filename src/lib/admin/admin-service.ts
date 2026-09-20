@@ -30,9 +30,10 @@ export async function getAdminDashboard(user: AuthenticatedUser) {
         name: true,
         brandName: true,
         communicationIdentity: true,
+        allowAgentIntegrationManagement: true,
         status: true,
         createdAt: true,
-        crmConnections: { select: { id: true, provider: true, status: true, updatedAt: true }, orderBy: { provider: "asc" } },
+        integrationConnections: { select: { id: true, provider: true, status: true, updatedAt: true }, orderBy: { provider: "asc" } },
         _count: { select: { contacts: true, agentAssignments: true } },
       },
       orderBy: { name: "asc" },
@@ -274,6 +275,7 @@ export async function updateManagedClient(actor: AuthenticatedUser, id: string, 
   const name = input.name === undefined ? undefined : text(input.name);
   const brandName = input.brandName === undefined ? undefined : text(input.brandName);
   const communicationIdentity = input.communicationIdentity === undefined ? undefined : text(input.communicationIdentity) || null;
+  const allowAgentIntegrationManagement = typeof input.allowAgentIntegrationManagement === "boolean" ? input.allowAgentIntegrationManagement : undefined;
   const status = input.status === "ACTIVE" || input.status === "INACTIVE" || input.status === "ARCHIVED" ? input.status : undefined;
   if (name === "" || brandName === "") {
     throw new AppError("INVALID_CLIENT_ACCOUNT_INPUT", 422, "Client account details are invalid.", "Names cannot be empty.");
@@ -281,11 +283,11 @@ export async function updateManagedClient(actor: AuthenticatedUser, id: string, 
   return prisma.$transaction(async (transaction) => {
     const client = await transaction.clientAccount.update({
       where: { id },
-      data: { ...(name !== undefined ? { name } : {}), ...(brandName !== undefined ? { brandName } : {}), ...(communicationIdentity !== undefined ? { communicationIdentity } : {}), ...(status ? { status } : {}) },
-      select: { id: true, name: true, brandName: true, communicationIdentity: true, status: true },
+      data: { ...(name !== undefined ? { name } : {}), ...(brandName !== undefined ? { brandName } : {}), ...(communicationIdentity !== undefined ? { communicationIdentity } : {}), ...(status ? { status } : {}), ...(allowAgentIntegrationManagement !== undefined ? { allowAgentIntegrationManagement } : {}) },
+      select: { id: true, name: true, brandName: true, communicationIdentity: true, status: true, allowAgentIntegrationManagement: true },
     });
     await transaction.auditLog.create({
-      data: { organizationId: actor.organizationId, userId: actor.id, clientAccountId: client.id, action: "CLIENT_ACCOUNT_UPDATED", entityType: "CLIENT_ACCOUNT", entityId: client.id, source: "PLATFORM", metadata: { status: status ?? null } },
+      data: { organizationId: actor.organizationId, userId: actor.id, clientAccountId: client.id, action: "CLIENT_ACCOUNT_UPDATED", entityType: "CLIENT_ACCOUNT", entityId: client.id, source: "PLATFORM", metadata: { status: status ?? null, allowAgentIntegrationManagement: allowAgentIntegrationManagement ?? null } },
     });
     return client;
   });

@@ -1,15 +1,15 @@
 import { AppError } from "@/lib/errors/app-error";
 import { hubSpotContactAdapter } from "@/lib/integrations/hubspot/adapter";
 import { mockCrmAdapter } from "@/lib/integrations/mock/adapter";
-import type { CrmAdapter } from "@/lib/integrations/types";
-import type { CrmProvider } from "@/lib/models/canonical";
+import type { IntegrationAdapter } from "@/lib/integrations/types";
+import type { IntegrationProvider } from "@/lib/models/canonical";
 
-const adapters: Partial<Record<CrmProvider, CrmAdapter>> = {
+const adapters: Partial<Record<IntegrationProvider, IntegrationAdapter>> = {
   HUBSPOT: hubSpotContactAdapter,
   MOCK: mockCrmAdapter,
 };
 
-export function getCrmAdapter(provider: CrmProvider): CrmAdapter {
+export function getIntegrationAdapter(provider: IntegrationProvider): IntegrationAdapter {
   const adapter = adapters[provider];
   if (!adapter) {
     throw new AppError(
@@ -22,3 +22,5 @@ export function getCrmAdapter(provider: CrmProvider): CrmAdapter {
 
   return adapter;
 }
+
+export const getCrmAdapter = getIntegrationAdapter;

@@ -365,3 +365,36 @@
 - The role dropdown is a workspace choice, not an authorization claim. Authorization continues to come exclusively from the database-backed user and session; a mismatched dropdown selection is denied before session creation.
 - The legacy `/telemetry` Agent URL now returns Agents to `/`; telemetry, sync health, and audit activity are available only inside the protected Admin workspace.
 - No Stage 3 visual redesign or external-provider implementation was started.
+
+## Post-MVP Stage 2.5 - Status
+
+### Completed
+- Read `Architecture.md`, `MVP.md`, `MVP_PROGRESS.md`, `POST_MVP_PLAN.md`, and `STAGE_2.5_INTEGRATION_FRAMEWORK.md` completely; inspected the existing RBAC boundaries, HubSpot adapter, contact synchronization, database mappings, and both Integration Hub surfaces before changing them.
+- Used the existing provider registry and adapter contract rather than duplicating HubSpot logic. Generalized it to `IntegrationAdapter` capabilities while preserving HubSpot contact list/PATCH behavior and the MOCK adapter.
+- Refactored the existing `CrmConnection` table in place into Prisma `IntegrationConnection` (retaining the physical table and IDs) with `COMPANY`, `CLIENT_ACCOUNT`, and `USER` ownership, provider-account metadata, scopes, connection timestamps, last-sync state, and safe error status.
+- Added separate `IntegrationCredential` and `OAuthState` persistence. OAuth access/refresh tokens use server-only AES-256-GCM authenticated encryption; OAuth state is random, SHA-256 hashed at rest, expires after ten minutes, is one-time use, and is bound to company, ownership target, and initiating user.
+- Added and applied migration `20260919120000_stage2_5_integration_framework` to PostgreSQL database `multicrm`, schema `public`; regenerated Prisma Client. Existing HubSpot/MOCK connection IDs, 14 `ExternalRecord` mappings, and prior `SyncRun` history were preserved.
+- Implemented HubSpot OAuth authorization and callback, minimal contact read/write scopes, code exchange, encrypted per-connection credential storage, proactive token refresh, refresh-failure state/audit handling, and token revocation against HubSpot's current `2026-03` OAuth endpoints.
+- Kept a narrowly isolated server-only compatibility path for the existing `env:HUBSPOT_ACCESS_TOKEN` reference so working contact sync is not interrupted before manual OAuth reauthorization. Completing OAuth replaces that connection credential with encrypted per-connection tokens.
+- Added authenticated JSON APIs: `GET /api/integrations`, `POST /api/integrations/hubspot/connect`, `GET /api/integrations/hubspot/callback`, `DELETE /api/integrations/:id`, and `POST /api/integrations/:id/sync`, `/retry`, and `/disconnect`.
+- Enforced ownership and RBAC server-side: Agents see only company services, their own user connections, and the selected assigned client's connections; stale/non-active client integration actions are rejected; Agents cannot disconnect client/company integrations; Admin/Manager access remains organization-scoped and can manage company/client connections.
+- Added `allowAgentIntegrationManagement` as an explicit client-account permission and an Admin Client Accounts control for it. Agents can initiate client HubSpot OAuth only when assigned and explicitly permitted.
+- Replaced the simulated Agent Integration Hub with real persisted status, provider-account information, last sync/error display, OAuth connect/reconnect, Sync, and Retry controls. Added real Admin/Manager integration ownership selection, connection listing, sync/retry, and disconnect controls while preserving the existing design system.
+- Unified direct Integration Hub sync/retry with the existing canonical contact persistence service. Sync updates `lastSyncAt`/status, creates `SyncRun` and audit records, preserves duplicate prevention through `ExternalRecord`, and retains local-first outbound failure/retry behavior.
+- Expanded the system runner to handle server-only module boundaries and verify credential encryption, JSON authentication failures, credential redaction, active-client connection isolation, Agent connect/disconnect restrictions, retry, live HubSpot inbound contact synchronization, duplicate prevention, and live outbound PATCH through the existing provider ID mapping.
+- Passed Prisma validation and migration deployment, Prisma Client generation, `npx tsc --noEmit`, focused ESLint checks, `npm run test:system`, `git diff --check`, and `npm run build`. The production route manifest includes every new integration endpoint and both Agent/Admin Integration Hub pages.
+
+### In Progress
+- None. Stage 2.5 implementation is complete and stopped for manual OAuth testing/review.
+
+### Pending
+- Configure a HubSpot public app and complete the first browser OAuth consent using the exact callback URL before removing the temporary development-token compatibility reference.
+- Stage 3 UI/UX Refinement only after explicit approval. Twilio, Calendar, AI, and additional CRM providers remain unstarted.
+
+### Notes / Decisions
+- Required local server configuration is `HUBSPOT_CLIENT_ID`, `HUBSPOT_CLIENT_SECRET`, `HUBSPOT_REDIRECT_URI=http://localhost:3000/api/integrations/hubspot/callback`, and a stable 32-byte base64 or 64-character hex `INTEGRATION_ENCRYPTION_KEY`. Values belong only in `.env.local`/deployment secrets and must never be committed.
+- HubSpot OAuth requests only `crm.objects.contacts.read` and `crm.objects.contacts.write`. Provider tokens and credential metadata never enter browser state, API responses, logs, or client-readable cookies.
+- Company- and user-owned connections are supported by the generic framework, but contact synchronization remains intentionally limited to client-owned CRM connections because canonical contacts belong to a selected client account.
+- Existing HubSpot contact APIs remain `/crm/v3/objects/contacts`; only the OAuth token lifecycle uses HubSpot's current date-versioned `/oauth/2026-03/*` endpoints.
+- The repository-wide `npm run lint` command exceeded the execution timeout without output. A focused ESLint run over all Stage 2.5 implementation files passed; two pre-existing `react-hooks/set-state-in-effect` violations remain in unrelated legacy sections of `AdminWorkspacePage.tsx` when that whole file is linted.
+- The known Prisma `@prisma/adapter-pg` deprecation warning still appears after successful system tests; no Stage 2.5 test failed because of it.

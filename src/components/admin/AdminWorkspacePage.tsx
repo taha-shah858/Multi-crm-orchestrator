@@ -18,6 +18,7 @@ import type { AdminDashboardData } from "@/lib/admin/admin-types";
 import { MultiCrmCard, MultiCrmInnerPanel, MultiCrmTag } from "@/components/ui/MultiCrmCard";
 import { useAdminWorkspaceUser } from "@/components/admin/AdminWorkspaceShell";
 import { readApiJson } from "@/lib/http/client-api";
+import { AdminIntegrationManager } from "@/components/admin/AdminIntegrationManager";
 
 export type AdminView = "dashboard" | "agents" | "clients" | "assignments" | "operations" | "commissions" | "analytics" | "integrations" | "audit";
 
@@ -155,8 +156,8 @@ function ClientsView({ dashboard, canManage, mutate }: AdminManageProps) {
       <SectionTitle icon={Building2} title="Client portfolio" detail="Tenant-scoped accounts owned by this company" />
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">{dashboard.clients.map((client) => <MultiCrmInnerPanel key={client.id} className="space-y-3">
         <div className="flex items-start justify-between gap-3"><div><p className="text-sm font-semibold">{client.name}</p><p className="mt-1 text-[10px] font-mono text-crm-text-muted">{client.brandName}</p></div><MultiCrmTag variant={client.status === "ACTIVE" ? "cyan" : "magenta"}>{client.status}</MultiCrmTag></div>
-        <div className="grid grid-cols-2 gap-2 text-[10px] font-mono text-crm-text-muted"><span>{client._count.contacts} contacts</span><span>{client._count.agentAssignments} assignments</span><span>{client.crmConnections.length} CRM connections</span><span>{client.communicationIdentity || "No comms identity"}</span></div>
-        {canManage && <select aria-label={`Status for ${client.name}`} value={client.status} onChange={(event) => void mutate(`/api/admin/clients/${client.id}`, "PATCH", { status: event.target.value }, `${client.name} status updated.`)} className="w-full rounded-lg border border-crm-border bg-crm-base px-3 py-2 text-xs text-crm-text"><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option><option value="ARCHIVED">Archived</option></select>}
+        <div className="grid grid-cols-2 gap-2 text-[10px] font-mono text-crm-text-muted"><span>{client._count.contacts} contacts</span><span>{client._count.agentAssignments} assignments</span><span>{client.integrationConnections.length} integrations</span><span>{client.communicationIdentity || "No comms identity"}</span></div>
+        {canManage && <div className="space-y-2"><select aria-label={`Status for ${client.name}`} value={client.status} onChange={(event) => void mutate(`/api/admin/clients/${client.id}`, "PATCH", { status: event.target.value }, `${client.name} status updated.`)} className="w-full rounded-lg border border-crm-border bg-crm-base px-3 py-2 text-xs text-crm-text"><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option><option value="ARCHIVED">Archived</option></select><label className="flex items-center gap-2 rounded-lg border border-crm-border bg-crm-base px-3 py-2 text-[10px] font-mono text-crm-text-muted"><input type="checkbox" checked={client.allowAgentIntegrationManagement} onChange={(event) => void mutate(`/api/admin/clients/${client.id}`, "PATCH", { allowAgentIntegrationManagement: event.target.checked }, `${client.name} integration permission updated.`)} />Allow assigned agents to connect client integrations</label></div>}
       </MultiCrmInnerPanel>)}</div>
     </MultiCrmCard>
     <MultiCrmCard className="space-y-4 xl:col-span-4">
@@ -196,7 +197,7 @@ function AnalyticsView({ dashboard }: { dashboard: AdminDashboardData }) {
 }
 
 function IntegrationsView({ dashboard }: { dashboard: AdminDashboardData }) {
-  return <div className="grid grid-cols-1 gap-6 xl:grid-cols-12"><MultiCrmCard className="space-y-4 xl:col-span-5"><SectionTitle icon={Network} title="CRM connections" detail="Connection health by client account" /><div className="space-y-3">{dashboard.clients.map((client) => <MultiCrmInnerPanel key={client.id} className="space-y-2"><p className="text-xs font-semibold">{client.name}</p>{client.crmConnections.map((connection) => <div key={connection.id} className="flex items-center justify-between text-[10px] font-mono"><span>{connection.provider}</span><span className={connection.status === "CONNECTED" ? "text-emerald-400" : "text-amber-300"}>{connection.status}</span></div>)}{client.crmConnections.length === 0 && <p className="text-[10px] font-mono text-crm-text-muted">No CRM connection configured.</p>}</MultiCrmInnerPanel>)}</div></MultiCrmCard><MultiCrmCard className="space-y-4 xl:col-span-7"><SectionTitle icon={DatabaseZap} title="Synchronization runs" detail="Provider outcomes and record counts" /><div className="space-y-2">{dashboard.syncRuns.map((run) => <SyncRunCard key={run.id} run={run} />)}{dashboard.syncRuns.length === 0 && <Empty text="No synchronization runs recorded." />}</div></MultiCrmCard></div>;
+  return <div className="space-y-6"><AdminIntegrationManager clients={dashboard.clients.map(({ id, name }) => ({ id, name }))} /><MultiCrmCard className="space-y-4"><SectionTitle icon={DatabaseZap} title="Synchronization runs" detail="Provider outcomes and record counts" /><div className="space-y-2">{dashboard.syncRuns.map((run) => <SyncRunCard key={run.id} run={run} />)}{dashboard.syncRuns.length === 0 && <Empty text="No synchronization runs recorded." />}</div></MultiCrmCard></div>;
 }
 
 function AuditView({ dashboard }: { dashboard: AdminDashboardData }) {

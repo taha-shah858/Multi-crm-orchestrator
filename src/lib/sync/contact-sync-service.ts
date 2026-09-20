@@ -1,6 +1,7 @@
 import { AppError } from "@/lib/errors/app-error";
 import { getCrmAdapter } from "@/lib/integrations/registry";
 import type { ContactWriteInput } from "@/lib/integrations/types";
+import type { IntegrationConnection } from "@prisma/client";
 import type { NormalizedContact } from "@/lib/models/contact";
 import type { RequestContext } from "@/lib/models/canonical";
 import { prisma } from "@/lib/db/prisma";
@@ -146,10 +147,11 @@ export async function syncActiveClientContacts(
 ): Promise<ContactSyncSummary> {
   await prepareActiveClientSync(context);
 
-  const connections = await prisma.crmConnection.findMany({
+  const connections = await prisma.integrationConnection.findMany({
     where: {
       organizationId: context.user.organizationId,
       clientAccountId: context.activeClientAccountId,
+      ownershipType: "CLIENT_ACCOUNT",
       status: "CONNECTED",
     },
     orderBy: { provider: "asc" },
@@ -174,41 +176,86 @@ export async function syncActiveClientContacts(
   };
 
   for (const connection of connections) {
-    const syncRun = await prisma.syncRun.create({
-      data: {
-        organizationId: context.user.organizationId,
-        clientAccountId: context.activeClientAccountId,
-        connectionId: connection.id,
-        userId: context.user.id,
-        provider: connection.provider,
-        trigger: "MANUAL",
-        status: "RUNNING",
-      },
-    });
+    const result = await syncSingleConnectionContacts(context, connection, requestId);
+    summary.contacts.push(...result.contacts);
+    summary.recordsRead += result.recordsRead;
+    summary.recordsCreated += result.recordsCreated;
+    summary.recordsUpdated += result.recordsUpdated;
+    summary.recordsFailed += result.recordsFailed;
+    summary.runs.push(...result.runs);
+  }
 
-    await recordAuditEvent(context, {
-      action: "CONTACT_SYNC_STARTED",
-      entityType: "SYNC_RUN",
-      entityId: syncRun.id,
-      requestId,
-      source: "PLATFORM",
-      metadata: { provider: connection.provider },
-    });
+  if (summary.runs.every((run) => run.status === "FAILED")) {
+    const firstFailure = summary.runs.find((run) => run.error)?.error;
+    throw new AppError(
+      "SYNC_FAILED",
+      502,
+      "All CRM sync runs failed.",
+      firstFailure ?? "The sync could not be completed. Review sync history and retry manually.",
+    );
+  }
 
-    try {
-      const contacts = await getCrmAdapter(connection.provider).listContacts(connection, { limit: 100 });
-      const persisted = await persistContacts(context, connection.id, contacts);
+  return summary;
+}
 
-      await prisma.syncRun.update({
-        where: { id: syncRun.id },
-        data: {
-          status: "COMPLETED",
-          recordsRead: contacts.length,
-          recordsCreated: persisted.recordsCreated,
-          recordsUpdated: persisted.recordsUpdated,
-          completedAt: new Date(),
-        },
-      });
+/** Runs one client-owned connection through the same canonical contact pipeline. */
+export async function syncSingleConnectionContacts(
+  context: RequestContext,
+  connection: IntegrationConnection,
+  requestId: string,
+): Promise<ContactSyncSummary> {
+  await prepareActiveClientSync(context);
+  if (
+    connection.organizationId !== context.user.organizationId
+    || connection.clientAccountId !== context.activeClientAccountId
+    || connection.ownershipType !== "CLIENT_ACCOUNT"
+  ) {
+    throw new AppError("CLIENT_ACCESS_DENIED", 403, "Connection is outside the active client account.", "Choose an integration connected to the active client account.");
+  }
+
+  const adapter = getCrmAdapter(connection.provider);
+  if (!adapter.listContacts) {
+    throw new AppError("CRM_PROVIDER_UNAVAILABLE", 422, `${connection.provider} does not support contact imports.`, "This provider cannot synchronize contacts.");
+  }
+
+  const syncRun = await prisma.syncRun.create({
+    data: {
+      organizationId: context.user.organizationId,
+      clientAccountId: context.activeClientAccountId,
+      connectionId: connection.id,
+      userId: context.user.id,
+      provider: connection.provider,
+      trigger: "MANUAL",
+      status: "RUNNING",
+    },
+  });
+
+  await recordAuditEvent(context, {
+    action: "CONTACT_SYNC_STARTED",
+    entityType: "SYNC_RUN",
+    entityId: syncRun.id,
+    requestId,
+    source: "PLATFORM",
+    metadata: { provider: connection.provider },
+  });
+
+  try {
+    const contacts = await adapter.listContacts(connection, { limit: 100 });
+    const persisted = await persistContacts(context, connection.id, contacts);
+
+      await prisma.$transaction([
+        prisma.syncRun.update({
+          where: { id: syncRun.id },
+          data: {
+            status: "COMPLETED",
+            recordsRead: contacts.length,
+            recordsCreated: persisted.recordsCreated,
+            recordsUpdated: persisted.recordsUpdated,
+            completedAt: new Date(),
+          },
+        }),
+        prisma.integrationConnection.update({ where: { id: connection.id }, data: { lastSyncAt: new Date(), lastError: null, status: "CONNECTED" } }),
+      ]);
 
       await recordAuditEvent(context, {
         action: "CONTACT_SYNC_COMPLETED",
@@ -224,17 +271,23 @@ export async function syncActiveClientContacts(
         },
       });
 
-      summary.contacts.push(...contacts);
-      summary.recordsRead += contacts.length;
-      summary.recordsCreated += persisted.recordsCreated;
-      summary.recordsUpdated += persisted.recordsUpdated;
-      summary.runs.push({ id: syncRun.id, provider: connection.provider, status: "COMPLETED" });
-    } catch (error) {
+    return {
+      contacts,
+      recordsRead: contacts.length,
+      recordsCreated: persisted.recordsCreated,
+      recordsUpdated: persisted.recordsUpdated,
+      recordsFailed: 0,
+      runs: [{ id: syncRun.id, provider: connection.provider, status: "COMPLETED" }],
+    };
+  } catch (error) {
       const message = error instanceof Error ? error.message : "CRM sync failed.";
-      await prisma.syncRun.update({
-        where: { id: syncRun.id },
-        data: { status: "FAILED", recordsFailed: 1, errorMessage: message, completedAt: new Date() },
-      });
+      await prisma.$transaction([
+        prisma.syncRun.update({
+          where: { id: syncRun.id },
+          data: { status: "FAILED", recordsFailed: 1, errorMessage: message, completedAt: new Date() },
+        }),
+        prisma.integrationConnection.update({ where: { id: connection.id }, data: { lastError: message, status: "DEGRADED" } }),
+      ]);
       await recordAuditEvent(context, {
         action: "CONTACT_SYNC_FAILED",
         entityType: "SYNC_RUN",
@@ -244,31 +297,15 @@ export async function syncActiveClientContacts(
         metadata: { provider: connection.provider },
       });
 
-      summary.recordsFailed += 1;
       const safeError = error instanceof AppError
         ? error.safeMessage
         : "The CRM sync failed. Review sync history and retry manually.";
 
-      summary.runs.push({
-        id: syncRun.id,
-        provider: connection.provider,
-        status: "FAILED",
-        error: safeError,
-      });
-    }
+    return {
+      contacts: [], recordsRead: 0, recordsCreated: 0, recordsUpdated: 0, recordsFailed: 1,
+      runs: [{ id: syncRun.id, provider: connection.provider, status: "FAILED", error: safeError }],
+    };
   }
-
-  if (summary.runs.every((run) => run.status === "FAILED")) {
-    const firstFailure = summary.runs.find((run) => run.error)?.error;
-    throw new AppError(
-      "SYNC_FAILED",
-      502,
-      "All CRM sync runs failed.",
-      firstFailure ?? "The sync could not be completed. Review sync history and retry manually.",
-    );
-  }
-
-  return summary;
 }
 
 function normalizeContactUpdate(input: ContactUpdateInput): ContactWriteInput {
@@ -340,7 +377,11 @@ async function syncContactToHubSpot(
   });
 
   try {
-    await getCrmAdapter("HUBSPOT").updateContact(mapping.connection, mapping.externalId, contact);
+    const adapter = getCrmAdapter("HUBSPOT");
+    if (!adapter.updateContact) {
+      throw new AppError("CRM_PROVIDER_UNAVAILABLE", 422, "HubSpot contact writes are unavailable.", "HubSpot cannot update this contact right now.");
+    }
+    await adapter.updateContact(mapping.connection, mapping.externalId, contact);
     await prisma.$transaction([
       prisma.externalRecord.update({ where: { id: mapping.id }, data: { lastSyncedAt: new Date() } }),
       prisma.syncRun.update({

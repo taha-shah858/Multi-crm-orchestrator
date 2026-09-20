@@ -1,4 +1,4 @@
-export const CRM_PROVIDERS = [
+export const INTEGRATION_PROVIDERS = [
   "HUBSPOT",
   "MOCK",
   "SALESFORCE",
@@ -7,9 +7,15 @@ export const CRM_PROVIDERS = [
   "ACTIVECAMPAIGN",
   "ZOHO",
   "PIPEDRIVE",
+  "TWILIO",
+  "GOOGLE_CALENDAR",
+  "OUTLOOK",
+  "AI_PROVIDER",
 ] as const;
 
-export type CrmProvider = (typeof CRM_PROVIDERS)[number];
+export type IntegrationProvider = (typeof INTEGRATION_PROVIDERS)[number];
+export type CrmProvider = Extract<IntegrationProvider, "HUBSPOT" | "MOCK" | "SALESFORCE" | "CLOSE" | "GOHIGHLEVEL" | "ACTIVECAMPAIGN" | "ZOHO" | "PIPEDRIVE">;
+export type IntegrationOwnershipType = "COMPANY" | "CLIENT_ACCOUNT" | "USER";
 export type UserRole = "ADMIN" | "MANAGER" | "AGENT";
 
 export interface AuthenticatedUser {
@@ -62,4 +68,29 @@ export interface CrmConnectionSummary {
     | "AUTHENTICATION_REQUIRED"
     | "ERROR"
     | "DISCONNECTED";
+}
+
+export interface IntegrationConnectionSummary {
+  id: string;
+  organizationId: string;
+  ownershipType: IntegrationOwnershipType;
+  clientAccountId: string | null;
+  userId: string | null;
+  provider: IntegrationProvider;
+  providerAccountId: string | null;
+  providerAccountName: string | null;
+  status: "CONNECTED" | "DEGRADED" | "AUTHENTICATION_REQUIRED" | "ERROR" | "DISCONNECTED";
+  scopes: string[];
+  connectedAt: string | null;
+  lastSyncAt: string | null;
+  lastError: string | null;
+  clientAccount?: { id: string; name: string } | null;
+  owner?: { id: string; name: string; email: string } | null;
+  permissions: {
+    canConnect: boolean;
+    canDisconnect: boolean;
+    canSync: boolean;
+    canRetry: boolean;
+    canManage: boolean;
+  };
 }

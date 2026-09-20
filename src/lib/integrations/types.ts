@@ -1,6 +1,6 @@
 import type { NormalizedContact } from "@/lib/models/contact";
-import type { CrmProvider } from "@/lib/models/canonical";
-import type { CrmConnection } from "@prisma/client";
+import type { IntegrationProvider } from "@/lib/models/canonical";
+import type { IntegrationConnection } from "@prisma/client";
 
 export interface ContactListOptions {
   limit?: number;
@@ -19,8 +19,16 @@ export interface ContactWriteInput {
  * Provider boundary for Phase 1. Later phases add writes, synchronization jobs,
  * webhooks, and provider-specific capability declarations behind this contract.
  */
-export interface CrmAdapter {
-  readonly provider: CrmProvider;
-  listContacts(connection: CrmConnection, options?: ContactListOptions): Promise<NormalizedContact[]>;
-  updateContact(connection: CrmConnection, externalId: string, contact: ContactWriteInput): Promise<void>;
+export interface IntegrationAdapter {
+  readonly provider: IntegrationProvider;
+  readonly capabilities: {
+    oauth: boolean;
+    listContacts: boolean;
+    updateContact: boolean;
+    disconnect: boolean;
+  };
+  listContacts?(connection: IntegrationConnection, options?: ContactListOptions): Promise<NormalizedContact[]>;
+  updateContact?(connection: IntegrationConnection, externalId: string, contact: ContactWriteInput): Promise<void>;
 }
+
+export type CrmAdapter = IntegrationAdapter;

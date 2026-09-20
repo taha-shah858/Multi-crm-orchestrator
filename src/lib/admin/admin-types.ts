@@ -6,9 +6,10 @@ export interface AdminDashboardData {
     name: string;
     brandName: string;
     communicationIdentity: string | null;
+    allowAgentIntegrationManagement: boolean;
     status: string;
     createdAt: string;
-    crmConnections: Array<{ id: string; provider: string; status: string; updatedAt: string }>;
+    integrationConnections: Array<{ id: string; provider: string; status: string; updatedAt: string }>;
     _count: { contacts: number; agentAssignments: number };
   }>;
   agents: Array<{

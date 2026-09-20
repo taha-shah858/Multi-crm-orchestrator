@@ -1,49 +1,10 @@
-import type { CrmConnection } from "@prisma/client";
+import type { IntegrationConnection } from "@prisma/client";
 import type { ContactWriteInput } from "@/lib/integrations/types";
 import { HubSpotContactsApiResponse } from "./types";
 import { AppError } from "@/lib/errors/app-error";
+import { getValidHubSpotAccessToken } from "@/lib/integrations/hubspot/oauth";
 
 const HUBSPOT_API_BASE = "https://api.hubapi.com";
-
-/**
- * Server-side client for fetching contacts from HubSpot CRM v3 API.
- * Resolves the selected CRM connection's server-side credential reference.
- */
-function resolveHubSpotAccessToken(connection: CrmConnection) {
-  const reference = connection.encryptedAccessToken?.trim();
-
-  if (!reference?.startsWith("env:")) {
-    throw new AppError(
-      "INTEGRATION_CONFIGURATION_ERROR",
-      503,
-      `HubSpot connection ${connection.id} has no valid credential reference.`,
-      "HubSpot credentials are not configured for the selected client account.",
-    );
-  }
-
-  const variableName = reference.slice("env:".length);
-  if (!/^HUBSPOT(?:_[A-Z0-9]+)*_ACCESS_TOKEN$/.test(variableName)) {
-    throw new AppError(
-      "INTEGRATION_CONFIGURATION_ERROR",
-      503,
-      `HubSpot connection ${connection.id} references a disallowed environment variable.`,
-      "HubSpot credentials are not configured safely for the selected client account.",
-    );
-  }
-
-  const token = process.env[variableName];
-
-  if (!token) {
-    throw new AppError(
-      "INTEGRATION_CONFIGURATION_ERROR",
-      503,
-      `HubSpot credential ${variableName} is missing.`,
-      "HubSpot import is not configured for this environment.",
-    );
-  }
-
-  return token;
-}
 
 function hubSpotHeaders(token: string) {
   return {
@@ -53,10 +14,10 @@ function hubSpotHeaders(token: string) {
 }
 
 export async function fetchHubSpotContacts(
-  connection: CrmConnection,
+  connection: IntegrationConnection,
   limit = 100,
 ): Promise<HubSpotContactsApiResponse> {
-  const token = resolveHubSpotAccessToken(connection);
+  const token = await getValidHubSpotAccessToken(connection);
 
   // Request explicitly required properties since v3 defaults to a minimal set
   const requestedProperties = ["firstname", "lastname", "email", "phone", "company", "createdate", "lastmodifieddate"];
@@ -116,11 +77,11 @@ export async function fetchHubSpotContacts(
 
 /** Updates one mapped HubSpot contact using the selected connection only. */
 export async function updateHubSpotContact(
-  connection: CrmConnection,
+  connection: IntegrationConnection,
   contactId: string,
   contact: ContactWriteInput,
 ) {
-  const token = resolveHubSpotAccessToken(connection);
+  const token = await getValidHubSpotAccessToken(connection);
   const response = await fetch(`${HUBSPOT_API_BASE}/crm/v3/objects/contacts/${encodeURIComponent(contactId)}`, {
     method: "PATCH",
     headers: hubSpotHeaders(token),

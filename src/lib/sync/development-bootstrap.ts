@@ -77,29 +77,42 @@ export async function ensureDevelopmentTenant(context: RequestContext) {
       create: { clientAccountId: client.id, userId: context.user.id },
     });
 
-    const connection = await prisma.crmConnection.upsert({
+    const hasLegacyHubSpotToken = client.provider === "HUBSPOT" && Boolean(process.env.HUBSPOT_ACCESS_TOKEN?.trim());
+    const connection = await prisma.integrationConnection.upsert({
       where: {
-        clientAccountId_provider: {
-          clientAccountId: client.id,
+        ownershipKey_provider: {
+          ownershipKey: `client:${client.id}`,
           provider: client.provider,
         },
       },
-      update: { status: "CONNECTED" },
+      update: {
+        organizationId: context.user.organizationId,
+        ownershipType: "CLIENT_ACCOUNT",
+        clientAccountId: client.id,
+        status: client.provider === "MOCK" || hasLegacyHubSpotToken ? "CONNECTED" : "AUTHENTICATION_REQUIRED",
+      },
       create: {
         organizationId: context.user.organizationId,
+        ownershipType: "CLIENT_ACCOUNT",
+        ownershipKey: `client:${client.id}`,
         clientAccountId: client.id,
         provider: client.provider,
-        status: "CONNECTED",
+        status: client.provider === "MOCK" || hasLegacyHubSpotToken ? "CONNECTED" : "AUTHENTICATION_REQUIRED",
       },
     });
 
-    // This is a server-only reference, never a token value. It preserves the
-    // current development setup while allowing each connection to point at a
-    // distinct HubSpot credential such as env:HUBSPOT_NORTHSTAR_ACCESS_TOKEN.
-    if (client.provider === "HUBSPOT" && !connection.encryptedAccessToken) {
-      await prisma.crmConnection.update({
-        where: { id: connection.id },
-        data: { encryptedAccessToken: "env:HUBSPOT_ACCESS_TOKEN" },
+    // Transitional development compatibility only: this stores an environment
+    // variable reference, never the token itself. Completing OAuth replaces it
+    // with per-connection AES-256-GCM encrypted credentials.
+    if (hasLegacyHubSpotToken) {
+      await prisma.integrationCredential.upsert({
+        where: { integrationConnectionId: connection.id },
+        update: {},
+        create: {
+          integrationConnectionId: connection.id,
+          encryptedAccessToken: "env:HUBSPOT_ACCESS_TOKEN",
+          metadata: { migratedLegacyReference: true },
+        },
       });
     }
 

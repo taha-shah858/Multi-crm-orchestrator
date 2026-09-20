@@ -24,7 +24,7 @@ enum ClientStatus {
   ARCHIVED
 }
 
-enum CrmProvider {
+enum IntegrationProvider {
   HUBSPOT
   MOCK
   SALESFORCE
@@ -33,6 +33,16 @@ enum CrmProvider {
   ACTIVECAMPAIGN
   ZOHO
   PIPEDRIVE
+  TWILIO
+  GOOGLE_CALENDAR
+  OUTLOOK
+  AI_PROVIDER
+}
+
+enum IntegrationOwnershipType {
+  COMPANY
+  CLIENT_ACCOUNT
+  USER
 }
 
 enum ConnectionStatus {
@@ -80,6 +90,11 @@ enum AuditAction {
   DOCUMENT_GENERATED
   DOCUMENT_UPDATED
   DOCUMENT_UPLOADED
+  INTEGRATION_CONNECTED
+  INTEGRATION_DISCONNECTED
+  INTEGRATION_OAUTH_FAILED
+  INTEGRATION_CREDENTIAL_REFRESH_FAILED
+  INTEGRATION_SYNC_RETRIED
 }
 
 enum ScriptChannel {
@@ -222,6 +237,8 @@ model Organization {
   commissionLedgerEntries CommissionLedgerEntry[]
   timeLogs                TimeLog[]
   documents               Document[]
+  integrationConnections  IntegrationConnection[]
+  oauthStates             OAuthState[]
 }
 
 model User {
@@ -249,6 +266,10 @@ model User {
   timeLogs                TimeLog[]
   documents               Document[]
   sessions                AuthSession[]
+  ownedIntegrations       IntegrationConnection[] @relation("IntegrationOwner")
+  connectedIntegrations   IntegrationConnection[] @relation("IntegrationConnectedBy")
+  ownedOAuthStates        OAuthState[]             @relation("OAuthStateOwner")
+  initiatedOAuthStates    OAuthState[]             @relation("OAuthStateInitiator")
 
   @@index([organizationId])
 }
@@ -272,11 +293,13 @@ model ClientAccount {
   brandName               String
   communicationIdentity   String?
   status                  ClientStatus            @default(ACTIVE)
+  allowAgentIntegrationManagement Boolean         @default(false)
   createdAt               DateTime                @default(now())
   updatedAt               DateTime                @updatedAt
   organization            Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   agentAssignments        ClientAssignment[]
-  crmConnections          CrmConnection[]
+  integrationConnections  IntegrationConnection[]
+  oauthStates             OAuthState[]
   contacts                Contact[]
   audits                  AuditLog[]
   syncRuns                SyncRun[]
@@ -305,23 +328,74 @@ model ClientAssignment {
   @@index([userId])
 }
 
-model CrmConnection {
-  id                    String           @id @default(cuid())
-  organizationId        String
-  clientAccountId       String
-  provider              CrmProvider
-  encryptedAccessToken  String?
-  encryptedRefreshToken String?
-  expiresAt             DateTime?
-  status                ConnectionStatus @default(DISCONNECTED)
-  createdAt             DateTime         @default(now())
-  updatedAt             DateTime         @updatedAt
-  clientAccount         ClientAccount    @relation(fields: [clientAccountId], references: [id], onDelete: Cascade)
-  externalRecords       ExternalRecord[]
-  syncRuns              SyncRun[]
+model IntegrationConnection {
+  id                  String                   @id @default(cuid())
+  organizationId      String
+  ownershipType       IntegrationOwnershipType @default(CLIENT_ACCOUNT)
+  ownershipKey        String
+  clientAccountId     String?
+  userId              String?
+  provider            IntegrationProvider
+  providerAccountId   String?
+  providerAccountName String?
+  status              ConnectionStatus         @default(DISCONNECTED)
+  scopes              String[]                 @default([])
+  connectedByUserId   String?
+  connectedAt         DateTime?
+  lastSyncAt          DateTime?
+  lastError           String?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  organization        Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clientAccount       ClientAccount?           @relation(fields: [clientAccountId], references: [id], onDelete: Cascade)
+  owner               User?                    @relation("IntegrationOwner", fields: [userId], references: [id], onDelete: Cascade)
+  connectedBy         User?                    @relation("IntegrationConnectedBy", fields: [connectedByUserId], references: [id], onDelete: SetNull)
+  credential          IntegrationCredential?
+  externalRecords     ExternalRecord[]
+  syncRuns            SyncRun[]
 
-  @@unique([clientAccountId, provider])
-  @@index([organizationId, clientAccountId])
+  @@unique([ownershipKey, provider])
+  @@index([organizationId, ownershipType, status])
+  @@index([clientAccountId, provider])
+  @@index([userId, provider])
+  @@map("CrmConnection")
+}
+
+model IntegrationCredential {
+  id                    String                @id @default(cuid())
+  integrationConnectionId String              @unique
+  encryptedAccessToken  String
+  encryptedRefreshToken String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  metadata              Json?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  connection            IntegrationConnection @relation(fields: [integrationConnectionId], references: [id], onDelete: Cascade)
+
+  @@index([accessTokenExpiresAt])
+}
+
+model OAuthState {
+  id                String                   @id @default(cuid())
+  stateHash         String                   @unique
+  provider          IntegrationProvider
+  organizationId    String
+  ownershipType     IntegrationOwnershipType
+  clientAccountId   String?
+  userId            String?
+  initiatedByUserId String
+  returnPath        String
+  expiresAt         DateTime
+  usedAt            DateTime?
+  createdAt         DateTime                 @default(now())
+  organization      Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clientAccount     ClientAccount?           @relation(fields: [clientAccountId], references: [id], onDelete: Cascade)
+  owner             User?                    @relation("OAuthStateOwner", fields: [userId], references: [id], onDelete: Cascade)
+  initiatedBy       User                     @relation("OAuthStateInitiator", fields: [initiatedByUserId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt, usedAt])
+  @@index([organizationId, provider])
 }
 
 model Contact {
@@ -364,7 +438,7 @@ model ExternalRecord {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   contact         Contact       @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  connection      CrmConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  connection      IntegrationConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
 
   @@unique([connectionId, externalId])
   @@index([clientAccountId, contactId])
@@ -396,7 +470,7 @@ model SyncRun {
   clientAccountId String
   connectionId    String
   userId          String?
-  provider        CrmProvider
+  provider        IntegrationProvider
   trigger         SyncTrigger   @default(MANUAL)
   status          SyncRunStatus @default(RUNNING)
   recordsRead     Int           @default(0)
@@ -408,7 +482,7 @@ model SyncRun {
   completedAt     DateTime?
   organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   clientAccount   ClientAccount @relation(fields: [clientAccountId], references: [id], onDelete: Cascade)
-  connection      CrmConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  connection      IntegrationConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
   user            User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, clientAccountId, startedAt])
