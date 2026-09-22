@@ -47,7 +47,7 @@ export function AdminIntegrationManager({ clients }: { clients: Array<{ id: stri
     try {
       const response = await fetch(operation === "disconnect" ? `/api/integrations/${connection.id}` : `/api/integrations/${connection.id}/${operation}`, { method: operation === "disconnect" ? "DELETE" : "POST" });
       await readApiJson(response);
-      setMessage({ tone: "success", text: operation === "disconnect" ? "Integration disconnected." : "Contact synchronization completed." });
+      setMessage({ tone: "success", text: operation === "disconnect" ? "Integration disconnected." : "Sales CRM synchronization completed." });
       await load();
     } catch (error) { setMessage({ tone: "error", text: error instanceof Error ? error.message : "The integration action failed." }); }
     finally { setWorking(null); }

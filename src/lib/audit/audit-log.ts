@@ -1,41 +1,14 @@
 import type { RequestContext } from "@/lib/models/canonical";
 import { prisma } from "@/lib/db/prisma";
+import type { AuditAction, Prisma } from "@prisma/client";
 
 export interface AuditEvent {
-  action:
-    | "CONTACT_IMPORT_REQUESTED"
-    | "CONTACT_IMPORT_COMPLETED"
-    | "CONTACT_SYNC_STARTED"
-    | "CONTACT_SYNC_COMPLETED"
-    | "CONTACT_SYNC_FAILED"
-    | "CONTACT_UPDATED"
-    | "CONTACT_OUTBOUND_SYNC_COMPLETED"
-    | "CONTACT_OUTBOUND_SYNC_FAILED"
-    | "INTERACTION_CREATED"
-    | "COMMUNICATION_DISPATCHED"
-    | "COMMUNICATION_MANUALLY_LOGGED"
-    | "LEAD_ANALYSIS_CREATED"
-    | "LEAD_ANALYSIS_UPDATED"
-    | "SCRIPT_CREATED"
-    | "SCRIPT_UPDATED"
-    | "APPOINTMENT_CREATED"
-    | "APPOINTMENT_UPDATED"
-    | "APPOINTMENT_CANCELLED"
-    | "DEAL_CREATED"
-    | "COMMISSION_CREATED"
-    | "COMMISSION_UPDATED"
-    | "COMMISSION_LEDGER_ADJUSTED"
-    | "TIME_LOG_CREATED"
-    | "TIME_LOG_UPDATED"
-    | "DOCUMENT_CREATED"
-    | "DOCUMENT_GENERATED"
-    | "DOCUMENT_UPDATED"
-    | "DOCUMENT_UPLOADED";
-  entityType: "CONTACT" | "SYNC_RUN" | "INTERACTION" | "COMMUNICATION_IDENTITY" | "LEAD_ANALYSIS" | "SALES_SCRIPT" | "APPOINTMENT" | "DEAL" | "COMMISSION_RECORD" | "COMMISSION_LEDGER_ENTRY" | "TIME_LOG" | "DOCUMENT";
+  action: AuditAction;
+  entityType: string;
   entityId?: string;
   requestId: string;
   source: "PLATFORM" | "HUBSPOT" | "MOCK" | "TWILIO";
-  metadata?: Record<string, boolean | number | string | null>;
+  metadata?: Prisma.InputJsonValue;
 }
 
 /**

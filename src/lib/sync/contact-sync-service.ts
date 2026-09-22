@@ -7,6 +7,8 @@ import type { RequestContext } from "@/lib/models/canonical";
 import { prisma } from "@/lib/db/prisma";
 import { recordAuditEvent } from "@/lib/audit/audit-log";
 import { assertClientAccess } from "@/lib/auth/auth-service";
+import { activeClientIntegrationWhere } from "@/lib/integrations/connection-resolution";
+import { normalizeRichTextToPlainText } from "@/lib/text/plain-text";
 
 export interface ContactSyncSummary {
   contacts: NormalizedContact[];
@@ -33,6 +35,42 @@ export interface PersistedContactSummary {
   sourceCrm: "HubSpot" | "Mock CRM" | "Salesforce" | "Zoho" | "Pipedrive";
   createdAt: Date;
   updatedAt: Date;
+  crmOwner: { id: string; displayName: string; email: string | null } | null;
+  companyDetails: {
+    id: string;
+    name: string;
+    domain: string | null;
+    website: string | null;
+    phone: string | null;
+    industry: string | null;
+    city: string | null;
+    state: string | null;
+    country: string | null;
+    address: string | null;
+  } | null;
+  deals: Array<{
+    id: string;
+    title: string;
+    valueCents: number;
+    currency: string;
+    status: "OPEN" | "CLOSED_WON" | "CLOSED_LOST";
+    pipelineId: string | null;
+    pipelineLabel: string | null;
+    stageId: string | null;
+    stageLabel: string | null;
+    expectedCloseAt: Date | null;
+    closedAt: Date | null;
+    owner: { id: string; displayName: string; email: string | null } | null;
+    company: { id: string; name: string } | null;
+  }>;
+  recentActivities: Array<{
+    id: string;
+    type: string;
+    subject: string | null;
+    body: string;
+    occurredAt: Date;
+    source: string;
+  }>;
 }
 
 export interface ContactUpdateInput {
@@ -81,7 +119,7 @@ export async function prepareActiveClientSync(context: RequestContext) {
   await assertClientAccess(context.user, context.activeClientAccountId);
 }
 
-async function persistContacts(
+export async function persistContacts(
   context: RequestContext,
   connectionId: string,
   contacts: NormalizedContact[],
@@ -93,8 +131,9 @@ async function persistContacts(
     for (const contact of contacts) {
       const existing = await transaction.externalRecord.findUnique({
         where: {
-          connectionId_externalId: {
+          connectionId_objectType_externalId: {
             connectionId,
+            objectType: "CONTACT",
             externalId: contact.id,
           },
         },
@@ -108,7 +147,7 @@ async function persistContacts(
         company: contact.company || null,
       };
 
-      if (existing) {
+      if (existing?.contactId) {
         await transaction.contact.update({ where: { id: existing.contactId }, data });
         await transaction.externalRecord.update({
           where: { id: existing.id },
@@ -127,6 +166,7 @@ async function persistContacts(
             create: {
               clientAccountId: context.activeClientAccountId,
               connectionId,
+              objectType: "CONTACT",
               externalId: contact.id,
               lastSyncedAt: new Date(),
             },
@@ -148,12 +188,7 @@ export async function syncActiveClientContacts(
   await prepareActiveClientSync(context);
 
   const connections = await prisma.integrationConnection.findMany({
-    where: {
-      organizationId: context.user.organizationId,
-      clientAccountId: context.activeClientAccountId,
-      ownershipType: "CLIENT_ACCOUNT",
-      status: "CONNECTED",
-    },
+    where: activeClientIntegrationWhere(context),
     orderBy: { provider: "asc" },
   });
 
@@ -211,6 +246,11 @@ export async function syncSingleConnectionContacts(
     || connection.ownershipType !== "CLIENT_ACCOUNT"
   ) {
     throw new AppError("CLIENT_ACCESS_DENIED", 403, "Connection is outside the active client account.", "Choose an integration connected to the active client account.");
+  }
+
+  if (connection.provider === "HUBSPOT") {
+    const { syncHubSpotSalesCrm } = await import("@/lib/sync/hubspot-sales-sync-service");
+    return syncHubSpotSalesCrm(context, connection, requestId);
   }
 
   const adapter = getCrmAdapter(connection.provider);
@@ -348,12 +388,10 @@ async function syncContactToHubSpot(
   const mappings = await prisma.externalRecord.findMany({
     where: {
       contactId: contact.id,
+      objectType: "CONTACT",
       clientAccountId: context.activeClientAccountId,
       connection: {
-        organizationId: context.user.organizationId,
-        clientAccountId: context.activeClientAccountId,
-        provider: "HUBSPOT",
-        status: "CONNECTED",
+        ...activeClientIntegrationWhere(context, "HUBSPOT"),
       },
     },
     include: { connection: true },
@@ -490,6 +528,7 @@ export async function getActiveClientSyncHistory(context: RequestContext) {
       recordsCreated: true,
       recordsUpdated: true,
       recordsFailed: true,
+      categoryCounts: true,
       errorMessage: true,
       startedAt: true,
       completedAt: true,
@@ -509,6 +548,11 @@ export async function getActiveClientContacts(
       clientAccountId: context.activeClientAccountId,
     },
     include: {
+      crmOwner: { select: { id: true, displayName: true, email: true } },
+      crmCompany: { select: { id: true, name: true, domain: true, website: true, phone: true, industry: true, city: true, state: true, country: true, address: true } },
+      dealLinks: { include: { deal: { include: { crmOwner: { select: { id: true, displayName: true, email: true } }, company: { select: { id: true, name: true } } } } } },
+      deals: { include: { crmOwner: { select: { id: true, displayName: true, email: true } }, company: { select: { id: true, name: true } } } },
+      interactions: { orderBy: { occurredAt: "desc" }, take: 10, select: { id: true, type: true, subject: true, body: true, occurredAt: true, source: true } },
       externalRecords: {
         where: { clientAccountId: context.activeClientAccountId },
         include: { connection: { select: { provider: true } } },
@@ -522,6 +566,9 @@ export async function getActiveClientContacts(
     const externalRecord = contact.externalRecords[0];
     if (!externalRecord) return [];
 
+    const deals = [...contact.dealLinks.map((link) => link.deal), ...contact.deals]
+      .filter((deal, index, all) => all.findIndex((candidate) => candidate.id === deal.id) === index)
+      .map((deal) => ({ id: deal.id, title: deal.title, valueCents: deal.valueCents, currency: deal.currency, status: deal.status, pipelineId: deal.pipelineId, pipelineLabel: deal.pipelineLabel, stageId: deal.stageId, stageLabel: deal.stageLabel, expectedCloseAt: deal.expectedCloseAt, closedAt: deal.closedAt, owner: deal.crmOwner, company: deal.company }));
     return [{
       id: contact.id,
       externalId: externalRecord.externalId,
@@ -533,6 +580,15 @@ export async function getActiveClientContacts(
       sourceCrm: sourceCrmForProvider(externalRecord.connection.provider),
       createdAt: contact.createdAt,
       updatedAt: contact.updatedAt,
+      crmOwner: contact.crmOwner,
+      companyDetails: contact.crmCompany,
+      deals,
+      recentActivities: contact.interactions.map((interaction) => ({
+        ...interaction,
+        body: interaction.source === "HUBSPOT"
+          ? normalizeRichTextToPlainText(interaction.body) ?? "Activity logged in HubSpot"
+          : interaction.body,
+      })),
     }];
   });
 }

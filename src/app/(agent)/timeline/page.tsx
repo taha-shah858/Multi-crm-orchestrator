@@ -54,7 +54,7 @@ export interface TimelineEvent {
     | "Manual"
     | "MOCK";
   variant: "cyan" | "purple" | "magenta" | "neutral";
-  type: "sync" | "ai" | "call" | "deal" | "lead" | "sms" | "email" | "note" | "crm_activity";
+  type: "sync" | "ai" | "call" | "meeting" | "task" | "deal" | "lead" | "sms" | "email" | "note" | "crm_activity";
   icon: any;
   iconColor: string;
   entity: string;
@@ -69,7 +69,7 @@ export interface TimelineEvent {
   payload: Record<string, any>;
 }
 
-type InteractionType = "CALL" | "SMS" | "EMAIL" | "NOTE" | "CRM_ACTIVITY";
+type InteractionType = "CALL" | "SMS" | "EMAIL" | "MEETING" | "NOTE" | "TASK" | "CRM_ACTIVITY";
 type InteractionDirection = "INBOUND" | "OUTBOUND" | "INTERNAL";
 
 interface ContactOption {
@@ -294,11 +294,11 @@ export default function TimelinePage() {
     const data = await response.json();
     if (version !== requestVersion.current || currentClientAccountId.current !== clientAccountId) return;
     if (!response.ok || !data.success) return;
-    setEvents(data.interactions.map((interaction: { id: string; type: string; direction: string; source: string; subject: string | null; body: string; occurredAt: string; contact: { id: string; firstName: string; lastName: string; company: string | null; email: string | null } | null }) => {
+    setEvents(data.interactions.map((interaction: { id: string; type: string; direction: string; source: string; subject: string | null; body: string; occurredAt: string; contact: { id: string; firstName: string; lastName: string; company: string | null; email: string | null } | null; companyLinks: Array<{ company: { id: string; name: string } }>; dealLinks: Array<{ deal: { id: string; title: string; stageLabel: string | null } }> }) => {
       const type = interaction.type.toLowerCase();
-      const icon = interaction.type === "CALL" ? PhoneCall : interaction.type === "NOTE" ? Code2 : interaction.type === "EMAIL" ? Activity : interaction.type === "SMS" ? Radio : Layers;
-      const contactName = interaction.contact ? `${interaction.contact.firstName} ${interaction.contact.lastName}` : "Client activity";
-      return { id: interaction.id, time: new Date(interaction.occurredAt).toLocaleString(), timestamp: new Date(interaction.occurredAt).toLocaleTimeString(), title: interaction.subject || `${interaction.type.replace("_", " ")} logged`, description: interaction.body, source: interaction.source === "MANUAL" ? "Manual" : interaction.source, variant: "neutral", type, icon, iconColor: "text-primary-cyan", entity: contactName, entityId: interaction.contact?.id || activeClientAccount.id, entityEmail: interaction.contact?.email || undefined, entityCompany: interaction.contact?.company || undefined, syncStatus: "success", latencyMs: 0, payload: { direction: interaction.direction, source: interaction.source } } as TimelineEvent;
+      const icon = interaction.type === "CALL" ? PhoneCall : interaction.type === "MEETING" ? Calendar : interaction.type === "NOTE" ? Code2 : interaction.type === "EMAIL" ? Activity : interaction.type === "SMS" ? Radio : Layers;
+      const contactName = interaction.contact ? `${interaction.contact.firstName} ${interaction.contact.lastName}` : interaction.companyLinks[0]?.company.name || interaction.dealLinks[0]?.deal.title || "Client activity";
+      return { id: interaction.id, time: new Date(interaction.occurredAt).toLocaleString(), timestamp: new Date(interaction.occurredAt).toLocaleTimeString(), title: interaction.subject || `${interaction.type.replace("_", " ")} logged`, description: interaction.body, source: interaction.source === "MANUAL" ? "Manual" : interaction.source, variant: "neutral", type, icon, iconColor: "text-primary-cyan", entity: contactName, entityId: interaction.contact?.id || interaction.companyLinks[0]?.company.id || interaction.dealLinks[0]?.deal.id || activeClientAccount.id, entityEmail: interaction.contact?.email || undefined, entityCompany: interaction.contact?.company || interaction.companyLinks[0]?.company.name || undefined, syncStatus: "success", latencyMs: 0, payload: { direction: interaction.direction, source: interaction.source, companies: interaction.companyLinks.map((link) => link.company), deals: interaction.dealLinks.map((link) => link.deal) } } as TimelineEvent;
     }));
   }, [activeClientAccount.id, isClientAccountReady]);
 
@@ -1045,7 +1045,9 @@ export default function TimelinePage() {
                     <option value="CALL">Call</option>
                     <option value="SMS">SMS</option>
                     <option value="EMAIL">Email</option>
+                    <option value="MEETING">Meeting</option>
                     <option value="NOTE">Note</option>
+                    <option value="TASK">Task</option>
                     <option value="CRM_ACTIVITY">CRM activity</option>
                   </select>
                 </div>

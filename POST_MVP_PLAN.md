@@ -40,6 +40,22 @@
 - Live OAuth consent requires the operator to configure `HUBSPOT_CLIENT_ID`, `HUBSPOT_CLIENT_SECRET`, `HUBSPOT_REDIRECT_URI`, and `INTEGRATION_ENCRYPTION_KEY`, then complete the browser flow from the Integration Hub.
 - Twilio, Calendar providers, AI providers, and additional CRMs were not started.
 
+## Stage 2.6 — HubSpot Sales CRM Expansion
+
+### Status — implementation complete; awaiting expanded-scope OAuth review
+- Expanded the HubSpot adapter from contacts-only synchronization to paginated Contacts, Companies, Deals, Owners, pipelines/stages, Calls, Meetings, Notes, Tasks, Emails, and their provider associations.
+- Added canonical CRM companies and owners, extended canonical deals, generalized `ExternalRecord` mappings by provider object type, and preserved contact/company/deal/activity relationships without inferring them from names or email addresses.
+- Reused canonical `Interaction` records for HubSpot activity history and added explicit many-to-many association records for contacts, companies, and deals.
+- Added local-first Company and Deal edit APIs and Unified Leads controls. Supported fields write back through the existing encrypted HubSpot connection; provider failures preserve local edits and expose explicit retry controls.
+- Added category-level `SyncRun` observability, bounded retry/backoff for rate limits and transient provider failures, partial-success persistence, and sales-CRM audit actions.
+- Unified Leads now displays CRM owner, normalized company context, associated deals, pipeline/stage labels, close dates, and recent activity. The Aggregation Timeline now displays synchronized HubSpot calls, meetings, notes, tasks, and emails with related company/deal context.
+- OAuth now requests the verified contact, company, deal, owner, and `sales-email-read` scopes needed by the implemented APIs. HubSpot requires `sales-email-read` for email engagement content; other implemented activity reads use contact-read authorization.
+- Unified active-client connection resolution across the Integration Hub and legacy Sync Active Client flow. Degraded/recoverable connections reuse their persisted encrypted credentials, and expired access tokens rotate through the stored refresh token without repeated OAuth authorization.
+- HubSpot rich-text activity bodies are normalized to safe readable text during import and before presentation; provider HTML is never rendered directly.
+- Added deterministic Stage 2.6 provider-fixture coverage for pagination, repeat-sync idempotency, provider mappings, associations, outbound Company/Deal updates, local-first failure/retry, degraded connection persistence across a fresh process, OAuth refresh-token rotation, activity normalization, and cross-client rejection.
+- The existing system suite passed with the legacy Northstar token: contacts and permitted activities synchronized, unsupported expanded categories were retained as safe partial failures, and contact outbound synchronization continued to work.
+- Full email verification requires adding `sales-email-read` to the HubSpot app and re-authorizing the existing test-portal installation once.
+
 ## Stage 3 — UI / UX Refinement
 - Full visual QA
 - Fix stale-state/client-switch issues

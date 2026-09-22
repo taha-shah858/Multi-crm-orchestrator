@@ -20,6 +20,7 @@ export interface HubSpotContactRecord {
   createdAt: string;
   updatedAt: string;
   archived: boolean;
+  associations?: HubSpotAssociations;
 }
 
 export interface HubSpotContactsApiResponse {
@@ -30,4 +31,58 @@ export interface HubSpotContactsApiResponse {
       link?: string;
     };
   };
+}
+
+export interface HubSpotAssociationPage {
+  results?: Array<{ id?: string; toObjectId?: number | string }>;
+  paging?: { next?: { after: string } };
+}
+
+export type HubSpotAssociations = Record<string, HubSpotAssociationPage | undefined>;
+
+export interface HubSpotObjectRecord {
+  id: string;
+  properties: Record<string, string | null | undefined>;
+  associations?: HubSpotAssociations;
+  createdAt: string;
+  updatedAt: string;
+  archived: boolean;
+}
+
+export interface HubSpotObjectPage {
+  results: HubSpotObjectRecord[];
+  paging?: { next?: { after: string; link?: string } };
+}
+
+export interface HubSpotOwnerRecord {
+  id: string;
+  email?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  userId?: number | null;
+  teams?: Array<{ id: string }>;
+  archived?: boolean;
+}
+
+export interface HubSpotOwnerPage {
+  results: HubSpotOwnerRecord[];
+  paging?: { next?: { after: string; link?: string } };
+}
+
+export interface HubSpotPipelineRecord {
+  id: string;
+  label: string;
+  displayOrder: number;
+  archived?: boolean;
+  stages: Array<{
+    id: string;
+    label: string;
+    displayOrder: number;
+    metadata?: { probability?: string; isClosed?: string };
+    archived?: boolean;
+  }>;
+}
+
+export interface HubSpotPipelinePage {
+  results: HubSpotPipelineRecord[];
 }

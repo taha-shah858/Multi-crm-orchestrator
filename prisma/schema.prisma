@@ -95,6 +95,15 @@ enum AuditAction {
   INTEGRATION_OAUTH_FAILED
   INTEGRATION_CREDENTIAL_REFRESH_FAILED
   INTEGRATION_SYNC_RETRIED
+  SALES_CRM_SYNC_STARTED
+  SALES_CRM_SYNC_COMPLETED
+  SALES_CRM_SYNC_FAILED
+  COMPANY_UPDATED
+  COMPANY_OUTBOUND_SYNC_COMPLETED
+  COMPANY_OUTBOUND_SYNC_FAILED
+  DEAL_UPDATED
+  DEAL_OUTBOUND_SYNC_COMPLETED
+  DEAL_OUTBOUND_SYNC_FAILED
 }
 
 enum ScriptChannel {
@@ -113,8 +122,22 @@ enum InteractionType {
   CALL
   SMS
   EMAIL
+  MEETING
   NOTE
+  TASK
   CRM_ACTIVITY
+}
+
+enum ExternalObjectType {
+  CONTACT
+  COMPANY
+  DEAL
+  OWNER
+  CALL
+  MEETING
+  NOTE
+  TASK
+  EMAIL
 }
 
 enum InteractionDirection {
@@ -239,6 +262,9 @@ model Organization {
   documents               Document[]
   integrationConnections  IntegrationConnection[]
   oauthStates             OAuthState[]
+  crmCompanies            CrmCompany[]
+  crmOwners               CrmOwner[]
+  crmPipelines            CrmPipeline[]
 }
 
 model User {
@@ -268,51 +294,54 @@ model User {
   sessions                AuthSession[]
   ownedIntegrations       IntegrationConnection[] @relation("IntegrationOwner")
   connectedIntegrations   IntegrationConnection[] @relation("IntegrationConnectedBy")
-  ownedOAuthStates        OAuthState[]             @relation("OAuthStateOwner")
-  initiatedOAuthStates    OAuthState[]             @relation("OAuthStateInitiator")
+  ownedOAuthStates        OAuthState[]            @relation("OAuthStateOwner")
+  initiatedOAuthStates    OAuthState[]            @relation("OAuthStateInitiator")
 
   @@index([organizationId])
 }
 
 model AuthSession {
-  id        String   @id @default(cuid())
-  userId    String
-  tokenHash String   @unique
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  userId     String
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
   lastSeenAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt])
 }
 
 model ClientAccount {
-  id                      String                  @id @default(cuid())
-  organizationId          String
-  name                    String
-  brandName               String
-  communicationIdentity   String?
-  status                  ClientStatus            @default(ACTIVE)
-  allowAgentIntegrationManagement Boolean         @default(false)
-  createdAt               DateTime                @default(now())
-  updatedAt               DateTime                @updatedAt
-  organization            Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  agentAssignments        ClientAssignment[]
-  integrationConnections  IntegrationConnection[]
-  oauthStates             OAuthState[]
-  contacts                Contact[]
-  audits                  AuditLog[]
-  syncRuns                SyncRun[]
-  interactions            Interaction[]
-  communicationIdentities CommunicationIdentity[]
-  leadAnalyses            LeadAnalysis[]
-  salesScripts            SalesScript[]
-  appointments            Appointment[]
-  deals                   Deal[]
-  commissionRecords       CommissionRecord[]
-  commissionLedgerEntries CommissionLedgerEntry[]
-  timeLogs                TimeLog[]
-  documents               Document[]
+  id                              String                  @id @default(cuid())
+  organizationId                  String
+  name                            String
+  brandName                       String
+  communicationIdentity           String?
+  status                          ClientStatus            @default(ACTIVE)
+  allowAgentIntegrationManagement Boolean                 @default(false)
+  createdAt                       DateTime                @default(now())
+  updatedAt                       DateTime                @updatedAt
+  organization                    Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  agentAssignments                ClientAssignment[]
+  integrationConnections          IntegrationConnection[]
+  oauthStates                     OAuthState[]
+  contacts                        Contact[]
+  audits                          AuditLog[]
+  syncRuns                        SyncRun[]
+  interactions                    Interaction[]
+  communicationIdentities         CommunicationIdentity[]
+  leadAnalyses                    LeadAnalysis[]
+  salesScripts                    SalesScript[]
+  appointments                    Appointment[]
+  deals                           Deal[]
+  commissionRecords               CommissionRecord[]
+  commissionLedgerEntries         CommissionLedgerEntry[]
+  timeLogs                        TimeLog[]
+  documents                       Document[]
+  crmCompanies                    CrmCompany[]
+  crmOwners                       CrmOwner[]
+  crmPipelines                    CrmPipeline[]
 
   @@index([organizationId])
 }
@@ -353,6 +382,7 @@ model IntegrationConnection {
   credential          IntegrationCredential?
   externalRecords     ExternalRecord[]
   syncRuns            SyncRun[]
+  crmPipelines        CrmPipeline[]
 
   @@unique([ownershipKey, provider])
   @@index([organizationId, ownershipType, status])
@@ -362,16 +392,16 @@ model IntegrationConnection {
 }
 
 model IntegrationCredential {
-  id                    String                @id @default(cuid())
-  integrationConnectionId String              @unique
-  encryptedAccessToken  String
-  encryptedRefreshToken String?
-  accessTokenExpiresAt  DateTime?
-  refreshTokenExpiresAt DateTime?
-  metadata              Json?
-  createdAt             DateTime              @default(now())
-  updatedAt             DateTime              @updatedAt
-  connection            IntegrationConnection @relation(fields: [integrationConnectionId], references: [id], onDelete: Cascade)
+  id                      String                @id @default(cuid())
+  integrationConnectionId String                @unique
+  encryptedAccessToken    String
+  encryptedRefreshToken   String?
+  accessTokenExpiresAt    DateTime?
+  refreshTokenExpiresAt   DateTime?
+  metadata                Json?
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+  connection              IntegrationConnection @relation(fields: [integrationConnectionId], references: [id], onDelete: Cascade)
 
   @@index([accessTokenExpiresAt])
 }
@@ -399,49 +429,69 @@ model OAuthState {
 }
 
 model Contact {
-  id              String           @id @default(cuid())
-  organizationId  String
-  clientAccountId String
-  assignedAgentId String?
-  firstName       String
-  lastName        String
-  email           String?
-  phone           String?
-  company         String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  clientAccount   ClientAccount    @relation(fields: [clientAccountId], references: [id], onDelete: Cascade)
-  assignedAgent   User?            @relation("AssignedContacts", fields: [assignedAgentId], references: [id])
-  externalRecords ExternalRecord[]
-  interactions    Interaction[]
-  leadAnalyses    LeadAnalysis[]
-  salesScripts    SalesScript[]
-  appointments    Appointment[]
-  deals           Deal[]
-  timeLogs        TimeLog[]
-  documents       Document[]
+  id               String               @id @default(cuid())
+  organizationId   String
+  clientAccountId  String
+  assignedAgentId  String?
+  firstName        String
+  lastName         String
+  email            String?
+  phone            String?
+  company          String?
+  crmCompanyId     String?
+  crmOwnerId       String?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  organization     Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clientAccount    ClientAccount        @relation(fields: [clientAccountId], references: [id], onDelete: Cascade)
+  assignedAgent    User?                @relation("AssignedContacts", fields: [assignedAgentId], references: [id])
+  crmCompany       CrmCompany?          @relation(fields: [crmCompanyId], references: [id], onDelete: SetNull)
+  crmOwner         CrmOwner?            @relation(fields: [crmOwnerId], references: [id], onDelete: SetNull)
+  externalRecords  ExternalRecord[]
+  interactions     Interaction[]
+  leadAnalyses     LeadAnalysis[]
+  salesScripts     SalesScript[]
+  appointments     Appointment[]
+  deals            Deal[]               @relation("PrimaryDealContact")
+  dealLinks        DealContact[]
+  interactionLinks InteractionContact[]
+  timeLogs         TimeLog[]
+  documents        Document[]
 
   @@index([organizationId, clientAccountId])
   @@index([assignedAgentId])
   @@index([email])
   @@index([phone])
+  @@index([crmCompanyId])
+  @@index([crmOwnerId])
 }
 
 model ExternalRecord {
-  id              String        @id @default(cuid())
+  id              String                @id @default(cuid())
   clientAccountId String
-  contactId       String
+  objectType      ExternalObjectType    @default(CONTACT)
+  contactId       String?
+  crmCompanyId    String?
+  dealId          String?
+  crmOwnerId      String?
+  interactionId   String?
   connectionId    String
   externalId      String
   lastSyncedAt    DateTime?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  contact         Contact       @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  contact         Contact?              @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  crmCompany      CrmCompany?           @relation(fields: [crmCompanyId], references: [id], onDelete: Cascade)
+  deal            Deal?                 @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  crmOwner        CrmOwner?             @relation(fields: [crmOwnerId], references: [id], onDelete: Cascade)
+  interaction     Interaction?          @relation(fields: [interactionId], references: [id], onDelete: Cascade)
   connection      IntegrationConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
 
-  @@unique([connectionId, externalId])
+  @@unique([connectionId, objectType, externalId])
   @@index([clientAccountId, contactId])
+  @@index([clientAccountId, crmCompanyId])
+  @@index([clientAccountId, dealId])
+  @@index([clientAccountId, interactionId])
 }
 
 model AuditLog {
@@ -465,25 +515,26 @@ model AuditLog {
 }
 
 model SyncRun {
-  id              String        @id @default(cuid())
+  id              String                @id @default(cuid())
   organizationId  String
   clientAccountId String
   connectionId    String
   userId          String?
   provider        IntegrationProvider
-  trigger         SyncTrigger   @default(MANUAL)
-  status          SyncRunStatus @default(RUNNING)
-  recordsRead     Int           @default(0)
-  recordsCreated  Int           @default(0)
-  recordsUpdated  Int           @default(0)
-  recordsFailed   Int           @default(0)
+  trigger         SyncTrigger           @default(MANUAL)
+  status          SyncRunStatus         @default(RUNNING)
+  recordsRead     Int                   @default(0)
+  recordsCreated  Int                   @default(0)
+  recordsUpdated  Int                   @default(0)
+  recordsFailed   Int                   @default(0)
   errorMessage    String?
-  startedAt       DateTime      @default(now())
+  categoryCounts  Json?
+  startedAt       DateTime              @default(now())
   completedAt     DateTime?
-  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  clientAccount   ClientAccount @relation(fields: [clientAccountId], references: [id], onDelete: Cascade)
+  organization    Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clientAccount   ClientAccount         @relation(fields: [clientAccountId], references: [id], onDelete: Cascade)
   connection      IntegrationConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-  user            User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user            User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, clientAccountId, startedAt])
   @@index([connectionId, status])
@@ -510,6 +561,10 @@ model Interaction {
   user            User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
   leadAnalyses    LeadAnalysis[]
   appointments    Appointment[]
+  externalRecords ExternalRecord[]
+  contactLinks    InteractionContact[]
+  companyLinks    InteractionCompany[]
+  dealLinks       InteractionDeal[]
 
   @@index([organizationId, clientAccountId, occurredAt])
   @@index([contactId, occurredAt])
@@ -627,29 +682,173 @@ model Appointment {
 }
 
 model Deal {
-  id              String            @id @default(cuid())
-  organizationId  String
-  clientAccountId String
-  contactId       String?
-  userId          String?
-  title           String
-  valueCents      Int
-  currency        String            @default("USD")
-  status          DealStatus        @default(OPEN)
-  closedAt        DateTime?
-  notes           String?
-  isManual        Boolean           @default(true)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  clientAccount   ClientAccount     @relation(fields: [clientAccountId], references: [id], onDelete: Cascade)
-  contact         Contact?          @relation(fields: [contactId], references: [id], onDelete: SetNull)
-  user            User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
-  commission      CommissionRecord?
-  documents       Document[]
+  id               String            @id @default(cuid())
+  organizationId   String
+  clientAccountId  String
+  contactId        String?
+  companyId        String?
+  crmOwnerId       String?
+  userId           String?
+  title            String
+  valueCents       Int
+  currency         String            @default("USD")
+  status           DealStatus        @default(OPEN)
+  pipelineId       String?
+  pipelineLabel    String?
+  stageId          String?
+  stageLabel       String?
+  expectedCloseAt  DateTime?
+  closedAt         DateTime?
+  notes            String?
+  sourceMetadata   Json?
+  isManual         Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clientAccount    ClientAccount     @relation(fields: [clientAccountId], references: [id], onDelete: Cascade)
+  contact          Contact?          @relation("PrimaryDealContact", fields: [contactId], references: [id], onDelete: SetNull)
+  company          CrmCompany?       @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  crmOwner         CrmOwner?         @relation(fields: [crmOwnerId], references: [id], onDelete: SetNull)
+  user             User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  commission       CommissionRecord?
+  documents        Document[]
+  externalRecords  ExternalRecord[]
+  contactLinks     DealContact[]
+  interactionLinks InteractionDeal[]
 
   @@index([organizationId, clientAccountId, status])
   @@index([contactId])
+  @@index([companyId])
+  @@index([crmOwnerId])
+}
+
+model CrmCompany {
+  id               String               @id @default(cuid())
+  organizationId   String
+  clientAccountId  String
+  name             String
+  domain           String?
+  website          String?
+  phone            String?
+  industry         String?
+  city             String?
+  state            String?
+  country          String?
+  address          String?
+  crmOwnerId       String?
+  sourceMetadata   Json?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  organization     Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clientAccount    ClientAccount        @relation(fields: [clientAccountId], references: [id], onDelete: Cascade)
+  crmOwner         CrmOwner?            @relation(fields: [crmOwnerId], references: [id], onDelete: SetNull)
+  contacts         Contact[]
+  deals            Deal[]
+  externalRecords  ExternalRecord[]
+  interactionLinks InteractionCompany[]
+
+  @@index([organizationId, clientAccountId, name])
+  @@index([crmOwnerId])
+}
+
+model CrmOwner {
+  id              String           @id @default(cuid())
+  organizationId  String
+  clientAccountId String
+  firstName       String?
+  lastName        String?
+  displayName     String
+  email           String?
+  providerUserId  String?
+  teamId          String?
+  archived        Boolean          @default(false)
+  sourceMetadata  Json?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clientAccount   ClientAccount    @relation(fields: [clientAccountId], references: [id], onDelete: Cascade)
+  contacts        Contact[]
+  companies       CrmCompany[]
+  deals           Deal[]
+  externalRecords ExternalRecord[]
+
+  @@index([organizationId, clientAccountId, email])
+}
+
+model DealContact {
+  dealId    String
+  contactId String
+  isPrimary Boolean @default(false)
+  deal      Deal    @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@id([dealId, contactId])
+  @@index([contactId])
+}
+
+model InteractionContact {
+  interactionId String
+  contactId     String
+  interaction   Interaction @relation(fields: [interactionId], references: [id], onDelete: Cascade)
+  contact       Contact     @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@id([interactionId, contactId])
+  @@index([contactId])
+}
+
+model InteractionCompany {
+  interactionId String
+  companyId     String
+  interaction   Interaction @relation(fields: [interactionId], references: [id], onDelete: Cascade)
+  company       CrmCompany  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@id([interactionId, companyId])
+  @@index([companyId])
+}
+
+model InteractionDeal {
+  interactionId String
+  dealId        String
+  interaction   Interaction @relation(fields: [interactionId], references: [id], onDelete: Cascade)
+  deal          Deal        @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@id([interactionId, dealId])
+  @@index([dealId])
+}
+
+model CrmPipeline {
+  id                 String                @id @default(cuid())
+  organizationId     String
+  clientAccountId    String
+  connectionId       String
+  providerPipelineId String
+  label              String
+  displayOrder       Int                   @default(0)
+  archived           Boolean               @default(false)
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  organization       Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clientAccount      ClientAccount         @relation(fields: [clientAccountId], references: [id], onDelete: Cascade)
+  connection         IntegrationConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  stages             CrmPipelineStage[]
+
+  @@unique([connectionId, providerPipelineId])
+  @@index([organizationId, clientAccountId])
+}
+
+model CrmPipelineStage {
+  id              String      @id @default(cuid())
+  pipelineId      String
+  providerStageId String
+  label           String
+  displayOrder    Int         @default(0)
+  probability     Float?
+  isClosed        Boolean     @default(false)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  pipeline        CrmPipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+
+  @@unique([pipelineId, providerStageId])
 }
 
 model CommissionRecord {

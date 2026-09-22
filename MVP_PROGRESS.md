@@ -398,3 +398,36 @@
 - Existing HubSpot contact APIs remain `/crm/v3/objects/contacts`; only the OAuth token lifecycle uses HubSpot's current date-versioned `/oauth/2026-03/*` endpoints.
 - The repository-wide `npm run lint` command exceeded the execution timeout without output. A focused ESLint run over all Stage 2.5 implementation files passed; two pre-existing `react-hooks/set-state-in-effect` violations remain in unrelated legacy sections of `AdminWorkspacePage.tsx` when that whole file is linted.
 - The known Prisma `@prisma/adapter-pg` deprecation warning still appears after successful system tests; no Stage 2.5 test failed because of it.
+
+## Post-MVP Stage 2.6 - Status
+
+### Completed
+- Extended the existing Stage 2.5 HubSpot adapter and encrypted OAuth lifecycle instead of creating a parallel provider path.
+- Added and applied migration `20260920160000_stage2_6_hubspot_sales_crm`. It adds canonical CRM companies and owners, pipeline/stage metadata, extended deal context, typed provider mappings for every supported HubSpot object, explicit deal-contact and activity associations, and category-level sync metrics while preserving all existing contact mappings and IDs.
+- Added verified OAuth scopes for Contacts read/write, Companies read/write, Deals read/write, Owners read, and `sales-email-read`. HubSpot's email engagement content requires `sales-email-read`; the other implemented activity reads use contact-read authorization.
+- Implemented bounded-retry, paginated HubSpot reads for Contacts, Companies, Deals, Owners, Calls, Meetings, Notes, Tasks, and Emails, plus account-specific deal pipeline/stage metadata.
+- Implemented dependency-safe synchronization in the order Owners → pipelines → Companies → Contacts → Deals → activities, followed by real provider association persistence. Repeated imports update mappings rather than creating duplicates.
+- Added partial-success behavior: successful categories commit independently, failed categories are named in `SyncRun.categoryCounts` and audit metadata, and the connection becomes `DEGRADED` so assigned users can retry without receiving or re-entering credentials.
+- Reused canonical `Interaction` records for HubSpot activities and added `MEETING` and `TASK` interaction types. Timeline responses include linked companies and deals.
+- Expanded Unified Leads with CRM owner, canonical company details, associated deals, human-readable pipeline/stage labels, expected close dates, and recent HubSpot/manual activities.
+- Added local-first Company and Deal editing through authenticated active-client APIs. Safe mapped fields write to HubSpot; a provider failure leaves the canonical update intact and exposes a Retry HubSpot action.
+- Preserved commission integrity: imported HubSpot deals populate canonical Deal records but do not create or alter authoritative commission records or platform agent attribution.
+- Added `npm run test:stage2.6`, covering pagination, all supported object types, associations, repeat-sync duplicate prevention, outbound Company/Deal PATCH, local-first failure/retry, and cross-client rejection with a deterministic mocked provider.
+- Fixed manual-test connection resolution so `IntegrationConnection` is the shared persisted source for the Integration Hub, direct Sync/Retry, outbound mappings, and Sync Active Client. `CONNECTED`, `DEGRADED`, and recoverable `ERROR` states remain syncable; only disconnected/authentication-required states cross the reconnect boundary. Expired OAuth access tokens are refreshed from the encrypted stored refresh token and the rotated credentials are persisted.
+- Normalized HubSpot rich-text activity fields to safe readable text during import and defensively before Timeline/Recent Activity presentation, including existing stored activity rows. No provider HTML is rendered.
+- Expanded Stage 2.6 regression coverage with degraded-connection resolution, expired-token refresh, credential rotation persistence, fresh-process/server-restart reuse, cross-client rejection, and rich-text normalization tests.
+- Passed Prisma validation, migration status/deployment, Prisma Client generation, `npx tsc --noEmit`, focused Stage 2.6 ESLint, `npm run test:stage2.6`, the existing `npm run test:system`, `git diff --check`, and the production build. The live legacy Northstar credential continued contact bidirectional sync and imported permitted activities while safely reporting missing expanded permissions by category.
+
+### In Progress
+- None. Stage 2.6 implementation is complete and stopped for manual expanded-scope OAuth testing/review.
+
+### Pending
+- Add `sales-email-read` to the HubSpot app configuration, deploy/save the app settings, and re-authorize the existing test-portal installation once so email activities can be verified live.
+- Test the full browser flow with a portal containing representative companies, deals/stages, owners, all five activity types, and associations.
+- Stage 3 UI/UX Refinement only after explicit approval.
+
+### Notes / Decisions
+- The current legacy Northstar token does not have all Stage 2.6 scopes. During verification, Contacts and six permitted activity records synchronized; Companies, Deals, Owners, pipelines, and Emails produced safe category failures. This is expected until renewed OAuth consent is completed.
+- HubSpot account `247075021` is persisted as a client-owned OAuth connection with an encrypted refresh token. Its manual-test `DEGRADED` status came from the missing email permission, not a lost installation; degraded connections now remain available to every sync entry point.
+- HubSpot object reads remain on the working CRM v3 endpoints used by Stage 2.5; the encrypted token lifecycle remains on the date-versioned OAuth endpoints. Provider HTTP remains isolated behind the HubSpot adapter.
+- Manual Sync Now and Retry remain deterministic failsafes. Webhooks were not made mandatory or started in this stage.

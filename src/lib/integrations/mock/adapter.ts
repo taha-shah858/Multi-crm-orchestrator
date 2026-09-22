@@ -6,7 +6,7 @@ import type { CrmAdapter } from "@/lib/integrations/types";
  */
 export const mockCrmAdapter: CrmAdapter = {
   provider: "MOCK",
-  capabilities: { oauth: false, listContacts: true, updateContact: false, disconnect: false },
+  capabilities: { oauth: false, listContacts: true, updateContact: false, salesCrm: false, updateCompany: false, updateDeal: false, disconnect: false },
   async listContacts() {
     return [
       {

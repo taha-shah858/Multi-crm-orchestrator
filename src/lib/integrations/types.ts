@@ -6,6 +6,58 @@ export interface ContactListOptions {
   limit?: number;
 }
 
+export type HubSpotSalesObjectType = "companies" | "deals" | "calls" | "meetings" | "notes" | "tasks" | "emails";
+
+export interface ProviderAssociationSet {
+  contacts: string[];
+  companies: string[];
+  deals: string[];
+}
+
+export interface ProviderSalesRecord {
+  id: string;
+  properties: Record<string, string | null | undefined>;
+  associations: ProviderAssociationSet;
+  createdAt: string;
+  updatedAt: string;
+  archived: boolean;
+}
+
+export interface ProviderOwnerRecord {
+  id: string;
+  email?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  userId?: number | null;
+  teams?: Array<{ id: string }>;
+  archived?: boolean;
+}
+
+export interface ProviderPipelineRecord {
+  id: string;
+  label: string;
+  displayOrder: number;
+  archived?: boolean;
+  stages: Array<{
+    id: string;
+    label: string;
+    displayOrder: number;
+    metadata?: { probability?: string; isClosed?: string };
+    archived?: boolean;
+  }>;
+}
+
+export interface SalesCrmSnapshot {
+  contacts: NormalizedContact[];
+  contactRecords: ProviderSalesRecord[];
+  companies: ProviderSalesRecord[];
+  deals: ProviderSalesRecord[];
+  owners: ProviderOwnerRecord[];
+  pipelines: ProviderPipelineRecord[];
+  activities: Array<ProviderSalesRecord & { objectType: "CALL" | "MEETING" | "NOTE" | "TASK" | "EMAIL" }>;
+  failures: Array<{ category: string; message: string }>;
+}
+
 /** Canonical contact fields shared by provider write adapters. */
 export interface ContactWriteInput {
   firstName: string;
@@ -13,6 +65,27 @@ export interface ContactWriteInput {
   email: string | null;
   phone: string | null;
   company: string | null;
+}
+
+export interface CompanyWriteInput {
+  name: string;
+  domain: string | null;
+  website: string | null;
+  phone: string | null;
+  industry: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  address: string | null;
+}
+
+export interface DealWriteInput {
+  name: string;
+  amount: string;
+  pipelineId: string | null;
+  stageId: string | null;
+  expectedCloseAt: Date | null;
+  ownerExternalId: string | null;
 }
 
 /**
@@ -25,10 +98,16 @@ export interface IntegrationAdapter {
     oauth: boolean;
     listContacts: boolean;
     updateContact: boolean;
+    salesCrm: boolean;
+    updateCompany: boolean;
+    updateDeal: boolean;
     disconnect: boolean;
   };
   listContacts?(connection: IntegrationConnection, options?: ContactListOptions): Promise<NormalizedContact[]>;
   updateContact?(connection: IntegrationConnection, externalId: string, contact: ContactWriteInput): Promise<void>;
+  fetchSalesCrm?(connection: IntegrationConnection): Promise<SalesCrmSnapshot>;
+  updateCompany?(connection: IntegrationConnection, externalId: string, company: CompanyWriteInput): Promise<void>;
+  updateDeal?(connection: IntegrationConnection, externalId: string, deal: DealWriteInput): Promise<void>;
 }
 
 export type CrmAdapter = IntegrationAdapter;

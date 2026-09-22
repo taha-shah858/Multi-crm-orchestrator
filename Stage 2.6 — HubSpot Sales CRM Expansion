@@ -1,0 +1,211 @@
+Objective
+Expand the proven HubSpot OAuth integration from Contacts-only into a sales CRM integration covering Contacts, Companies, Deals, Owners, sales activities, and their associations. Build on Stage 2.5; do not replace its OAuth, encrypted credentials, RBAC, audit, retry, or provider-adapter architecture.
+HubSpot supports CRM objects and associations needed for this model, including deals related to contacts, companies, and activities. Use current HubSpot documentation to verify exact OAuth scope names before changing the app configuration.
+1. Implementation order
+1. Companies
+2. Owners
+3. Deals and pipeline/stage metadata
+4. Contact ↔ Company ↔ Deal associations
+5. Calls, Meetings, Notes, Tasks, Emails
+6. Activity associations
+7. Unified Lead Detail integration
+8. Aggregation Timeline integration
+9. Supported outbound synchronization
+10. Reliability, retry, audit, and tests
+Do not implement unrelated HubSpot CMS/marketing features.
+2. OAuth scopes
+Extend the HubSpot project OAuth scopes only for APIs actually implemented:
+- Contacts read/write
+- Companies read/write
+- Deals read/write
+- Owners read
+- Calls
+- Meetings
+- Notes
+- Tasks
+- Emails
+Do not guess scope names. Verify exact current scope names against HubSpot documentation/app validation. After changing app-hsmeta.json, upload/deploy the HubSpot project and re-authorize the test portal if renewed consent is required.
+3. Canonical models
+Keep provider IDs separate from canonical IDs.
+Company
+Include useful fields such as name, domain, website, phone, industry, location, ownership/source metadata, clientAccountId, timestamps.
+Deal
+Include name, amount, currency where available, pipeline, stage, open/won/lost state where determinable, expected close date, closed date, owner reference, clientAccountId, source metadata, timestamps.
+CRM Owner
+Store provider owner identity through ExternalRecord mapping. Do not assume a HubSpot Owner equals a platform Agent. Any Owner ↔ Agent relationship must be explicit.
+Activities
+Reuse/extend the existing canonical Interaction model where appropriate for CALL, MEETING, NOTE, TASK, EMAIL instead of creating a disconnected second timeline.
+4. ExternalRecord mapping
+Maintain provider mappings for every imported object:
+Canonical Contact  ↔ HubSpot Contact ID
+Canonical Company  ↔ HubSpot Company ID
+Canonical Deal     ↔ HubSpot Deal ID
+Canonical Owner    ↔ HubSpot Owner ID
+Canonical Activity ↔ HubSpot Activity ID
+Mappings must be scoped to the correct IntegrationConnection/client. Repeated imports update mapped records rather than creating duplicates.
+5. Associations
+Preserve real CRM relationships:
+Contact ↔ Company
+Contact ↔ Deal
+Company ↔ Deal
+
+Contact ↔ Activity
+Company ↔ Activity
+Deal    ↔ Activity
+Use HubSpot association data/APIs. Do not infer relationships from names or email addresses.
+The platform should be able to answer: who is the lead, which company they belong to, which deals are related, who owns them, deal amount/stage/close date, and what calls/emails/meetings/tasks/notes occurred.
+6. Provider adapter
+Extend the existing HubSpot adapter rather than adding HubSpot HTTP calls to pages.
+Support the equivalent of:
+- list/update Contacts
+- list/get/update Companies
+- list/get/update Deals
+- list Owners
+- list Calls
+- list Meetings
+- list Notes
+- list Tasks
+- list Emails
+- retrieve associations
+Use pagination correctly. Centralize OAuth access-token refresh through Stage 2.5 services. Never expose tokens to client components.
+7. Inbound synchronization
+Sync Active Client should synchronize sales CRM data, not only contacts.
+Use a dependency-safe flow such as:
+Owners
+  ↓
+Contacts + Companies
+  ↓
+Deals
+  ↓
+Associations
+  ↓
+Activities
+  ↓
+Activity associations
+Requirements:
+- pagination
+- tenant/client isolation
+- provider-ID upserts
+- no duplicates
+- useful SyncRun/AuditLog counts
+- structured JSON errors
+- partial failures must not corrupt successful canonical data
+8. Unified Lead Directory
+Keep the UI sales-oriented, not a raw HubSpot browser.
+Lead detail should expose:
+Identity: name, email, phone, company, source CRM, CRM owner.
+Qualification: existing budget, timeline, intent, lead score, temperature, deal probability, AI summary, last analyzed.
+Deal context: associated deals, amount, pipeline, stage, expected close date, owner, status.
+Recent activity: calls, meetings, emails, notes, tasks.
+Preserve the existing design system.
+9. Aggregation Timeline
+Feed HubSpot activities into the existing Unified Interaction Aggregator alongside manual interactions and future Twilio interactions.
+Each item should retain type, timestamp, provider/source, related contact, related deal/company where available, direction where meaningful, and safe display content. Repeated syncs must not duplicate activities.
+10. Deals and commission integrity
+Use:
+External CRM Deal
+       ↓
+Canonical Deal
+       ↓
+Platform Agent Attribution
+       ↓
+Commission Rules
+       ↓
+CommissionRecord
+Do not calculate authoritative commissions directly from arbitrary external CRM fields. Preserve audited platform commission logic.
+11. Outbound synchronization
+Do not blindly write every canonical property back to HubSpot.
+Keep existing Contact outbound sync. Add safe Company/Deal mappings where appropriate. Deal fields may include name, amount, stage, expected close date, and owner only when a valid owner mapping exists.
+Provider-managed/read-only properties must not be overwritten.
+Use the existing pattern:
+Canonical DB update
+       ↓
+Outbound sync
+       ↓
+SUCCESS
+or
+SYNC_FAILED → Retry
+Local edits survive provider failures.
+12. Pipelines and stages
+Do not hardcode one HubSpot pipeline/stage set. Retrieve/normalize metadata required to support different HubSpot accounts. Display human-readable labels rather than raw provider IDs.
+13. Sync observability
+Sync results should identify categories, e.g.:
+Contacts: 120
+Companies: 34
+Deals: 48
+Activities: 390
+Failures: 2
+Assigned agents may Sync and Retry permitted failures. Admin/Manager may inspect broader integration health. Never log tokens/secrets/authorization headers.
+14. Webhooks
+Webhook capability already exists in the HubSpot project, but do not make it mandatory for core Stage 2.6.
+First make manual/on-demand sync correct and deterministic. Webhooks may then be enabled incrementally for supported objects. Webhook handling must be authenticated/validated, idempotent, connection-aware, and tenant-safe.
+Manual Sync Now and Retry remain available as failsafes.
+15. RBAC
+Preserve Stage 2.5 rules.
+Agent: assigned clients only; permitted sync/retry; no credentials/global mappings/unassigned clients.
+Admin/Manager: integration management, broader sync health, mappings/ownership configuration where implemented.
+Enforce all authorization server-side.
+16. Error handling
+Application APIs must return structured JSON errors. Do not allow frontend JSON parsing failures caused by HTML responses. Handle rate limits and transient provider failures deliberately with bounded retry/backoff where appropriate.
+17. Testing
+Use a HubSpot test portal containing contacts, companies, multiple deals/stages, owners, calls, meetings, notes, tasks, emails, and associations.
+Verify:
+- OAuth still works after scope expansion.
+- All supported objects import.
+- Associations are correct.
+- Repeated sync creates no duplicates.
+- Lead detail shows correct deal/company/owner context.
+- Timeline shows correct HubSpot activities.
+- Refresh/server restart preserves data.
+- Client A data cannot appear under Client B.
+- Cross-client APIs reject access.
+- Supported outbound edits reach HubSpot.
+- Re-import after outbound edit creates no duplicates.
+- Provider failure preserves canonical data and Retry succeeds.
+- Credentials never appear in browser responses/logs.
+18. Verification
+Run at minimum:
+- Prisma validate/migrations/generate
+- TypeScript --noEmit
+- focused lint
+- focused HubSpot sales-sync tests
+- tenant-isolation/system tests
+- production build
+19. Definition of Done
+Stage 2.6 is complete when:
+- HubSpot OAuth works with required sales CRM scopes.
+- Contacts remain bidirectional.
+- Companies, Deals, Owners import and normalize.
+- Calls, Meetings, Notes, Tasks, Emails import as canonical interactions where appropriate.
+- Associations are preserved.
+- Pipeline/stage information is meaningful in UI.
+- Unified Leads shows useful company/deal/owner context.
+- Timeline shows HubSpot activities without duplicates.
+- Supported Company/Deal outbound edits use local-first + retry.
+- ExternalRecord mappings prevent duplicates.
+- RBAC and tenant isolation pass.
+- SyncRun/AuditLog provide useful results.
+- No credentials are exposed.
+- Manual sync/retry remains available.
+- Prisma, TypeScript, tests, and production build pass.
+Stop after Stage 2.6 for manual review. Do not start Stage 3 or additional providers automatically.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    To pick up a draggable item, press the space bar.
+    While dragging, use the arrow keys to move the item.
+    Press space again to drop the item in its new position, or press escape to cancel.i wanna start in new chat do you need context

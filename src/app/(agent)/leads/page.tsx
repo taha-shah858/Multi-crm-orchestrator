@@ -69,6 +69,10 @@ interface Lead {
   lastName?: string;
   isPersisted?: boolean;
   analysis?: PersistedLeadAnalysis;
+  crmOwner?: PersistedContact["crmOwner"];
+  companyDetails?: PersistedContact["companyDetails"];
+  deals?: PersistedContact["deals"];
+  recentActivities?: PersistedContact["recentActivities"];
 }
 
 interface PersistedContact {
@@ -82,6 +86,17 @@ interface PersistedContact {
   sourceCrm: Lead["crmSource"];
   createdAt: string;
   updatedAt: string;
+  crmOwner: { id: string; displayName: string; email: string | null } | null;
+  companyDetails: {
+    id: string; name: string; domain: string | null; website: string | null; phone: string | null;
+    industry: string | null; city: string | null; state: string | null; country: string | null; address: string | null;
+  } | null;
+  deals: Array<{
+    id: string; title: string; valueCents: number; currency: string; status: "OPEN" | "CLOSED_WON" | "CLOSED_LOST";
+    pipelineId: string | null; pipelineLabel: string | null; stageId: string | null; stageLabel: string | null; expectedCloseAt: string | null; closedAt: string | null;
+    owner: { id: string; displayName: string; email: string | null } | null; company: { id: string; name: string } | null;
+  }>;
+  recentActivities: Array<{ id: string; type: string; subject: string | null; body: string; occurredAt: string; source: string }>;
 }
 
 interface PersistedLeadAnalysis {
@@ -101,6 +116,8 @@ interface PersistedLeadAnalysis {
 }
 
 type AssessmentForm = Pick<PersistedLeadAnalysis, "summary" | "budget" | "timeline" | "requirements" | "intent" | "objections" | "leadScore" | "temperature" | "dealProbability">;
+type CompanyForm = { name: string; domain: string; website: string; phone: string; industry: string; city: string; state: string; country: string; address: string };
+type DealForm = { id: string; title: string; amount: string; pipelineLabel: string; stageLabel: string; expectedCloseAt: string };
 
 export default function LeadsPage() {
   const { activeClientAccount, isClientAccountReady } = useClientAccount();
@@ -117,6 +134,11 @@ export default function LeadsPage() {
   const [isSavingContact, setIsSavingContact] = useState(false);
   const [contactSyncFeedback, setContactSyncFeedback] = useState("");
   const [editContact, setEditContact] = useState({ firstName: "", lastName: "", email: "", phone: "", company: "" });
+  const [companyForm, setCompanyForm] = useState<CompanyForm | null>(null);
+  const [dealForm, setDealForm] = useState<DealForm | null>(null);
+  const [isSavingCrmEntity, setIsSavingCrmEntity] = useState(false);
+  const [crmEntityFeedback, setCrmEntityFeedback] = useState("");
+  const [crmRetryTarget, setCrmRetryTarget] = useState<{ type: "companies" | "deals"; id: string } | null>(null);
   const [showAssessmentModal, setShowAssessmentModal] = useState(false);
   const [isSavingAssessment, setIsSavingAssessment] = useState(false);
   const [assessmentFeedback, setAssessmentFeedback] = useState("");
@@ -141,6 +163,10 @@ export default function LeadsPage() {
       lastName: contact.lastName,
       isPersisted: true,
       analysis,
+      crmOwner: contact.crmOwner,
+      companyDetails: contact.companyDetails,
+      deals: contact.deals,
+      recentActivities: contact.recentActivities,
       title: "Contact",
       company: contact.company || "Independent",
       email: contact.email || "no-email@crm.invalid",
@@ -151,14 +177,14 @@ export default function LeadsPage() {
       pulledFrom: `${contact.sourceCrm} client-account sync`,
       pulledAt: new Date(contact.updatedAt).toLocaleString(),
       syncStatus: "Synced",
-      leadOwner: `${activeClientAccount.name} Integration`,
+      leadOwner: contact.crmOwner?.displayName ?? `${activeClientAccount.name} Integration`,
       status: "Active Lead",
       rating: analysis?.temperature === "Hot" || analysis?.temperature === "Warm" || analysis?.temperature === "Cold" ? analysis.temperature : "Unrated",
       score: analysis?.leadScore ?? null,
-      industry: "General",
+      industry: contact.companyDetails?.industry || "General",
       annualRevenue: "N/A",
-      website: "",
-      address: `Imported for ${activeClientAccount.name}`,
+      website: contact.companyDetails?.website || (contact.companyDetails?.domain ? `https://${contact.companyDetails.domain}` : ""),
+      address: [contact.companyDetails?.address, contact.companyDetails?.city, contact.companyDetails?.state, contact.companyDetails?.country].filter(Boolean).join(", ") || `Imported for ${activeClientAccount.name}`,
       description: `Imported via the ${activeClientAccount.name} client-account sync from ${contact.sourceCrm} Contact ID #${contact.externalId}`,
       variant: "neutral",
     };
@@ -332,6 +358,67 @@ export default function LeadsPage() {
     } finally {
       setIsSavingContact(false);
     }
+  };
+
+  const openCompanyEditor = () => {
+    const company = selectedLead?.companyDetails;
+    if (!company) return;
+    setCrmEntityFeedback(""); setCrmRetryTarget(null);
+    setCompanyForm({ name: company.name, domain: company.domain || "", website: company.website || "", phone: company.phone || "", industry: company.industry || "", city: company.city || "", state: company.state || "", country: company.country || "", address: company.address || "" });
+  };
+
+  const saveCompany = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!selectedLead?.companyDetails || !companyForm) return;
+    setIsSavingCrmEntity(true); setCrmEntityFeedback("");
+    try {
+      const response = await fetch(`/api/crm/companies/${selectedLead.companyDetails.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(companyForm) });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error?.message || "Unable to save this company.");
+      const companyDetails = { ...selectedLead.companyDetails, ...companyForm };
+      setSelectedLead({ ...selectedLead, company: companyForm.name, companyDetails, industry: companyForm.industry || "General", website: companyForm.website || (companyForm.domain ? `https://${companyForm.domain}` : ""), address: [companyForm.address, companyForm.city, companyForm.state, companyForm.country].filter(Boolean).join(", ") });
+      setCompanyForm(null);
+      setCrmRetryTarget(data.outboundSync.status === "FAILED" ? { type: "companies", id: selectedLead.companyDetails.id } : null);
+      setCrmEntityFeedback(data.outboundSync.status === "COMPLETED" ? "Company saved locally and updated in HubSpot." : data.outboundSync.status === "FAILED" ? `Company saved locally. ${data.outboundSync.error}` : "Company saved locally; no HubSpot mapping was available.");
+      await loadPersistedContacts(false, false);
+    } catch (error) { setCrmEntityFeedback(error instanceof Error ? error.message : "Unable to save this company."); }
+    finally { setIsSavingCrmEntity(false); }
+  };
+
+  const openDealEditor = (deal: NonNullable<Lead["deals"]>[number]) => {
+    setCrmEntityFeedback(""); setCrmRetryTarget(null);
+    setDealForm({ id: deal.id, title: deal.title, amount: (deal.valueCents / 100).toFixed(2), pipelineLabel: deal.pipelineLabel || "Unassigned pipeline", stageLabel: deal.stageLabel || "Unassigned stage", expectedCloseAt: deal.expectedCloseAt ? new Date(deal.expectedCloseAt).toISOString().slice(0, 10) : "" });
+  };
+
+  const saveDeal = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!selectedLead || !dealForm) return;
+    setIsSavingCrmEntity(true); setCrmEntityFeedback("");
+    try {
+      const payload = { title: dealForm.title, amount: Number(dealForm.amount), expectedCloseAt: dealForm.expectedCloseAt || null };
+      const response = await fetch(`/api/crm/deals/${dealForm.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error?.message || "Unable to save this deal.");
+      setSelectedLead({ ...selectedLead, deals: selectedLead.deals?.map((deal) => deal.id === dealForm.id ? { ...deal, title: dealForm.title, valueCents: Math.round(Number(dealForm.amount) * 100), expectedCloseAt: dealForm.expectedCloseAt || null } : deal) });
+      setDealForm(null);
+      setCrmRetryTarget(data.outboundSync.status === "FAILED" ? { type: "deals", id: dealForm.id } : null);
+      setCrmEntityFeedback(data.outboundSync.status === "COMPLETED" ? "Deal saved locally and updated in HubSpot." : data.outboundSync.status === "FAILED" ? `Deal saved locally. ${data.outboundSync.error}` : "Deal saved locally; no HubSpot mapping was available.");
+      await loadPersistedContacts(false, false);
+    } catch (error) { setCrmEntityFeedback(error instanceof Error ? error.message : "Unable to save this deal."); }
+    finally { setIsSavingCrmEntity(false); }
+  };
+
+  const retrySalesEntitySync = async () => {
+    if (!crmRetryTarget) return;
+    setIsSavingCrmEntity(true);
+    try {
+      const response = await fetch(`/api/crm/${crmRetryTarget.type}/${crmRetryTarget.id}/sync`, { method: "POST" });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error?.message || "Unable to retry HubSpot sync.");
+      if (data.outboundSync.status !== "COMPLETED") throw new Error(data.outboundSync.error || "HubSpot is still unavailable; the local edit remains saved.");
+      setCrmEntityFeedback("HubSpot update completed."); setCrmRetryTarget(null);
+    } catch (error) { setCrmEntityFeedback(error instanceof Error ? error.message : "Unable to retry HubSpot sync."); }
+    finally { setIsSavingCrmEntity(false); }
   };
 
   const openAssessmentEditor = () => {
@@ -913,10 +1000,14 @@ export default function LeadsPage() {
                   <span className="text-crm-text">{selectedLead.title}</span>
                 </div>
                 <div>
+                  <span className="text-slate-500 block text-[10px]">Company</span>
+                  <div className="flex items-center gap-2"><span className="text-crm-text">{selectedLead.company}</span>{selectedLead.companyDetails && <button type="button" onClick={openCompanyEditor} className="text-[9px] text-primary-cyan hover:underline">Edit company</button>}</div>
+                </div>
+                <div>
                   <span className="text-slate-500 block text-[10px]">
-                    Company
+                    CRM Owner
                   </span>
-                  <span className="text-crm-text">{selectedLead.company}</span>
+                  <span className="text-crm-text">{selectedLead.crmOwner?.displayName || selectedLead.leadOwner}</span>
                 </div>
                 <div>
                   <span className="text-slate-500 block text-[10px]">
@@ -965,6 +1056,43 @@ export default function LeadsPage() {
                 </div>
               </div>
 
+              <MultiCrmInnerPanel className="p-4 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-crm-text-muted font-mono text-xs font-bold">Associated Deals</span>
+                  <span className="text-[10px] font-mono text-primary-cyan">{selectedLead.deals?.length ?? 0} linked</span>
+                </div>
+                {selectedLead.deals?.length ? (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {selectedLead.deals.map((deal) => (
+                      <div key={deal.id} className="rounded-xl border border-crm-border-strong bg-crm-surface/60 p-3 font-mono text-[10px]">
+                        <div className="flex items-start justify-between gap-3">
+                          <span className="font-semibold text-crm-text">{deal.title}</span>
+                          <span className={deal.status === "CLOSED_WON" ? "text-emerald-400" : deal.status === "CLOSED_LOST" ? "text-rose-300" : "text-amber-300"}>{deal.status.replaceAll("_", " ")}</span>
+                        </div>
+                        <p className="mt-2 text-sm font-semibold text-primary-cyan">{new Intl.NumberFormat(undefined, { style: "currency", currency: deal.currency }).format(deal.valueCents / 100)}</p>
+                        <p className="mt-1 text-crm-text-muted">{[deal.pipelineLabel, deal.stageLabel].filter(Boolean).join(" · ") || "Pipeline metadata unavailable"}</p>
+                        <p className="mt-1 text-crm-text-muted">Owner: {deal.owner?.displayName || "Unassigned"}</p>
+                        {deal.expectedCloseAt && <p className="mt-1 text-crm-text-muted">Expected close: {new Date(deal.expectedCloseAt).toLocaleDateString()}</p>}
+                        <button type="button" onClick={() => openDealEditor(deal)} className="mt-2 text-primary-cyan hover:underline">Edit & sync deal</button>
+                      </div>
+                    ))}
+                  </div>
+                ) : <p className="text-[11px] text-crm-text-muted">No HubSpot deals are associated with this lead.</p>}
+              </MultiCrmInnerPanel>
+
+              <MultiCrmInnerPanel className="p-4 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-crm-text-muted font-mono text-xs font-bold">Recent CRM Activity</span>
+                  <span className="text-[10px] font-mono text-primary-cyan">HubSpot + manual</span>
+                </div>
+                {selectedLead.recentActivities?.length ? selectedLead.recentActivities.slice(0, 5).map((activity) => (
+                  <div key={activity.id} className="flex items-start justify-between gap-4 border-t border-crm-border/70 pt-2 first:border-0 first:pt-0">
+                    <div><p className="text-xs font-medium text-crm-text">{activity.subject || activity.type.replaceAll("_", " ")}</p><p className="mt-1 line-clamp-2 text-[10px] text-crm-text-muted">{activity.body}</p></div>
+                    <div className="shrink-0 text-right font-mono text-[9px] text-crm-text-muted"><p>{activity.type}</p><p>{new Date(activity.occurredAt).toLocaleDateString()}</p></div>
+                  </div>
+                )) : <p className="text-[11px] text-crm-text-muted">No recent activity is associated with this lead.</p>}
+              </MultiCrmInnerPanel>
+
               <MultiCrmInnerPanel className="p-4 space-y-2">
                 <span className="text-crm-text-muted font-mono text-xs font-bold block">
                   Address & Location
@@ -994,6 +1122,7 @@ export default function LeadsPage() {
               )}
             </div>
           )}
+          {crmEntityFeedback && <div className="flex items-center gap-3 rounded-xl border border-primary-cyan/30 bg-primary-cyan/10 px-4 py-3 text-xs font-mono text-crm-text-muted"><span>{crmEntityFeedback}</span>{crmRetryTarget && <button type="button" onClick={retrySalesEntitySync} disabled={isSavingCrmEntity} className="ml-auto rounded-lg border border-primary-cyan/40 px-2.5 py-1 text-primary-cyan disabled:opacity-50">Retry HubSpot</button>}</div>}
         </div>
       )}
 
@@ -1304,6 +1433,36 @@ export default function LeadsPage() {
                 <label key={field} className="block space-y-1 text-crm-text-muted"><span>{label}</span><input type={field === 'email' ? 'email' : 'text'} value={editContact[field as 'email' | 'phone' | 'company']} onChange={(event) => setEditContact({ ...editContact, [field]: event.target.value })} className="w-full rounded-xl border border-crm-border-strong bg-crm-inner px-3 py-2 text-crm-text outline-none focus:border-primary-cyan/60" /></label>
               ))}
               <div className="flex justify-end gap-3 pt-2"><button type="button" onClick={() => setShowEditModal(false)} className="rounded-xl border border-crm-border-strong px-4 py-2 text-crm-text-muted">Cancel</button><button disabled={isSavingContact} className="rounded-xl bg-primary-cyan px-4 py-2 font-semibold text-slate-950 disabled:opacity-50">{isSavingContact ? 'Saving…' : 'Save & Sync HubSpot'}</button></div>
+            </form>
+          </MultiCrmCard>
+        </div>
+      )}
+
+      {companyForm && selectedLead?.companyDetails && (
+        <div className="dashboard-overlay bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <MultiCrmCard className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 space-y-5 border border-primary-cyan/40 shadow-2xl">
+            <div className="flex items-start justify-between border-b border-crm-border-strong pb-3"><div><h2 className="text-lg font-bold text-crm-text">Edit canonical company</h2><p className="mt-1 text-xs font-mono text-crm-text-muted">Saves locally first, then updates supported HubSpot company properties.</p></div><button type="button" onClick={() => setCompanyForm(null)} className="text-crm-text-muted hover:text-crm-text"><X className="h-5 w-5" /></button></div>
+            <form onSubmit={saveCompany} className="space-y-4 font-mono text-xs">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {([['name', 'Company name'], ['domain', 'Domain'], ['website', 'Website'], ['phone', 'Phone'], ['industry', 'Industry'], ['city', 'City'], ['state', 'State'], ['country', 'Country']] as const).map(([field, label]) => <label key={field} className="space-y-1 text-crm-text-muted"><span>{label}</span><input required={field === 'name'} value={companyForm[field]} onChange={(event) => setCompanyForm({ ...companyForm, [field]: event.target.value })} className="w-full rounded-xl border border-crm-border-strong bg-crm-inner px-3 py-2 text-crm-text outline-none focus:border-primary-cyan/60" /></label>)}
+              </div>
+              <label className="block space-y-1 text-crm-text-muted"><span>Street address</span><input value={companyForm.address} onChange={(event) => setCompanyForm({ ...companyForm, address: event.target.value })} className="w-full rounded-xl border border-crm-border-strong bg-crm-inner px-3 py-2 text-crm-text outline-none focus:border-primary-cyan/60" /></label>
+              <div className="flex justify-end gap-3 border-t border-crm-border-strong pt-4"><button type="button" onClick={() => setCompanyForm(null)} className="rounded-xl border border-crm-border-strong px-4 py-2 text-crm-text-muted">Cancel</button><button disabled={isSavingCrmEntity} className="rounded-xl bg-primary-cyan px-4 py-2 font-semibold text-slate-950 disabled:opacity-50">{isSavingCrmEntity ? "Saving…" : "Save & Sync HubSpot"}</button></div>
+            </form>
+          </MultiCrmCard>
+        </div>
+      )}
+
+      {dealForm && selectedLead && (
+        <div className="dashboard-overlay bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <MultiCrmCard className="w-full max-w-lg p-6 space-y-5 border border-primary-cyan/40 shadow-2xl">
+            <div className="flex items-start justify-between border-b border-crm-border-strong pb-3"><div><h2 className="text-lg font-bold text-crm-text">Edit canonical deal</h2><p className="mt-1 text-xs font-mono text-crm-text-muted">Only safe sales fields are written back to HubSpot.</p></div><button type="button" onClick={() => setDealForm(null)} className="text-crm-text-muted hover:text-crm-text"><X className="h-5 w-5" /></button></div>
+            <form onSubmit={saveDeal} className="space-y-4 font-mono text-xs">
+              <label className="block space-y-1 text-crm-text-muted"><span>Deal name</span><input required value={dealForm.title} onChange={(event) => setDealForm({ ...dealForm, title: event.target.value })} className="w-full rounded-xl border border-crm-border-strong bg-crm-inner px-3 py-2 text-crm-text" /></label>
+              <div className="grid grid-cols-2 gap-3"><label className="space-y-1 text-crm-text-muted"><span>Amount</span><input required type="number" min="0" step="0.01" value={dealForm.amount} onChange={(event) => setDealForm({ ...dealForm, amount: event.target.value })} className="w-full rounded-xl border border-crm-border-strong bg-crm-inner px-3 py-2 text-crm-text" /></label><label className="space-y-1 text-crm-text-muted"><span>Expected close</span><input type="date" value={dealForm.expectedCloseAt} onChange={(event) => setDealForm({ ...dealForm, expectedCloseAt: event.target.value })} className="w-full rounded-xl border border-crm-border-strong bg-crm-inner px-3 py-2 text-crm-text" /></label></div>
+              <div className="grid grid-cols-2 gap-3 rounded-xl border border-crm-border-strong bg-crm-inner p-3"><div><p className="text-[10px] uppercase tracking-wider text-crm-text-muted">Pipeline</p><p className="mt-1 text-crm-text">{dealForm.pipelineLabel}</p></div><div><p className="text-[10px] uppercase tracking-wider text-crm-text-muted">Stage</p><p className="mt-1 text-crm-text">{dealForm.stageLabel}</p></div></div>
+              <p className="text-[10px] text-crm-text-muted">Pipeline and stage are managed by HubSpot and shown here using their human-readable labels.</p>
+              <div className="flex justify-end gap-3 border-t border-crm-border-strong pt-4"><button type="button" onClick={() => setDealForm(null)} className="rounded-xl border border-crm-border-strong px-4 py-2 text-crm-text-muted">Cancel</button><button disabled={isSavingCrmEntity} className="rounded-xl bg-primary-cyan px-4 py-2 font-semibold text-slate-950 disabled:opacity-50">{isSavingCrmEntity ? "Saving…" : "Save & Sync HubSpot"}</button></div>
             </form>
           </MultiCrmCard>
         </div>

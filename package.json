@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:system": "node scripts/phase10-system-test.cjs"
+    "test:system": "node scripts/phase10-system-test.cjs",
+    "test:stage2.6": "node scripts/stage2-6-sales-crm-test.cjs"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",

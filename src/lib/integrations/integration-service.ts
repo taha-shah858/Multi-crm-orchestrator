@@ -6,6 +6,7 @@ import { isAdminWorkspaceRole } from "@/lib/auth/roles";
 import { assertClientAccess } from "@/lib/auth/auth-service";
 import { prisma } from "@/lib/db/prisma";
 import { AppError } from "@/lib/errors/app-error";
+import { isSyncableConnectionStatus } from "@/lib/integrations/connection-resolution";
 import {
   buildHubSpotAuthorizationUrl,
   encryptedHubSpotCredentialData,
@@ -280,7 +281,12 @@ export async function runIntegrationSync(user: AuthenticatedUser, id: string, re
   if (connection.ownershipType !== "CLIENT_ACCOUNT" || !connection.clientAccountId) {
     throw new AppError("INVALID_INTEGRATION_TARGET", 422, "Contact synchronization needs a client-owned CRM connection.", "Choose a CRM connected to a client account.");
   }
-  if (connection.status !== "CONNECTED") throw new AppError("SYNC_CONNECTION_NOT_FOUND", 409, "Integration is not connected.", "Reconnect the provider before syncing.");
+  if (!isSyncableConnectionStatus(connection.status)) {
+    const safeMessage = connection.status === "AUTHENTICATION_REQUIRED"
+      ? "HubSpot authorization needs attention. Reconnect this account once to restore access."
+      : "This integration is disconnected. Connect it before syncing.";
+    throw new AppError("SYNC_CONNECTION_NOT_FOUND", 409, "Integration is not available for synchronization.", safeMessage);
+  }
   const context: RequestContext = { user, activeClientAccountId: connection.clientAccountId };
   if (retry) {
     await prisma.auditLog.create({ data: { organizationId: user.organizationId, clientAccountId: connection.clientAccountId, userId: user.id, action: "INTEGRATION_SYNC_RETRIED", entityType: "INTEGRATION_CONNECTION", entityId: connection.id, source: "PLATFORM", requestId, metadata: { provider: connection.provider } } });

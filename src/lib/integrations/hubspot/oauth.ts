@@ -8,7 +8,19 @@ import { decryptIntegrationSecret, encryptIntegrationSecret } from "@/lib/integr
 const HUBSPOT_AUTHORIZE_URL = "https://app.hubspot.com/oauth/authorize";
 const HUBSPOT_TOKEN_URL = "https://api.hubapi.com/oauth/2026-03/token";
 const HUBSPOT_REVOKE_URL = "https://api.hubapi.com/oauth/2026-03/token/revoke";
-export const HUBSPOT_CONTACT_SCOPES = ["crm.objects.contacts.read", "crm.objects.contacts.write"] as const;
+// Most HubSpot activity reads authorize through crm.objects.contacts.read.
+// Email engagement content additionally requires sales-email-read.
+export const HUBSPOT_SALES_SCOPES = [
+  "crm.objects.contacts.read",
+  "crm.objects.contacts.write",
+  "crm.objects.companies.read",
+  "crm.objects.companies.write",
+  "crm.objects.deals.read",
+  "crm.objects.deals.write",
+  "crm.objects.owners.read",
+  "sales-email-read",
+] as const;
+export const HUBSPOT_CONTACT_SCOPES = HUBSPOT_SALES_SCOPES;
 
 interface HubSpotTokenResponse {
   access_token: string;
@@ -38,7 +50,7 @@ export function buildHubSpotAuthorizationUrl(state: string) {
   const url = new URL(HUBSPOT_AUTHORIZE_URL);
   url.searchParams.set("client_id", clientId);
   url.searchParams.set("redirect_uri", redirectUri);
-  url.searchParams.set("scope", HUBSPOT_CONTACT_SCOPES.join(" "));
+  url.searchParams.set("scope", HUBSPOT_SALES_SCOPES.join(" "));
   url.searchParams.set("state", state);
   return url.toString();
 }
@@ -151,6 +163,6 @@ export function encryptedHubSpotCredentialData(tokens: HubSpotTokenResponse) {
     encryptedAccessToken: encryptIntegrationSecret(tokens.access_token),
     encryptedRefreshToken: encryptIntegrationSecret(tokens.refresh_token),
     accessTokenExpiresAt: new Date(Date.now() + tokens.expires_in * 1000),
-    metadata: { tokenType: "oauth", hubId: tokens.hub_id ?? null, scopes: tokens.scopes ?? [...HUBSPOT_CONTACT_SCOPES] },
+    metadata: { tokenType: "oauth", hubId: tokens.hub_id ?? null, scopes: tokens.scopes ?? [...HUBSPOT_SALES_SCOPES] },
   };
 }

@@ -57,6 +57,7 @@ export interface AdminDashboardData {
     recordsCreated: number;
     recordsUpdated: number;
     recordsFailed: number;
+    categoryCounts: unknown;
     errorMessage: string | null;
     startedAt: string;
     completedAt: string | null;

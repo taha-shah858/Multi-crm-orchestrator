@@ -104,6 +104,7 @@ export async function getAdminDashboard(user: AuthenticatedUser) {
         recordsCreated: true,
         recordsUpdated: true,
         recordsFailed: true,
+        categoryCounts: true,
         errorMessage: true,
         startedAt: true,
         completedAt: true,

@@ -1,10 +1,10 @@
 import { NormalizedContact } from "@/lib/models/contact";
-import { HubSpotContactRecord } from "./types";
+import type { HubSpotContactProperties } from "./types";
 
 /**
  * Maps a raw HubSpot v3 contact record to the platform's canonical NormalizedContact model.
  */
-export function mapHubSpotContactToNormalized(record: HubSpotContactRecord): NormalizedContact {
+export function mapHubSpotContactToNormalized(record: { id: string; properties: HubSpotContactProperties; createdAt: string; updatedAt: string }): NormalizedContact {
   const props = record.properties || {};
 
   return {
