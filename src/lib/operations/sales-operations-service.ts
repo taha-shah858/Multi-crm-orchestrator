@@ -47,14 +47,21 @@ export async function createManualCommission(context: RequestContext, input: Inp
   const title = text(input.dealTitle); const notes = text(input.notes) || null; const expectedCents = cents(input.expectedCommission, "INVALID_COMMISSION_INPUT"); const receivedCents = input.receivedCommission === undefined || input.receivedCommission === "" ? 0 : cents(input.receivedCommission, "INVALID_COMMISSION_INPUT"); const valueCents = cents(input.dealValue, "INVALID_COMMISSION_INPUT");
   if (!title || expectedCents <= 0 || valueCents <= 0) throw new AppError("INVALID_COMMISSION_INPUT", 422, "Commission details are required.", "Enter a deal title, deal value, and expected commission greater than zero.");
   const contactId = await contactFor(context, input.contactId); const status = commissionStatus(expectedCents, receivedCents); const clientCurrency = currency(input.currency);
+  const rate = Number(((expectedCents / valueCents) * 100).toFixed(2));
   const result = await prisma.$transaction(async (transaction) => {
-    const deal = await transaction.deal.create({ data: { organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, contactId, userId: context.user.id, title, valueCents, currency: clientCurrency, status: "CLOSED_WON", closedAt: new Date(), notes, isManual: true } });
+    const deal = await transaction.deal.create({ data: { organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, contactId, userId: context.user.id, title, valueCents, currency: clientCurrency, status: "CLOSED_WON", closedAt: new Date(), notes, isManual: true, commissionRate: rate, expectedRevenueCents: expectedCents } });
     const commission = await transaction.commissionRecord.create({ data: { organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, dealId: deal.id, userId: context.user.id, expectedCents, receivedCents, currency: clientCurrency, status, source: "MANUAL", notes } });
     await transaction.commissionLedgerEntry.createMany({ data: [{ organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, commissionId: commission.id, userId: context.user.id, type: "EXPECTED", amountCents: expectedCents, note: "Initial expected commission" }, ...(receivedCents > 0 ? [{ organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, commissionId: commission.id, userId: context.user.id, type: "PAYMENT" as const, amountCents: receivedCents, note: "Initial received commission" }] : [])] });
     return transaction.commissionRecord.findUniqueOrThrow({ where: { id: commission.id }, include: { deal: { include: { contact: contactSelection } }, ledgerEntries: { orderBy: { occurredAt: "desc" } } } });
   });
   await recordAuditEvent(context, { action: "DEAL_CREATED", entityType: "DEAL", entityId: result.dealId ?? undefined, requestId, source: "PLATFORM", metadata: { manual: true, valueCents } });
   await recordAuditEvent(context, { action: "COMMISSION_CREATED", entityType: "COMMISSION_RECORD", entityId: result.id, requestId, source: "PLATFORM", metadata: { expectedCents, receivedCents, status: result.status } });
+  try {
+    const { syncDealToClickUp } = await import("@/lib/agent-crm/agent-sales-service");
+    if (result.dealId) await syncDealToClickUp(result.dealId, context.user.id);
+  } catch (err) {
+    console.warn("[Manual Commission] ClickUp sync non-blocking error:", err);
+  }
   return result;
 }
 

@@ -60,17 +60,34 @@ export async function createDealHandoffFromAgencyDeal(
   const recommendedNextAction = options?.recommendedNextAction || "Begin onboarding";
   const notes = options?.notes || deal.notes || null;
 
-  // Mark Deal as CLOSED_WON in local database if not already
-  if (deal.status !== "CLOSED_WON") {
-    await prisma.deal.update({
-      where: { id: deal.id },
-      data: {
-        status: "CLOSED_WON",
-        closedAt: deal.closedAt || new Date(),
-        notes: notes ?? deal.notes,
-      },
-    });
-  }
+  const effectiveAgentId = deal.userId || context.user.id;
+  const agentUser = await prisma.user.findUnique({
+    where: { id: effectiveAgentId },
+    select: { defaultCommissionRate: true },
+  });
+  const clientAcc = await prisma.clientAccount.findUnique({
+    where: { id: clientAccountId },
+    select: { defaultCommissionRate: true },
+  });
+
+  const commissionRate = deal.commissionRate ?? (
+    typeof deal.commissionRate === "number"
+      ? deal.commissionRate
+      : agentUser?.defaultCommissionRate ?? clientAcc?.defaultCommissionRate ?? 10.0
+  );
+  const expectedRevenueCents = deal.expectedRevenueCents ?? Math.round(deal.valueCents * (commissionRate / 100));
+
+  // Mark Deal as CLOSED_WON in local database if not already, and snapshot commission
+  await prisma.deal.update({
+    where: { id: deal.id },
+    data: {
+      status: "CLOSED_WON",
+      closedAt: deal.closedAt || new Date(),
+      notes: notes ?? deal.notes,
+      commissionRate,
+      expectedRevenueCents,
+    },
+  });
 
   // Update ClientCrmRecord for this deal and contact
   await prisma.clientCrmRecord.updateMany({
@@ -167,6 +184,14 @@ export async function createDealHandoffFromAgencyDeal(
       provider: clientCrmProvider,
     },
   });
+
+  // Trigger ClickUp sync for agent's personal CRM tracker (fault isolated)
+  try {
+    const { syncDealToClickUp } = await import("@/lib/agent-crm/agent-sales-service");
+    await syncDealToClickUp(deal.id, effectiveAgentId);
+  } catch (clickUpErr) {
+    console.warn("[Deal Handoff] ClickUp sync non-blocking error:", clickUpErr);
+  }
 
   // Attempt synchronous dispatch to Client CRM
   return dispatchHandoffToClientCrm(context, handoff.id);

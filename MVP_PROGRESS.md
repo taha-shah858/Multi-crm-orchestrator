@@ -460,3 +460,37 @@
 - Deal Handoff bridges Agency Deals to Client CRM.
 - Agency Deals are agency-owned records (`organizationId = agency`) associated with a client account (`clientAccountId = client`).
 - Preloaded `.env.local` in `prisma.config.ts` so `npx prisma generate` runs directly from any shell or IDE environment without requiring manual environment export.
+
+## Stage 2.8 - Status
+
+### Completed
+- Set HubSpot as Agency CRM (sales source of truth) and Zoho CRM as Client CRM (handoff destination).
+- Implemented Zoho OAuth 2.0 and API integration (`src/lib/integrations/zoho/`).
+- Added client CRM handoff to Zoho on deal close (`CLOSED_WON`).
+- Scoped Client CRM Deals tab strictly to client-matched contacts.
+- Enabled direct deal creation from contact cards in `/client-crm`.
+- Created and passed all 20 tests in `npm run test:stage2.8`.
+
+## Stage 2.9 - Status
+
+### Completed
+- Added ClickUp as Agent Personal CRM / Sales Tracker work-management layer under Sales Operations (`/operations`).
+- Kept ClickUp strictly inside Sales Operations; did NOT add an unnecessary top-level sidebar module.
+- Preserved CRM boundaries: HubSpot remains Agency CRM; Zoho remains Client CRM; ClickUp is each agent's personal operational mirror.
+- Reused `IntegrationConnection` with `ownershipType: "USER"`, `userId: agentId`, `clientAccountId: null` for ClickUp connections.
+- Enforced strict agent isolation: agents can only see and manage their own ClickUp connection and sales tracker records.
+- Added commission snapshot model (`commissionRate` and `expectedRevenueCents`) on `Deal` model and applied migration `20260927160000_stage2_9_clickup_agent_crm`.
+- Implemented configurable commission calculation hierarchy: Deal override → Agent rate → Client rate → Agency default 10%.
+- Implemented idempotent ClickUp deal synchronization: repeated syncs update the existing ClickUp task without duplicates (`AgentClickUpRecord` unique on `[agentId, dealId]`).
+- Ensured fault isolation: ClickUp API errors or missing credentials do not block or corrupt core deal closing or Zoho client handoff.
+- Built ClickUp API routes (`/api/integrations/clickup/connect`, `/callback`, `/status`, `/disconnect`, `/workspaces`) and Agent Sales routes (`/api/agent-sales`, `/api/agent-sales/[dealId]/sync`).
+- Built Sales Operations UI with "My Closed Deals" table, ClickUp sync buttons, connection management card, and workspace/list selector.
+- Created `scripts/stage2-9-agent-clickup-sales-crm-test.cjs` and added `"test:stage2.9"` to `package.json`. All 14 verification criteria pass 100%.
+- Verified zero TypeScript compilation errors (`npx tsc --noEmit`).
+
+### In Progress
+- Verification and handover.
+
+### Pending
+- Next stages as planned.
+

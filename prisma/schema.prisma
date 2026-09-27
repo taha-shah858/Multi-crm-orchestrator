@@ -37,6 +37,7 @@ enum IntegrationProvider {
   GOOGLE_CALENDAR
   OUTLOOK
   AI_PROVIDER
+  CLICKUP
 }
 
 enum IntegrationOwnershipType {
@@ -131,6 +132,11 @@ enum AuditAction {
   CLIENT_CRM_SYNC_FAILED
   ZOHO_CONNECTED
   ZOHO_DISCONNECTED
+  CLICKUP_CONNECTED
+  CLICKUP_DISCONNECTED
+  CLICKUP_TASK_SYNC_STARTED
+  CLICKUP_TASK_SYNC_COMPLETED
+  CLICKUP_TASK_SYNC_FAILED
 }
 
 enum ScriptChannel {
@@ -294,6 +300,7 @@ model Organization {
   crmPipelines            CrmPipeline[]
   dealHandoffs            DealHandoff[]
   clientCrmRecords        ClientCrmRecord[]
+  agentClickUpRecords     AgentClickUpRecord[]
 }
 
 model User {
@@ -326,6 +333,8 @@ model User {
   ownedOAuthStates        OAuthState[]            @relation("OAuthStateOwner")
   initiatedOAuthStates    OAuthState[]            @relation("OAuthStateInitiator")
   dealHandoffs            DealHandoff[]
+  defaultCommissionRate   Float?                  @default(10.0)
+  agentClickUpRecords     AgentClickUpRecord[]
 
   @@index([organizationId])
 }
@@ -374,6 +383,8 @@ model ClientAccount {
   crmPipelines                    CrmPipeline[]
   dealHandoffs                    DealHandoff[]
   clientCrmRecords                ClientCrmRecord[]
+  defaultCommissionRate           Float?
+  agentClickUpRecords             AgentClickUpRecord[]
 
   @@index([organizationId])
 }
@@ -734,21 +745,24 @@ model Deal {
   closedAt         DateTime?
   notes            String?
   sourceMetadata   Json?
-  isManual         Boolean           @default(true)
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  clientAccount    ClientAccount     @relation(fields: [clientAccountId], references: [id], onDelete: Cascade)
-  contact          Contact?          @relation("PrimaryDealContact", fields: [contactId], references: [id], onDelete: SetNull)
-  company          CrmCompany?       @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  crmOwner         CrmOwner?         @relation(fields: [crmOwnerId], references: [id], onDelete: SetNull)
-  user             User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
-  commission       CommissionRecord?
-  documents        Document[]
-  externalRecords  ExternalRecord[]
-  contactLinks     DealContact[]
-  interactionLinks InteractionDeal[]
-  handoffs         DealHandoff[]
+  isManual             Boolean              @default(true)
+  commissionRate       Float?
+  expectedRevenueCents Int?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  organization         Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clientAccount        ClientAccount        @relation(fields: [clientAccountId], references: [id], onDelete: Cascade)
+  contact              Contact?             @relation("PrimaryDealContact", fields: [contactId], references: [id], onDelete: SetNull)
+  company              CrmCompany?          @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  crmOwner             CrmOwner?            @relation(fields: [crmOwnerId], references: [id], onDelete: SetNull)
+  user                 User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
+  commission           CommissionRecord?
+  documents            Document[]
+  externalRecords      ExternalRecord[]
+  contactLinks         DealContact[]
+  interactionLinks     InteractionDeal[]
+  handoffs             DealHandoff[]
+  agentClickUpRecords  AgentClickUpRecord[]
 
   @@index([organizationId, clientAccountId, status])
   @@index([contactId])
@@ -1044,3 +1058,31 @@ model ClientCrmRecord {
   @@unique([connectionId, recordType, externalId])
   @@index([organizationId, clientAccountId, recordType])
 }
+
+model AgentClickUpRecord {
+  id              String        @id @default(cuid())
+  organizationId  String
+  agentId         String
+  dealId          String
+  clientAccountId String?
+  clickUpTaskId   String
+  clickUpListId   String?
+  taskUrl         String?
+  status          HandoffStatus @default(PENDING)
+  commissionCents Int?
+  commissionRate  Float?
+  lastSyncedAt    DateTime?
+  lastSyncError   String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  agent           User           @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  deal            Deal           @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  clientAccount   ClientAccount? @relation(fields: [clientAccountId], references: [id], onDelete: SetNull)
+
+  @@unique([agentId, dealId])
+  @@index([organizationId, agentId, status])
+  @@index([dealId])
+}
+

@@ -14,7 +14,6 @@ export async function getPageUser() {
 export async function requireAgentWorkspaceUser() {
   const user = await getPageUser();
   if (!user) redirect("/login");
-  if (isAdminWorkspaceRole(user.role)) redirect(workspaceHomeForRole(user.role));
   return user;
 }
 

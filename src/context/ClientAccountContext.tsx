@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { AuthenticatedUser, ClientAccountSummary } from "@/lib/models/canonical";
 
 const pendingAccount: ClientAccountSummary = {
@@ -24,6 +24,7 @@ const ClientAccountContext = createContext<ClientAccountContextValue | undefined
 
 export function ClientAccountProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
   const [clientAccounts, setClientAccounts] = useState<ClientAccountSummary[]>([]);
   const [activeClientAccountId, setActiveClientAccountId] = useState("");
@@ -34,21 +35,39 @@ export function ClientAccountProvider({ children }: { children: React.ReactNode 
       setIsClientAccountReady(false);
       return;
     }
-    const response = await fetch("/api/auth/me", { cache: "no-store" });
-    const contentType = response.headers.get("content-type") ?? "";
-    if (!response.ok || !contentType.includes("application/json")) {
-      setUser(null); setClientAccounts([]); setActiveClientAccountId(""); setIsClientAccountReady(false);
-      window.location.replace("/login");
-      return;
+    try {
+      const response = await fetch("/api/auth/me", { cache: "no-store" });
+      if (response.status === 401) {
+        setUser(null);
+        setClientAccounts([]);
+        setActiveClientAccountId("");
+        setIsClientAccountReady(false);
+        router.replace("/login");
+        return;
+      }
+      const contentType = response.headers.get("content-type") ?? "";
+      if (!response.ok || !contentType.includes("application/json")) {
+        console.warn("[ClientAccountContext] Unexpected response fetching session:", response.status);
+        return;
+      }
+      const payload = (await response.json()) as {
+        success?: boolean;
+        user?: AuthenticatedUser;
+        clientAccounts?: ClientAccountSummary[];
+        activeClientAccountId?: string | null;
+      };
+      if (!payload.success || !payload.user) {
+        return;
+      }
+      const accounts = payload.clientAccounts ?? [];
+      setUser(payload.user);
+      setClientAccounts(accounts);
+      setActiveClientAccountId(payload.activeClientAccountId ?? accounts[0]?.id ?? "");
+      setIsClientAccountReady(true);
+    } catch (err) {
+      console.warn("[ClientAccountContext] Error refreshing session:", err);
     }
-    const payload = await response.json() as { success?: boolean; user?: AuthenticatedUser; clientAccounts?: ClientAccountSummary[]; activeClientAccountId?: string | null };
-    if (!payload.success || !payload.user) {
-      window.location.replace("/login");
-      return;
-    }
-    const accounts = payload.clientAccounts ?? [];
-    setUser(payload.user); setClientAccounts(accounts); setActiveClientAccountId(payload.activeClientAccountId ?? accounts[0]?.id ?? ""); setIsClientAccountReady(true);
-  }, [pathname]);
+  }, [pathname, router]);
 
   useEffect(() => { void refreshSession(); }, [refreshSession]);
 

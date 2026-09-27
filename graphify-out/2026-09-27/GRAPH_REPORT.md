@@ -1,11 +1,11 @@
 # Graph Report - Multi-crm-orchestrator  (2026-09-27)
 
 ## Corpus Check
-- 214 files · ~146,776 words
+- 214 files · ~146,529 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1406 nodes · 3073 edges · 126 communities (109 shown, 17 thin omitted)
+- 1405 nodes · 3071 edges · 113 communities (100 shown, 13 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 5 edges (avg confidence: 0.56)
 - Token cost: 0 input · 0 output
 
@@ -28,7 +28,7 @@
 - withApiErrorHandling
 - integration-service.ts
 - TiltCard.tsx
-- calendar-service.ts
+- AppError
 - eslint.config.mjs
 - compilerOptions
 - postcss.config.mjs
@@ -43,17 +43,17 @@
 - 13. Module 6.9 — Document & Proposal Generator
 - 7. Module 6.3 — Unified Interaction Aggregator
 - 9. Module 6.5 — Sales Script Architect
-- AppError
+- agent-sales-service.ts
 - success
 - contact-sync-service.ts
 - AdminWorkspacePage.tsx
 - phase10-system-test.cjs
 - stage2-6-sales-crm-test.cjs
 - MultiCrmCard.tsx
-- AdminWorkspacePage
+- client-crm-service.ts
 - auth-service.ts
 - calendar/page.tsx
-- prepareActiveClientSync
+- sales-operations-service.ts
 - document-service.ts
 - integrations/types.ts
 - hubspot-sales-sync-service.ts
@@ -92,38 +92,27 @@
 - package.json
 - stage2-8-agency-hubspot-zoho-client-crm-test.cjs
 - deals/[id]/sync/route.ts
-- sales-script-service.ts
+- recordAuditEvent
 - communication-service.ts
 - zoho/client.ts
-- hubspot/oauth.ts
-- client-crm-service.ts
+- syncClientCrm
+- client-lead-matching.ts
 - react-dom
 - useClientAccount
 - MVP_PROGRESS.md
 - Stage 2.9 - Status
-- handoff-service.ts
-- clients/route.ts
-- recordAuditEvent
-- interaction-service.ts
+- activecampaign/client.ts
+- commissions/route.ts
+- CalendarAdapter
+- time-logs/route.ts
 - companies/[id]/sync/route.ts
 - framer-motion
 - pg
 - NormalizedContact
 - clickup/connect/route.ts
-- import/route.ts
-- documents/route.ts
-- lead-analyses/route.ts
-- history/route.ts
-- dateTime
-- AdminWorkspaceShell.tsx
-- events/route.ts
-- contacts/[id]/route.ts
-- contacts/[id]/sync/route.ts
-- lead-analyses/[id]/route.ts
-- scripts/[id]/route.ts
-- money
-- admin-types.ts
-- lucide-react
+- deals/[id]/route.ts
+- status/route.ts
+- react
 
 ## God Nodes (most connected - your core abstractions)
 1. `withApiErrorHandling()` - 133 edges
@@ -144,10 +133,10 @@
   Prod.md → Architecture.md
 - `ClientCrmPage()` --calls--> `useClientAccount()`  [EXTRACTED]
   src/app/(agent)/client-crm/page.tsx → src/context/ClientAccountContext.tsx
+- `LoginPage()` --calls--> `workspaceHomeForRole()`  [EXTRACTED]
+  src/app/(auth)/login/page.tsx → src/lib/auth/roles.ts
 - `Integration Layer` --references--> `CRMAdapter Interface`  [EXTRACTED]
   Architecture.md → ArchitectureEssentials.md
-- `AdminLayout()` --calls--> `requireAdminWorkspaceUser()`  [EXTRACTED]
-  src/app/(admin)/layout.tsx → src/lib/auth/server-workspace.ts
 
 ## Import Cycles
 - None detected.
@@ -157,7 +146,7 @@
 - **CRM Integration Pattern** — crm_adapter_interface, architecture_integration_layer, unified_data_model [EXTRACTED 1.00]
 - **Static Assets** — public_file_svg, public_globe_svg, public_next_svg, public_vercel_svg, public_window_svg [INFERRED 0.90]
 
-## Communities (126 total, 17 thin omitted)
+## Communities (113 total, 13 thin omitted)
 
 ### Community 0 - "copilot/page.tsx"
 Cohesion: 0.33
@@ -165,7 +154,7 @@ Nodes (6): Analysis, Contact, CopilotPage(), EditableAnalysis, editableFrom(), I
 
 ### Community 1 - "dependencies"
 Cohesion: 0.11
-Nodes (19): clsx, next, dependencies, clsx, next, @prisma/adapter-pg, @prisma/client, react (+11 more)
+Nodes (19): clsx, lucide-react, next, dependencies, clsx, lucide-react, next, @prisma/adapter-pg (+11 more)
 
 ### Community 2 - "compilerOptions"
 Cohesion: 0.07
@@ -180,8 +169,8 @@ Cohesion: 0.10
 Nodes (21): eslint, eslint-config-next, devDependencies, eslint, eslint-config-next, prisma, tailwindcss, @tailwindcss/postcss (+13 more)
 
 ### Community 5 - "hubspot/client.ts"
-Cohesion: 0.12
-Nodes (29): hubSpotContactAdapter, associationIds(), createHubSpotDeal(), fetchAllObjects(), fetchAllOwners(), fetchHubSpotContacts(), fetchHubSpotSalesCrm(), hubSpotHeaders() (+21 more)
+Cohesion: 0.13
+Nodes (28): associationIds(), createHubSpotDeal(), fetchAllObjects(), fetchAllOwners(), fetchHubSpotContacts(), fetchHubSpotSalesCrm(), hubSpotHeaders(), hubSpotRequest() (+20 more)
 
 ### Community 6 - "mvp.md"
 Cohesion: 0.14
@@ -200,24 +189,24 @@ Cohesion: 0.31
 Nodes (9): Backend API Layer, Data Layer, Frontend Layer, Integration Layer, System Architecture, Architecture Essentials, CRMAdapter Interface, Product Requirements Document (+1 more)
 
 ### Community 10 - "withApiErrorHandling"
-Cohesion: 0.08
-Nodes (37): POST(), dynamic, PATCH(), dynamic, GET(), PATCH(), dynamic, GET() (+29 more)
+Cohesion: 0.07
+Nodes (43): PATCH(), dynamic, GET(), POST(), PATCH(), dynamic, POST(), dynamic (+35 more)
 
 ### Community 11 - "integration-service.ts"
-Cohesion: 0.15
-Nodes (30): GET(), GET(), GET(), POST(), isAdminWorkspaceRole(), ErrorCode, isAppError(), encryptedClickUpCredentialData() (+22 more)
+Cohesion: 0.08
+Nodes (57): AdminLayout(), GET(), GET(), GET(), POST(), AuthLayout(), AdminWorkspaceShell(), assertClientAccess() (+49 more)
 
-### Community 13 - "calendar-service.ts"
-Cohesion: 0.13
-Nodes (20): adapters, CalendarAdapter, calendarAdapterFor(), CalendarAdapterInput, CalendarAdapterResult, mockCalendarAdapter, SupportedCalendarProvider, AppointmentInput (+12 more)
+### Community 13 - "AppError"
+Cohesion: 0.15
+Nodes (20): adapters, calendarAdapterFor(), CalendarAdapterInput, CalendarAdapterResult, mockCalendarAdapter, SupportedCalendarProvider, AppointmentInput, AppointmentStatus (+12 more)
 
 ### Community 15 - "compilerOptions"
 Cohesion: 0.06
 Nodes (31): nextConfig, .next, compilerOptions, allowJs, baseUrl, esModuleInterop, incremental, isolatedModules (+23 more)
 
 ### Community 17 - "request-context.ts"
-Cohesion: 0.11
-Nodes (27): dynamic, PATCH(), dynamic, PATCH(), POST(), GET(), POST(), dynamic (+19 more)
+Cohesion: 0.09
+Nodes (30): dynamic, PATCH(), dynamic, GET(), POST(), dynamic, GET(), dynamic (+22 more)
 
 ### Community 22 - "poc.md"
 Cohesion: 0.05
@@ -255,21 +244,21 @@ Nodes (7): 7. Module 6.3 — Unified Interaction Aggregator, Automated Features,
 Cohesion: 0.29
 Nodes (7): 9. Module 6.5 — Sales Script Architect, Automated Features, Contextual Script Generation, Manual Override, Messaging Templates, Priority, Purpose
 
-### Community 38 - "AppError"
-Cohesion: 0.09
-Nodes (41): calculateEffectiveCommissionRate(), calculateExpectedRevenueCents(), DEFAULT_AGENCY_COMMISSION_RATE, listAgentSales(), snapshotDealCommission(), syncDealToClickUp(), globalForPrisma, prisma (+33 more)
+### Community 38 - "agent-sales-service.ts"
+Cohesion: 0.12
+Nodes (36): calculateEffectiveCommissionRate(), calculateExpectedRevenueCents(), DEFAULT_AGENCY_COMMISSION_RATE, listAgentSales(), snapshotDealCommission(), syncDealToClickUp(), ClickUpAuthContext, createClickUpTask() (+28 more)
 
 ### Community 39 - "success"
-Cohesion: 0.14
-Nodes (14): PATCH(), dynamic, POST(), POST(), PATCH(), dynamic, POST(), dynamic (+6 more)
+Cohesion: 0.12
+Nodes (18): GET(), POST(), dynamic, GET(), POST(), GET(), POST(), dynamic (+10 more)
 
 ### Community 40 - "contact-sync-service.ts"
-Cohesion: 0.20
-Nodes (15): getCrmAdapter, auditSourceForProvider(), ContactUpdateInput, getActiveClientContacts(), getUnifiedLeads(), normalizeContactUpdate(), OutboundContactSyncResult, persistContacts() (+7 more)
+Cohesion: 0.12
+Nodes (28): dynamic, GET(), handleManualSync(), POST(), listLeadAnalyses(), getCrmAdapter, createManualInteraction(), directions (+20 more)
 
 ### Community 41 - "AdminWorkspacePage.tsx"
-Cohesion: 0.09
-Nodes (3): AdminManageProps, AdminView, headings
+Cohesion: 0.05
+Nodes (13): AdminManageProps, AdminView, AdminWorkspacePage(), AuditRows(), CommissionsView(), dateTime(), headings, Metrics() (+5 more)
 
 ### Community 42 - "phase10-system-test.cjs"
 Cohesion: 0.17
@@ -280,32 +269,36 @@ Cohesion: 0.11
 Nodes (17): assert(), calls, { encryptIntegrationSecret, decryptIntegrationSecret }, fs, ids, { listInteractions }, main(), Module (+9 more)
 
 ### Community 44 - "MultiCrmCard.tsx"
-Cohesion: 0.18
-Nodes (16): CommunicationIdentity, Contact, SmartDialerPage(), Analysis, Channel, Contact, Script, ScriptsPage() (+8 more)
+Cohesion: 0.13
+Nodes (18): CommunicationIdentity, Contact, SmartDialerPage(), Analysis, Channel, Contact, Script, ScriptsPage() (+10 more)
+
+### Community 45 - "client-crm-service.ts"
+Cohesion: 0.14
+Nodes (13): AuditEvent, globalForPrisma, prisma, CreateHandoffOptions, dispatchHandoffToClientCrm(), formatHandoff(), listDealHandoffs(), retryDealHandoff() (+5 more)
 
 ### Community 46 - "auth-service.ts"
-Cohesion: 0.07
-Nodes (41): AdminLayout(), dynamic, POST(), dynamic, POST(), dynamic, POST(), AuthLayout() (+33 more)
+Cohesion: 0.11
+Nodes (31): dynamic, POST(), dynamic, POST(), dynamic, POST(), createManagedClient(), createManagedUser() (+23 more)
 
 ### Community 47 - "calendar/page.tsx"
 Cohesion: 0.18
 Nodes (18): addDays(), Appointment, blankForm(), CalendarPage(), Contact, contactName(), displayDateTime(), displayTime() (+10 more)
 
-### Community 48 - "prepareActiveClientSync"
-Cohesion: 0.27
-Nodes (16): cents(), commissionStatus(), contactFor(), contactSelection, createManualCommission(), createManualTimeLog(), currency(), date() (+8 more)
+### Community 48 - "sales-operations-service.ts"
+Cohesion: 0.31
+Nodes (13): cents(), commissionStatus(), contactFor(), contactSelection, createManualCommission(), createManualTimeLog(), currency(), date() (+5 more)
 
 ### Community 49 - "document-service.ts"
 Cohesion: 0.19
-Nodes (17): dynamic, POST(), createManualDocument(), documentContext(), documentInclude, DocumentKind, DocumentStatus, editableKinds (+9 more)
+Nodes (17): createManualDocument(), documentContext(), documentInclude, DocumentKind, DocumentStatus, downloadDocument(), editableKinds, generatedDocument() (+9 more)
 
 ### Community 50 - "integrations/types.ts"
-Cohesion: 0.12
-Nodes (16): activeCampaignAdapter, clickUpAdapter, mockCrmAdapter, adapters, CompanyWriteInput, ContactListOptions, ContactWriteInput, CrmAdapter (+8 more)
+Cohesion: 0.11
+Nodes (18): activeCampaignAdapter, clickUpAdapter, hubSpotContactAdapter, mockCrmAdapter, adapters, CompanyWriteInput, ContactListOptions, ContactWriteInput (+10 more)
 
 ### Community 51 - "hubspot-sales-sync-service.ts"
-Cohesion: 0.21
-Nodes (20): ProviderSalesRecord, activityDirection(), activityPlainText(), activityText(), applyContactAssociations(), CategoryCounts, clean(), Counts (+12 more)
+Cohesion: 0.22
+Nodes (20): persistContacts(), activityDirection(), activityPlainText(), activityText(), applyContactAssociations(), CategoryCounts, clean(), Counts (+12 more)
 
 ### Community 52 - "documents/page.tsx"
 Cohesion: 0.21
@@ -342,12 +335,12 @@ Cohesion: 0.18
 Nodes (11): 19. MVP Implementation Order, Phase 10 — Integration & System Testing, Phase 1 — Foundation, Phase 2 — Multi-CRM Sync Engine, Phase 3 — Unified Interaction Aggregator, Phase 4 — VoIP & SMS Identity Gateway, Phase 5 — AI Intelligence, Phase 6 — Sales Script Architect (+3 more)
 
 ### Community 57 - "canonical.ts"
-Cohesion: 0.14
-Nodes (17): ClientCrmPage(), DealHandoffTarget, TabType, ClientAccountContext, ClientAccountContextValue, pendingAccount, AuthenticatedUser, CanonicalContact (+9 more)
+Cohesion: 0.11
+Nodes (21): ClientCrmPage(), DealHandoffTarget, TabType, AdminWorkspaceContext, navigation, useAdminWorkspaceUser(), ClientAccountContext, ClientAccountContextValue (+13 more)
 
 ### Community 58 - "sales-crm-service.ts"
-Cohesion: 0.21
-Nodes (15): createDealHandoffFromAgencyDeal(), activeClientIntegrationWhere(), hubspotConnectionWhere(), SYNCABLE_CONNECTION_STATUSES, getIntegrationAdapter(), createActiveClientDeal, createAgencyDeal(), dateValue() (+7 more)
+Cohesion: 0.34
+Nodes (13): createDealHandoffFromAgencyDeal(), hubspotConnectionWhere(), getIntegrationAdapter(), createActiveClientDeal, createAgencyDeal(), dateValue(), Input, nullableText() (+5 more)
 
 ### Community 59 - "timeline/page.tsx"
 Cohesion: 0.22
@@ -457,25 +450,25 @@ Nodes (3): name, private, version
 Cohesion: 0.12
 Nodes (17): { agencyIntegrationWhere, clientIntegrationWhere }, assert(), { connectZoho }, { createDealHandoffFromAgencyDeal, dispatchHandoffToClientCrm, retryDealHandoff, listDealHandoffs }, { encryptIntegrationSecret, decryptIntegrationSecret }, { fetchZohoRecords, syncHandoffToZoho, resolveZohoCredentials, createOrUpdateZohoRecord }, fs, { getActiveClientContacts } (+9 more)
 
-### Community 87 - "sales-script-service.ts"
-Cohesion: 0.24
-Nodes (10): dynamic, POST(), Channel, contextFor(), createManualSalesScript(), generatedContent(), generateSalesScript(), ScriptInput (+2 more)
+### Community 87 - "recordAuditEvent"
+Cohesion: 0.18
+Nodes (16): activeContact(), AnalysisInput, analyzeTranscript(), createLeadAnalysis(), firstMatch(), updateLeadAnalysis(), recordAuditEvent(), Channel (+8 more)
 
 ### Community 88 - "communication-service.ts"
-Cohesion: 0.23
-Nodes (10): AuditEvent, CommunicationKind, dispatchCommunication(), DispatchInput, DispatchMode, listCommunicationIdentities(), normalizePhone(), sendWithTwilio() (+2 more)
+Cohesion: 0.31
+Nodes (8): CommunicationKind, dispatchCommunication(), DispatchInput, DispatchMode, listCommunicationIdentities(), normalizePhone(), sendWithTwilio(), twilioCredentials()
 
 ### Community 89 - "zoho/client.ts"
-Cohesion: 0.16
-Nodes (20): createOrUpdateZohoRecord(), fetchZohoRecords(), getZohoFixtureRecords(), resolveZohoCredentials(), syncHandoffToZoho(), ZohoAuthContext, zohoHeaders(), buildZohoAuthorizationUrl() (+12 more)
+Cohesion: 0.24
+Nodes (13): decryptIntegrationSecret(), createOrUpdateZohoRecord(), fetchZohoRecords(), getZohoFixtureRecords(), resolveZohoCredentials(), syncHandoffToZoho(), ZohoAuthContext, zohoHeaders() (+5 more)
 
-### Community 90 - "hubspot/oauth.ts"
-Cohesion: 0.27
-Nodes (11): decryptIntegrationSecret(), encryptIntegrationSecret(), encryptionKey(), encryptedHubSpotCredentialData(), exchangeHubSpotAuthorizationCode(), HUBSPOT_CONTACT_SCOPES, HUBSPOT_SALES_SCOPES, HubSpotTokenResponse (+3 more)
+### Community 90 - "syncClientCrm"
+Cohesion: 0.19
+Nodes (10): dynamic, PATCH(), dynamic, GET(), dynamic, POST(), formatClientCrmRecord(), listClientCrmRecords() (+2 more)
 
-### Community 91 - "client-crm-service.ts"
-Cohesion: 0.30
-Nodes (12): assertClientAccess(), formatClientCrmRecord(), listClientCrmRecords(), syncClientCrm(), syncUnifiedContactsToClientCrm(), updateClientCrmRecord(), ClientAccountTarget, ContactCandidate (+4 more)
+### Community 91 - "client-lead-matching.ts"
+Cohesion: 0.33
+Nodes (6): syncUnifiedContactsToClientCrm(), ClientAccountTarget, ContactCandidate, doesContactMatchClient(), MatchResult, normalizeCompanyName()
 
 ### Community 93 - "useClientAccount"
 Cohesion: 0.14
@@ -489,70 +482,38 @@ Nodes (6): Completed, Completed, In Progress, Pending, Stage 2.8 - Status, Stage
 Cohesion: 0.33
 Nodes (5): Completed, In Progress, Notes / Decisions, Pending, Stage 2.9 - Status
 
-### Community 96 - "handoff-service.ts"
-Cohesion: 0.16
-Nodes (18): CreateHandoffOptions, dispatchHandoffToClientCrm(), formatHandoff(), listDealHandoffs(), retryDealHandoff(), ActiveCampaignConfig, activeCampaignHeaders(), createOrUpdateActiveCampaignRecord() (+10 more)
+### Community 96 - "activecampaign/client.ts"
+Cohesion: 0.22
+Nodes (13): ActiveCampaignConfig, activeCampaignHeaders(), createOrUpdateActiveCampaignRecord(), fetchActiveCampaignRecords(), getFixtureRecords(), resolveActiveCampaignCredentials(), syncHandoffToActiveCampaign(), ActiveCampaignAccount (+5 more)
 
-### Community 101 - "clients/route.ts"
-Cohesion: 0.21
-Nodes (9): dynamic, GET(), POST(), dynamic, GET(), dynamic, GET(), POST() (+1 more)
+### Community 101 - "commissions/route.ts"
+Cohesion: 0.50
+Nodes (4): dynamic, GET(), POST(), listSalesOperations()
 
-### Community 102 - "recordAuditEvent"
-Cohesion: 0.43
-Nodes (7): activeContact(), AnalysisInput, analyzeTranscript(), createLeadAnalysis(), firstMatch(), updateLeadAnalysis(), recordAuditEvent()
-
-### Community 103 - "interaction-service.ts"
-Cohesion: 0.36
-Nodes (6): createManualInteraction(), directions, listInteractions(), types, decodeEntity(), normalizeRichTextToPlainText()
+### Community 103 - "time-logs/route.ts"
+Cohesion: 0.50
+Nodes (4): dynamic, GET(), POST(), listTimeLogs()
 
 ### Community 107 - "NormalizedContact"
 Cohesion: 0.33
 Nodes (4): HubSpotContactProperties, SalesCrmSnapshot, NormalizedContact, ContactSyncSummary
 
 ### Community 108 - "clickup/connect/route.ts"
-Cohesion: 0.70
-Nodes (4): GET(), POST(), beginClickUpOAuth(), connectClickUp()
-
-### Community 109 - "import/route.ts"
-Cohesion: 0.53
-Nodes (5): dynamic, GET(), handleManualSync(), POST(), syncActiveClientContacts()
-
-### Community 110 - "documents/route.ts"
-Cohesion: 0.50
-Nodes (4): dynamic, GET(), POST(), listDocuments()
-
-### Community 111 - "lead-analyses/route.ts"
-Cohesion: 0.50
-Nodes (4): dynamic, GET(), POST(), listLeadAnalyses()
-
-### Community 112 - "history/route.ts"
-Cohesion: 0.67
-Nodes (3): dynamic, GET(), getActiveClientSyncHistory()
-
-### Community 114 - "dateTime"
-Cohesion: 0.50
-Nodes (4): AuditRows(), dateTime(), OperationsView(), SyncRunCard()
-
-### Community 115 - "AdminWorkspaceShell.tsx"
-Cohesion: 0.50
-Nodes (3): AdminWorkspaceContext, navigation, useAdminWorkspaceUser()
-
-### Community 121 - "money"
-Cohesion: 0.67
-Nodes (3): CommissionsView(), Metrics(), money()
+Cohesion: 0.83
+Nodes (3): GET(), POST(), beginClickUpOAuth()
 
 ## Knowledge Gaps
 - **580 isolated node(s):** `eslintConfig`, `nextConfig`, `name`, `version`, `private` (+575 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **17 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **13 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `.next` connect `compilerOptions` to `app/layout.tsx`?**
-  _High betweenness centrality (0.026) - this node is a cross-community bridge._
-- **Why does `withApiErrorHandling()` connect `withApiErrorHandling` to `integration-service.ts`, `request-context.ts`, `success`, `auth-service.ts`, `document-service.ts`, `deals/[id]/sync/route.ts`, `sales-script-service.ts`, `clients/route.ts`, `companies/[id]/sync/route.ts`, `clickup/connect/route.ts`, `import/route.ts`, `documents/route.ts`, `lead-analyses/route.ts`, `history/route.ts`, `events/route.ts`, `contacts/[id]/route.ts`, `contacts/[id]/sync/route.ts`, `lead-analyses/[id]/route.ts`, `scripts/[id]/route.ts`?**
-  _High betweenness centrality (0.026) - this node is a cross-community bridge._
+- **Why does `withApiErrorHandling()` connect `withApiErrorHandling` to `commissions/route.ts`, `success`, `contact-sync-service.ts`, `companies/[id]/sync/route.ts`, `time-logs/route.ts`, `integration-service.ts`, `clickup/connect/route.ts`, `deals/[id]/route.ts`, `auth-service.ts`, `status/route.ts`, `request-context.ts`, `deals/[id]/sync/route.ts`, `syncClientCrm`?**
+  _High betweenness centrality (0.025) - this node is a cross-community bridge._
+- **Why does `MultiCrmCard()` connect `MultiCrmCard.tsx` to `copilot/page.tsx`, `app/layout.tsx`, `AdminWorkspacePage.tsx`, `calendar/page.tsx`, `documents/page.tsx`, `(agent)/operations/page.tsx`, `canonical.ts`, `timeline/page.tsx`, `(agent)/integrations/page.tsx`, `useClientAccount`?**
+  _High betweenness centrality (0.022) - this node is a cross-community bridge._
 - **What connects `eslintConfig`, `nextConfig`, `name` to the rest of the system?**
   _580 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `dependencies` be split into smaller, more focused modules?**

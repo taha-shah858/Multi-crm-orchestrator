@@ -20,6 +20,12 @@ import {
   exchangeZohoAuthorizationCode,
   ZOHO_SCOPES,
 } from "@/lib/integrations/zoho/oauth";
+import {
+  buildClickUpAuthorizationUrl,
+  encryptedClickUpCredentialData,
+  exchangeClickUpAuthorizationCode,
+} from "@/lib/integrations/clickup/oauth";
+import type { ClickUpDestinationConfig } from "@/lib/integrations/clickup/types";
 import { syncSingleConnectionContacts } from "@/lib/sync/contact-sync-service";
 import type { AuthenticatedUser, IntegrationConnectionSummary, RequestContext } from "@/lib/models/canonical";
 
@@ -263,6 +269,9 @@ async function getAuthorizedConnection(user: AuthenticatedUser, id: string, acti
     if (user.role === "AGENT" && activeClientAccountId !== connection.clientAccountId) {
       throw new AppError("CLIENT_ACCESS_DENIED", 403, "Integration is outside the active client account.", "Switch to the integration's assigned client account.");
     }
+  }
+  if ((connection.provider as string) === "CLICKUP" && connection.userId !== user.id) {
+    throw new AppError("FORBIDDEN", 403, "ClickUp integration belongs to another agent.", "You cannot access or modify another agent's ClickUp connection.");
   }
   if (connection.ownershipType === "USER" && connection.userId !== user.id && !isAdminWorkspaceRole(user.role)) {
     throw new AppError("FORBIDDEN", 403, "User integration belongs to another user.", "You cannot access another user's integration.");
@@ -666,3 +675,346 @@ export async function connectZoho(
 
   return { connection, success: true };
 }
+
+export async function beginClickUpOAuth(user: AuthenticatedUser, returnPath = "/operations") {
+  const rawState = randomBytes(24).toString("hex");
+  const stateHash = hashState(rawState);
+  const expiresAt = new Date(Date.now() + OAUTH_STATE_TTL_MS);
+
+  await prisma.oAuthState.create({
+    data: {
+      stateHash,
+      organizationId: user.organizationId,
+      ownershipType: "USER",
+      userId: user.id,
+      initiatedByUserId: user.id,
+      clientAccountId: null,
+      provider: "CLICKUP" as any,
+      returnPath: returnPath || "/operations",
+      expiresAt,
+    },
+  });
+
+  return {
+    authorizationUrl: buildClickUpAuthorizationUrl(rawState),
+    state: rawState,
+    expiresAt,
+  };
+}
+
+export async function completeClickUpOAuth(
+  code: string,
+  state: string,
+  user: AuthenticatedUser,
+) {
+  const stateHash = hashState(state);
+  const stored = await prisma.oAuthState.findFirst({
+    where: { stateHash, usedAt: null, expiresAt: { gt: new Date() } },
+  });
+
+  if (!stored) {
+    throw new AppError(
+      "INVALID_OAUTH_STATE",
+      400,
+      "OAuth state is expired or invalid.",
+      "The ClickUp connection request expired. Start again from Sales Operations.",
+    );
+  }
+
+  if (stored.organizationId !== user.organizationId || stored.userId !== user.id) {
+    throw new AppError(
+      "INVALID_OAUTH_STATE",
+      400,
+      "OAuth state did not match the current session.",
+      "This ClickUp connection request belongs to another user. Connect using your own account.",
+    );
+  }
+
+  const consumed = await prisma.oAuthState.updateMany({
+    where: { id: stored.id, usedAt: null, expiresAt: { gt: new Date() } },
+    data: { usedAt: new Date() },
+  });
+
+  if (consumed.count !== 1) {
+    throw new AppError(
+      "INVALID_OAUTH_STATE",
+      400,
+      "OAuth state is expired or already used.",
+      "This ClickUp connection request was already used. Start again.",
+    );
+  }
+
+  const tokens = await exchangeClickUpAuthorizationCode(code);
+  const key = ownershipKey(user.organizationId, "USER", null, user.id);
+  const credentialData = encryptedClickUpCredentialData(tokens);
+
+  const connection = await prisma.$transaction(async (tx) => {
+    const conn = await tx.integrationConnection.upsert({
+      where: { ownershipKey_provider: { ownershipKey: key, provider: "CLICKUP" as any } },
+      update: {
+        organizationId: user.organizationId,
+        ownershipType: "USER",
+        userId: user.id,
+        clientAccountId: null,
+        providerAccountId: `clickup-user-${user.id}`,
+        providerAccountName: "ClickUp Personal Workspace",
+        status: "CONNECTED",
+        connectedByUserId: user.id,
+        connectedAt: new Date(),
+        lastError: null,
+      },
+      create: {
+        organizationId: user.organizationId,
+        ownershipType: "USER",
+        ownershipKey: key,
+        userId: user.id,
+        clientAccountId: null,
+        provider: "CLICKUP" as any,
+        providerAccountId: `clickup-user-${user.id}`,
+        providerAccountName: "ClickUp Personal Workspace",
+        status: "CONNECTED",
+        connectedByUserId: user.id,
+        connectedAt: new Date(),
+      },
+    });
+
+    await tx.integrationCredential.upsert({
+      where: { integrationConnectionId: conn.id },
+      update: {
+        encryptedAccessToken: credentialData.encryptedAccessToken,
+        encryptedRefreshToken: credentialData.encryptedRefreshToken,
+        accessTokenExpiresAt: credentialData.accessTokenExpiresAt,
+        metadata: credentialData.metadata as any,
+      },
+      create: {
+        integrationConnectionId: conn.id,
+        encryptedAccessToken: credentialData.encryptedAccessToken,
+        encryptedRefreshToken: credentialData.encryptedRefreshToken,
+        accessTokenExpiresAt: credentialData.accessTokenExpiresAt,
+        metadata: credentialData.metadata as any,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        organizationId: user.organizationId,
+        userId: user.id,
+        action: "CLICKUP_CONNECTED" as unknown as AuditAction,
+        entityType: "INTEGRATION_CONNECTION",
+        entityId: conn.id,
+        source: "CLICKUP",
+        metadata: { provider: "CLICKUP", ownershipType: "USER" },
+      },
+    });
+
+    return conn;
+  });
+
+  return { connection, returnPath: stored.returnPath || "/operations" };
+}
+
+export async function failClickUpOAuth(user: AuthenticatedUser, state: string) {
+  const stateHash = hashState(state);
+  const stored = await prisma.oAuthState.findFirst({
+    where: { stateHash, usedAt: null, expiresAt: { gt: new Date() } },
+  });
+
+  if (!stored) {
+    throw new AppError("INVALID_OAUTH_STATE", 400, "OAuth state is expired or invalid.", "The ClickUp request expired.");
+  }
+
+  if (stored.organizationId !== user.organizationId || stored.userId !== user.id) {
+    throw new AppError("INVALID_OAUTH_STATE", 400, "OAuth state did not match session.", "The ClickUp request is invalid.");
+  }
+
+  await prisma.oAuthState.updateMany({
+    where: { id: stored.id, usedAt: null },
+    data: { usedAt: new Date() },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      organizationId: stored.organizationId,
+      userId: user.id,
+      action: "INTEGRATION_OAUTH_FAILED",
+      entityType: "INTEGRATION_CONNECTION",
+      source: "CLICKUP",
+      metadata: { provider: "CLICKUP", ownershipType: "USER", reason: "authorization_denied" },
+    },
+  });
+
+  return stored.returnPath || "/operations";
+}
+
+export async function connectClickUp(
+  user: AuthenticatedUser,
+  input: {
+    accessToken?: string;
+    refreshToken?: string;
+    destination?: ClickUpDestinationConfig;
+  },
+) {
+  const key = ownershipKey(user.organizationId, "USER", null, user.id);
+  const { encryptIntegrationSecret } = await import("@/lib/integrations/credential-crypto");
+
+  const accessToken = input.accessToken || `clickup-access-${Date.now()}`;
+  const refreshToken = input.refreshToken || `clickup-refresh-${Date.now()}`;
+  const destination = input.destination || {
+    teamId: "team-default",
+    teamName: "My Workspace",
+    listId: "list-default",
+    listName: "My Closed Deals",
+  };
+
+  const connection = await prisma.$transaction(async (tx) => {
+    const conn = await tx.integrationConnection.upsert({
+      where: { ownershipKey_provider: { ownershipKey: key, provider: "CLICKUP" as any } },
+      update: {
+        organizationId: user.organizationId,
+        ownershipType: "USER",
+        userId: user.id,
+        clientAccountId: null,
+        providerAccountId: `clickup-user-${user.id}`,
+        providerAccountName: destination.teamName || "ClickUp Personal Workspace",
+        status: "CONNECTED",
+        connectedByUserId: user.id,
+        connectedAt: new Date(),
+        lastError: null,
+      },
+      create: {
+        organizationId: user.organizationId,
+        ownershipType: "USER",
+        ownershipKey: key,
+        userId: user.id,
+        clientAccountId: null,
+        provider: "CLICKUP" as any,
+        providerAccountId: `clickup-user-${user.id}`,
+        providerAccountName: destination.teamName || "ClickUp Personal Workspace",
+        status: "CONNECTED",
+        connectedByUserId: user.id,
+        connectedAt: new Date(),
+      },
+    });
+
+    await tx.integrationCredential.upsert({
+      where: { integrationConnectionId: conn.id },
+      update: {
+        encryptedAccessToken: encryptIntegrationSecret(accessToken),
+        encryptedRefreshToken: encryptIntegrationSecret(refreshToken),
+        accessTokenExpiresAt: new Date(Date.now() + 30 * 86400 * 1000),
+        metadata: {
+          destination,
+          tokenType: "Bearer",
+        } as any,
+      },
+      create: {
+        integrationConnectionId: conn.id,
+        encryptedAccessToken: encryptIntegrationSecret(accessToken),
+        encryptedRefreshToken: encryptIntegrationSecret(refreshToken),
+        accessTokenExpiresAt: new Date(Date.now() + 30 * 86400 * 1000),
+        metadata: {
+          destination,
+          tokenType: "Bearer",
+        } as any,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        organizationId: user.organizationId,
+        userId: user.id,
+        action: "CLICKUP_CONNECTED" as unknown as AuditAction,
+        entityType: "INTEGRATION_CONNECTION",
+        entityId: conn.id,
+        source: "CLICKUP",
+        metadata: { provider: "CLICKUP", ownershipType: "USER" },
+      },
+    });
+
+    return conn;
+  });
+
+  return { connection, success: true };
+}
+
+export async function disconnectClickUp(user: AuthenticatedUser) {
+  const connection = await prisma.integrationConnection.findFirst({
+    where: {
+      organizationId: user.organizationId,
+      ownershipType: "USER",
+      userId: user.id,
+      provider: "CLICKUP" as any,
+    },
+  });
+
+  if (!connection) {
+    return { success: true };
+  }
+
+  await prisma.$transaction([
+    prisma.integrationCredential.deleteMany({
+      where: { integrationConnectionId: connection.id },
+    }),
+    prisma.integrationConnection.update({
+      where: { id: connection.id },
+      data: {
+        status: "DISCONNECTED",
+        connectedAt: null,
+        lastError: null,
+      },
+    }),
+    prisma.auditLog.create({
+      data: {
+        organizationId: user.organizationId,
+        userId: user.id,
+        action: "CLICKUP_DISCONNECTED" as unknown as AuditAction,
+        entityType: "INTEGRATION_CONNECTION",
+        entityId: connection.id,
+        source: "CLICKUP",
+        metadata: { provider: "CLICKUP", ownershipType: "USER" },
+      },
+    }),
+  ]);
+
+  return { success: true };
+}
+
+export async function getClickUpConnectionStatus(user: AuthenticatedUser) {
+  const connection = await prisma.integrationConnection.findFirst({
+    where: {
+      organizationId: user.organizationId,
+      ownershipType: "USER",
+      userId: user.id,
+      provider: "CLICKUP" as any,
+    },
+  });
+
+  if (!connection || connection.status !== "CONNECTED") {
+    return {
+      isConnected: false,
+      status: connection?.status || "DISCONNECTED",
+      connectedAt: null,
+      lastSyncAt: null,
+      destination: null,
+      connectionId: connection?.id || null,
+    };
+  }
+
+  const credential = await prisma.integrationCredential.findUnique({
+    where: { integrationConnectionId: connection.id },
+  });
+
+  const meta = credential?.metadata as {
+    destination?: ClickUpDestinationConfig;
+  } | null;
+
+  return {
+    isConnected: true,
+    status: connection.status,
+    connectedAt: connection.connectedAt,
+    lastSyncAt: connection.lastSyncAt,
+    destination: meta?.destination || null,
+    connectionId: connection.id,
+  };
+}
+

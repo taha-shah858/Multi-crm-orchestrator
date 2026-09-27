@@ -19,7 +19,9 @@ import {
   PanelLeftOpen,
   LogOut,
   Briefcase,
+  Shield,
 } from "lucide-react";
+import { isAdminWorkspaceRole } from "@/lib/auth/roles";
 
 const workspaceNavigation = [
   { name: "Home Dashboard", href: "/", icon: LayoutGrid },
@@ -138,7 +140,12 @@ export default function Sidebar() {
 
         {/* Navigation Items */}
         <nav className="p-3 space-y-1.5 flex-1 overflow-y-auto">
-          {workspaceNavigation.map((item) => {
+          {[
+            ...(user && isAdminWorkspaceRole(user.role)
+              ? [{ name: "Admin Console", href: "/admin", icon: Shield }]
+              : []),
+            ...workspaceNavigation,
+          ].map((item) => {
             const isActive = pathname === item.href;
             const Icon = item.icon;
             return (

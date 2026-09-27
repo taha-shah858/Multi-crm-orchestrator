@@ -81,3 +81,24 @@ export function hubspotConnectionWhere(
     ],
   };
 }
+
+export function userIntegrationWhere(
+  organizationIdOrContext: string | RequestContext | { user: { organizationId: string } },
+  userId: string,
+  provider?: IntegrationProvider,
+): Prisma.IntegrationConnectionWhereInput {
+  const organizationId = typeof organizationIdOrContext === "string"
+    ? organizationIdOrContext
+    : "user" in organizationIdOrContext
+    ? organizationIdOrContext.user.organizationId
+    : (organizationIdOrContext as any).organizationId;
+
+  return {
+    organizationId,
+    ownershipType: "USER",
+    userId,
+    status: { in: [...SYNCABLE_CONNECTION_STATUSES] },
+    ...(provider ? { provider } : {}),
+  };
+}
+

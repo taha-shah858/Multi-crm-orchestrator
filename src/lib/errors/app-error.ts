@@ -53,6 +53,9 @@ export type ErrorCode =
   | "RECORD_NOT_FOUND"
   | "HANDOFF_NOT_FOUND"
   | "CREDENTIAL_NOT_FOUND"
+  | "CLICKUP_NOT_CONNECTED"
+  | "CLICKUP_API_ERROR"
+  | "CLICKUP_SYNC_FAILED"
   | "INTERNAL_ERROR";
 
 export class AppError extends Error {

@@ -11,6 +11,7 @@ export const INTEGRATION_PROVIDERS = [
   "GOOGLE_CALENDAR",
   "OUTLOOK",
   "AI_PROVIDER",
+  "CLICKUP",
 ] as const;
 
 export type IntegrationProvider = (typeof INTEGRATION_PROVIDERS)[number];
