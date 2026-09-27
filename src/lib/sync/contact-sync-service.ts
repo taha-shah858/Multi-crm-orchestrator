@@ -7,7 +7,10 @@ import type { RequestContext } from "@/lib/models/canonical";
 import { prisma } from "@/lib/db/prisma";
 import { recordAuditEvent } from "@/lib/audit/audit-log";
 import { assertClientAccess } from "@/lib/auth/auth-service";
-import { activeClientIntegrationWhere } from "@/lib/integrations/connection-resolution";
+import {
+  activeClientIntegrationWhere,
+  hubspotConnectionWhere,
+} from "@/lib/integrations/connection-resolution";
 import { normalizeRichTextToPlainText } from "@/lib/text/plain-text";
 
 export interface ContactSyncSummary {
@@ -240,17 +243,29 @@ export async function syncSingleConnectionContacts(
   requestId: string,
 ): Promise<ContactSyncSummary> {
   await prepareActiveClientSync(context);
-  if (
-    connection.organizationId !== context.user.organizationId
-    || connection.clientAccountId !== context.activeClientAccountId
-    || connection.ownershipType !== "CLIENT_ACCOUNT"
-  ) {
+  const isCompanyConnection = connection.ownershipType === "COMPANY" && connection.organizationId === context.user.organizationId;
+  const isClientConnection = connection.ownershipType === "CLIENT_ACCOUNT" && connection.organizationId === context.user.organizationId && connection.clientAccountId === context.activeClientAccountId;
+
+  if (!isCompanyConnection && !isClientConnection) {
     throw new AppError("CLIENT_ACCESS_DENIED", 403, "Connection is outside the active client account.", "Choose an integration connected to the active client account.");
   }
 
   if (connection.provider === "HUBSPOT") {
     const { syncHubSpotSalesCrm } = await import("@/lib/sync/hubspot-sales-sync-service");
     return syncHubSpotSalesCrm(context, connection, requestId);
+  }
+
+  if (connection.provider === "ACTIVECAMPAIGN") {
+    const { syncClientCrm } = await import("@/lib/client-crm/client-crm-service");
+    const syncRes = await syncClientCrm(context);
+    return {
+      contacts: [],
+      recordsRead: syncRes.count,
+      recordsCreated: syncRes.count,
+      recordsUpdated: 0,
+      recordsFailed: 0,
+      runs: [{ id: connection.id, provider: "ACTIVECAMPAIGN", status: "COMPLETED" }],
+    };
   }
 
   const adapter = getCrmAdapter(connection.provider);
@@ -389,10 +404,7 @@ async function syncContactToHubSpot(
     where: {
       contactId: contact.id,
       objectType: "CONTACT",
-      clientAccountId: context.activeClientAccountId,
-      connection: {
-        ...activeClientIntegrationWhere(context, "HUBSPOT"),
-      },
+      connection: hubspotConnectionWhere(context),
     },
     include: { connection: true },
   });
@@ -539,14 +551,24 @@ export async function getActiveClientSyncHistory(context: RequestContext) {
 /** Returns canonical contacts persisted for the currently selected client only. */
 export async function getActiveClientContacts(
   context: RequestContext,
+  options?: { scope?: "agency" | "client"; clientAccountId?: string },
 ): Promise<PersistedContactSummary[]> {
   await prepareActiveClientSync(context);
 
+  const whereCondition: Record<string, unknown> = {
+    organizationId: context.user.organizationId,
+  };
+
+  if (options?.scope === "agency") {
+    if (options.clientAccountId) {
+      whereCondition.clientAccountId = options.clientAccountId;
+    }
+  } else {
+    whereCondition.clientAccountId = options?.clientAccountId || context.activeClientAccountId;
+  }
+
   const contacts = await prisma.contact.findMany({
-    where: {
-      organizationId: context.user.organizationId,
-      clientAccountId: context.activeClientAccountId,
-    },
+    where: whereCondition,
     include: {
       crmOwner: { select: { id: true, displayName: true, email: true } },
       crmCompany: { select: { id: true, name: true, domain: true, website: true, phone: true, industry: true, city: true, state: true, country: true, address: true } },
@@ -554,7 +576,6 @@ export async function getActiveClientContacts(
       deals: { include: { crmOwner: { select: { id: true, displayName: true, email: true } }, company: { select: { id: true, name: true } } } },
       interactions: { orderBy: { occurredAt: "desc" }, take: 10, select: { id: true, type: true, subject: true, body: true, occurredAt: true, source: true } },
       externalRecords: {
-        where: { clientAccountId: context.activeClientAccountId },
         include: { connection: { select: { provider: true } } },
         orderBy: { updatedAt: "desc" },
       },
@@ -592,3 +613,10 @@ export async function getActiveClientContacts(
     }];
   });
 }
+
+export const getUnifiedLeads = (
+  context: RequestContext,
+  filter?: { clientAccountId?: string },
+) => getActiveClientContacts(context, { scope: "agency", clientAccountId: filter?.clientAccountId });
+
+export const updateAgencyContact = updateActiveClientContact;

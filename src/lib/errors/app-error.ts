@@ -50,6 +50,9 @@ export type ErrorCode =
   | "DOCUMENT_NOT_FOUND"
   | "DOCUMENT_CONTEXT_LINK_MISMATCH"
   | "DOCUMENT_FILE_INVALID"
+  | "RECORD_NOT_FOUND"
+  | "HANDOFF_NOT_FOUND"
+  | "CREDENTIAL_NOT_FOUND"
   | "INTERNAL_ERROR";
 
 export class AppError extends Error {
@@ -65,5 +68,13 @@ export class AppError extends Error {
 }
 
 export function isAppError(error: unknown): error is AppError {
-  return error instanceof AppError;
+  return (
+    error instanceof AppError ||
+    (typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      "status" in error &&
+      "safeMessage" in error &&
+      typeof (error as Record<string, unknown>).safeMessage === "string")
+  );
 }

@@ -1,12 +1,16 @@
 import { AppError } from "@/lib/errors/app-error";
 import { hubSpotContactAdapter } from "@/lib/integrations/hubspot/adapter";
 import { mockCrmAdapter } from "@/lib/integrations/mock/adapter";
+import { activeCampaignAdapter } from "@/lib/integrations/activecampaign/adapter";
+import { zohoAdapter } from "@/lib/integrations/zoho/adapter";
 import type { IntegrationAdapter } from "@/lib/integrations/types";
 import type { IntegrationProvider } from "@/lib/models/canonical";
 
 const adapters: Partial<Record<IntegrationProvider, IntegrationAdapter>> = {
   HUBSPOT: hubSpotContactAdapter,
   MOCK: mockCrmAdapter,
+  ACTIVECAMPAIGN: activeCampaignAdapter,
+  ZOHO: zohoAdapter,
 };
 
 export function getIntegrationAdapter(provider: IntegrationProvider): IntegrationAdapter {

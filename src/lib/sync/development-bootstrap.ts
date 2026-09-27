@@ -48,6 +48,41 @@ export async function ensureDevelopmentTenant(context: RequestContext) {
     },
   });
 
+  // Provision Agency-level HubSpot CRM connection
+  const hasAgencyHubSpotToken = Boolean(process.env.HUBSPOT_ACCESS_TOKEN?.trim());
+  const agencyConnection = await prisma.integrationConnection.upsert({
+    where: {
+      ownershipKey_provider: {
+        ownershipKey: `company:${context.user.organizationId}`,
+        provider: "HUBSPOT",
+      },
+    },
+    update: {
+      organizationId: context.user.organizationId,
+      ownershipType: "COMPANY",
+      status: hasAgencyHubSpotToken ? "CONNECTED" : "AUTHENTICATION_REQUIRED",
+    },
+    create: {
+      organizationId: context.user.organizationId,
+      ownershipType: "COMPANY",
+      ownershipKey: `company:${context.user.organizationId}`,
+      provider: "HUBSPOT",
+      status: hasAgencyHubSpotToken ? "CONNECTED" : "AUTHENTICATION_REQUIRED",
+    },
+  });
+
+  if (hasAgencyHubSpotToken) {
+    await prisma.integrationCredential.upsert({
+      where: { integrationConnectionId: agencyConnection.id },
+      update: {},
+      create: {
+        integrationConnectionId: agencyConnection.id,
+        encryptedAccessToken: "env:HUBSPOT_ACCESS_TOKEN",
+        metadata: { migratedLegacyReference: true },
+      },
+    });
+  }
+
   for (const client of developmentClients) {
     await prisma.clientAccount.upsert({
       where: { id: client.id },
@@ -115,6 +150,40 @@ export async function ensureDevelopmentTenant(context: RequestContext) {
         },
       });
     }
+
+    // Provision ActiveCampaign as Client CRM
+    const acConnection = await prisma.integrationConnection.upsert({
+      where: {
+        ownershipKey_provider: {
+          ownershipKey: `client:${client.id}`,
+          provider: "ACTIVECAMPAIGN",
+        },
+      },
+      update: {
+        organizationId: context.user.organizationId,
+        ownershipType: "CLIENT_ACCOUNT",
+        clientAccountId: client.id,
+        status: "CONNECTED",
+      },
+      create: {
+        organizationId: context.user.organizationId,
+        ownershipType: "CLIENT_ACCOUNT",
+        ownershipKey: `client:${client.id}`,
+        clientAccountId: client.id,
+        provider: "ACTIVECAMPAIGN",
+        status: "CONNECTED",
+      },
+    });
+
+    await prisma.integrationCredential.upsert({
+      where: { integrationConnectionId: acConnection.id },
+      update: {},
+      create: {
+        integrationConnectionId: acConnection.id,
+        encryptedAccessToken: "env:ACTIVECAMPAIGN_API_KEY",
+        metadata: { apiUrl: "https://client-crm.api-us1.com/api/3" },
+      },
+    });
 
     await prisma.communicationIdentity.upsert({
       where: {

@@ -117,7 +117,18 @@ interface PersistedLeadAnalysis {
 
 type AssessmentForm = Pick<PersistedLeadAnalysis, "summary" | "budget" | "timeline" | "requirements" | "intent" | "objections" | "leadScore" | "temperature" | "dealProbability">;
 type CompanyForm = { name: string; domain: string; website: string; phone: string; industry: string; city: string; state: string; country: string; address: string };
-type DealForm = { id: string; title: string; amount: string; pipelineLabel: string; stageLabel: string; expectedCloseAt: string };
+type DealForm = {
+  id: string;
+  title: string;
+  amount: string;
+  pipelineLabel: string;
+  stageLabel: string;
+  expectedCloseAt: string;
+  status: "OPEN" | "CLOSED_WON" | "CLOSED_LOST";
+  notes: string;
+  closeOutcome: string;
+  recommendedNextAction: string;
+};
 
 export default function LeadsPage() {
   const { activeClientAccount, isClientAccountReady } = useClientAccount();
@@ -200,13 +211,13 @@ export default function LeadsPage() {
 
     try {
       const [contactResponse, analysisResponse] = await Promise.all([
-        fetch("/api/contacts", { cache: "no-store" }),
+        fetch("/api/contacts?scope=agency", { cache: "no-store" }),
         fetch("/api/lead-analyses", { cache: "no-store" }),
       ]);
       const [contactData, analysisData] = await Promise.all([contactResponse.json(), analysisResponse.json()]);
       if (!contactResponse.ok || !contactData.success || !analysisResponse.ok || !analysisData.success) {
         const errorMessage = typeof contactData.error === "string" ? contactData.error : contactData.error?.message;
-        throw new Error(errorMessage || "Unable to load contacts for the active client account.");
+        throw new Error(errorMessage || "Unable to load contacts for the agency sales pipeline.");
       }
 
       if (requestVersion !== contactRequestVersion.current) return false;
@@ -225,7 +236,7 @@ export default function LeadsPage() {
       setLeads([]);
       setImportFeedback({
         type: "error",
-        message: error instanceof Error ? error.message : "Unable to load contacts for the active client account.",
+        message: error instanceof Error ? error.message : "Unable to load contacts for the agency sales pipeline.",
       });
       return false;
     } finally {
@@ -237,8 +248,12 @@ export default function LeadsPage() {
 
   useEffect(() => {
     currentClientAccountId.current = activeClientAccount.id;
-    void loadPersistedContacts(true);
-  }, [activeClientAccount.id, loadPersistedContacts]);
+    // Stage 2.7: Unified Leads is agency-level. Switching the active client in the header
+    // changes client-specific operational context (Client CRM), but does NOT clear or reload Unified Leads.
+    if (leads.length === 0) {
+      void loadPersistedContacts(false, false);
+    }
+  }, [activeClientAccount.id, leads.length, loadPersistedContacts]);
 
   /**
    * Trigger backend import from HubSpot CRM and merge newly fetched contacts
@@ -385,27 +400,92 @@ export default function LeadsPage() {
     finally { setIsSavingCrmEntity(false); }
   };
 
-  const openDealEditor = (deal: NonNullable<Lead["deals"]>[number]) => {
-    setCrmEntityFeedback(""); setCrmRetryTarget(null);
-    setDealForm({ id: deal.id, title: deal.title, amount: (deal.valueCents / 100).toFixed(2), pipelineLabel: deal.pipelineLabel || "Unassigned pipeline", stageLabel: deal.stageLabel || "Unassigned stage", expectedCloseAt: deal.expectedCloseAt ? new Date(deal.expectedCloseAt).toISOString().slice(0, 10) : "" });
+  const openDealEditor = (
+    deal: NonNullable<Lead["deals"]>[number],
+    initialStatus?: "OPEN" | "CLOSED_WON" | "CLOSED_LOST",
+  ) => {
+    setCrmEntityFeedback("");
+    setCrmRetryTarget(null);
+    setDealForm({
+      id: deal.id,
+      title: deal.title,
+      amount: (deal.valueCents / 100).toFixed(2),
+      pipelineLabel: deal.pipelineLabel || "Unassigned pipeline",
+      stageLabel: deal.stageLabel || "Unassigned stage",
+      expectedCloseAt: deal.expectedCloseAt
+        ? new Date(deal.expectedCloseAt).toISOString().slice(0, 10)
+        : "",
+      status: initialStatus || deal.status || "OPEN",
+      notes: (deal as { notes?: string }).notes || "",
+      closeOutcome: "Client accepted proposal",
+      recommendedNextAction: "Begin onboarding",
+    });
   };
 
   const saveDeal = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!selectedLead || !dealForm) return;
-    setIsSavingCrmEntity(true); setCrmEntityFeedback("");
+    setIsSavingCrmEntity(true);
+    setCrmEntityFeedback("");
     try {
-      const payload = { title: dealForm.title, amount: Number(dealForm.amount), expectedCloseAt: dealForm.expectedCloseAt || null };
-      const response = await fetch(`/api/crm/deals/${dealForm.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+      const payload = {
+        title: dealForm.title,
+        amount: Number(dealForm.amount),
+        expectedCloseAt: dealForm.expectedCloseAt || null,
+        status: dealForm.status,
+        notes: dealForm.notes || null,
+        closeOutcome: dealForm.closeOutcome || undefined,
+        recommendedNextAction: dealForm.recommendedNextAction || undefined,
+      };
+      const response = await fetch(`/api/crm/deals/${dealForm.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
       const data = await response.json();
-      if (!response.ok || !data.success) throw new Error(data.error?.message || "Unable to save this deal.");
-      setSelectedLead({ ...selectedLead, deals: selectedLead.deals?.map((deal) => deal.id === dealForm.id ? { ...deal, title: dealForm.title, valueCents: Math.round(Number(dealForm.amount) * 100), expectedCloseAt: dealForm.expectedCloseAt || null } : deal) });
+      if (!response.ok || !data.success)
+        throw new Error(data.error?.message || "Unable to save this deal.");
+
+      setSelectedLead({
+        ...selectedLead,
+        deals: selectedLead.deals?.map((deal) =>
+          deal.id === dealForm.id
+            ? {
+                ...deal,
+                title: dealForm.title,
+                valueCents: Math.round(Number(dealForm.amount) * 100),
+                expectedCloseAt: dealForm.expectedCloseAt || null,
+                status: dealForm.status,
+              }
+            : deal
+        ),
+      });
       setDealForm(null);
-      setCrmRetryTarget(data.outboundSync.status === "FAILED" ? { type: "deals", id: dealForm.id } : null);
-      setCrmEntityFeedback(data.outboundSync.status === "COMPLETED" ? "Deal saved locally and updated in HubSpot." : data.outboundSync.status === "FAILED" ? `Deal saved locally. ${data.outboundSync.error}` : "Deal saved locally; no HubSpot mapping was available.");
+      setCrmRetryTarget(
+        data.outboundSync?.status === "FAILED"
+          ? { type: "deals", id: dealForm.id }
+          : null
+      );
+
+      const handoffInfo = data.handoff
+        ? ` 🎉 Deal Handoff created for ${data.handoff.clientCrmProvider} (Status: ${data.handoff.status}, Ext ID: #${data.handoff.clientCrmRecordId || "syncing"}).`
+        : "";
+
+      setCrmEntityFeedback(
+        (data.outboundSync?.status === "COMPLETED"
+          ? "Deal saved locally and updated in HubSpot."
+          : data.outboundSync?.status === "FAILED"
+          ? `Deal saved locally. ${data.outboundSync.error}`
+          : "Deal saved locally.") + handoffInfo
+      );
       await loadPersistedContacts(false, false);
-    } catch (error) { setCrmEntityFeedback(error instanceof Error ? error.message : "Unable to save this deal."); }
-    finally { setIsSavingCrmEntity(false); }
+    } catch (error) {
+      setCrmEntityFeedback(
+        error instanceof Error ? error.message : "Unable to save this deal."
+      );
+    } finally {
+      setIsSavingCrmEntity(false);
+    }
   };
 
   const retrySalesEntitySync = async () => {
@@ -567,25 +647,27 @@ export default function LeadsPage() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <Users className="w-5 h-5 text-primary-cyan" />
                 <h1 className="text-2xl font-bold tracking-tight text-crm-text">
                   Unified Lead Directory
                 </h1>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-orange-500/10 text-orange-400 border border-orange-500/30">
+                  Agency Sales Pipeline • HubSpot CRM
+                </span>
               </div>
               <p className="text-xs text-crm-text-muted font-mono mt-1">
-                Aggregated cross-CRM records with real-time AI scoring, source
-                lineage tracking, and live routing.
+                Agency-wide unified sales pipeline across all clients and agents. Backed by Agency CRM (HubSpot).
               </p>
             </div>
 
             <div className="flex items-center gap-3">
-              {/* Manual Phase 2 sync for the currently selected client account */}
+              {/* Manual Agency CRM sync */}
               <button
                 onClick={handleManualClientSync}
                 disabled={isImporting}
                 className="px-4 py-2 rounded-xl bg-orange-500/10 border border-orange-500/30 text-xs font-mono text-orange-400 hover:bg-orange-500/20 hover:border-orange-500/50 transition-all flex items-center gap-2 shadow-inner cursor-pointer disabled:opacity-50"
-                title="Manually sync contacts from the active client account's CRM"
+                title="Manually sync contacts from the Agency HubSpot CRM"
               >
                 <RefreshCw
                   className={`w-3.5 h-3.5 ${
@@ -593,7 +675,7 @@ export default function LeadsPage() {
                   }`}
                 />
                 <span>
-                  {isImporting ? "Syncing active client..." : "Sync Active Client"}
+                  {isImporting ? "Syncing Agency CRM..." : "Sync Agency Pipeline (HubSpot)"}
                 </span>
               </button>
 
@@ -1072,8 +1154,26 @@ export default function LeadsPage() {
                         <p className="mt-2 text-sm font-semibold text-primary-cyan">{new Intl.NumberFormat(undefined, { style: "currency", currency: deal.currency }).format(deal.valueCents / 100)}</p>
                         <p className="mt-1 text-crm-text-muted">{[deal.pipelineLabel, deal.stageLabel].filter(Boolean).join(" · ") || "Pipeline metadata unavailable"}</p>
                         <p className="mt-1 text-crm-text-muted">Owner: {deal.owner?.displayName || "Unassigned"}</p>
-                        {deal.expectedCloseAt && <p className="mt-1 text-crm-text-muted">Expected close: {new Date(deal.expectedCloseAt).toLocaleDateString()}</p>}
-                        <button type="button" onClick={() => openDealEditor(deal)} className="mt-2 text-primary-cyan hover:underline">Edit & sync deal</button>
+                        <div className="mt-2.5 flex items-center gap-2 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => openDealEditor(deal)}
+                            className="text-primary-cyan hover:underline cursor-pointer"
+                          >
+                            Edit & sync deal
+                          </button>
+                          {deal.status !== "CLOSED_WON" && (
+                            <button
+                              type="button"
+                              onClick={() => openDealEditor(deal, "CLOSED_WON")}
+                              className="px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/35 text-emerald-400 hover:bg-emerald-500/25 transition-all text-[9px] font-semibold flex items-center gap-1 cursor-pointer"
+                              title="Mark deal as Closed Won and hand off to Zoho CRM"
+                            >
+                              <Sparkles className="w-2.5 h-2.5 text-emerald-400" />
+                              <span>Close & Handoff to Zoho</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1455,14 +1555,204 @@ export default function LeadsPage() {
 
       {dealForm && selectedLead && (
         <div className="dashboard-overlay bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <MultiCrmCard className="w-full max-w-lg p-6 space-y-5 border border-primary-cyan/40 shadow-2xl">
-            <div className="flex items-start justify-between border-b border-crm-border-strong pb-3"><div><h2 className="text-lg font-bold text-crm-text">Edit canonical deal</h2><p className="mt-1 text-xs font-mono text-crm-text-muted">Only safe sales fields are written back to HubSpot.</p></div><button type="button" onClick={() => setDealForm(null)} className="text-crm-text-muted hover:text-crm-text"><X className="h-5 w-5" /></button></div>
+          <MultiCrmCard className="w-full max-w-lg p-6 space-y-5 border border-primary-cyan/40 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-start justify-between border-b border-crm-border-strong pb-3">
+              <div>
+                <h2 className="text-lg font-bold text-crm-text flex items-center gap-2">
+                  <DollarSign className="w-5 h-5 text-primary-cyan" />
+                  {dealForm.status === "CLOSED_WON" ? "Close Deal & Handoff" : "Edit Canonical Deal"}
+                </h2>
+                <p className="mt-1 text-xs font-mono text-crm-text-muted">
+                  {dealForm.status === "CLOSED_WON"
+                    ? "Closing this deal triggers an operational Deal Handoff with notes to Zoho CRM."
+                    : "Saves locally and syncs safe sales fields with HubSpot."}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDealForm(null)}
+                className="text-crm-text-muted hover:text-crm-text"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
             <form onSubmit={saveDeal} className="space-y-4 font-mono text-xs">
-              <label className="block space-y-1 text-crm-text-muted"><span>Deal name</span><input required value={dealForm.title} onChange={(event) => setDealForm({ ...dealForm, title: event.target.value })} className="w-full rounded-xl border border-crm-border-strong bg-crm-inner px-3 py-2 text-crm-text" /></label>
-              <div className="grid grid-cols-2 gap-3"><label className="space-y-1 text-crm-text-muted"><span>Amount</span><input required type="number" min="0" step="0.01" value={dealForm.amount} onChange={(event) => setDealForm({ ...dealForm, amount: event.target.value })} className="w-full rounded-xl border border-crm-border-strong bg-crm-inner px-3 py-2 text-crm-text" /></label><label className="space-y-1 text-crm-text-muted"><span>Expected close</span><input type="date" value={dealForm.expectedCloseAt} onChange={(event) => setDealForm({ ...dealForm, expectedCloseAt: event.target.value })} className="w-full rounded-xl border border-crm-border-strong bg-crm-inner px-3 py-2 text-crm-text" /></label></div>
-              <div className="grid grid-cols-2 gap-3 rounded-xl border border-crm-border-strong bg-crm-inner p-3"><div><p className="text-[10px] uppercase tracking-wider text-crm-text-muted">Pipeline</p><p className="mt-1 text-crm-text">{dealForm.pipelineLabel}</p></div><div><p className="text-[10px] uppercase tracking-wider text-crm-text-muted">Stage</p><p className="mt-1 text-crm-text">{dealForm.stageLabel}</p></div></div>
-              <p className="text-[10px] text-crm-text-muted">Pipeline and stage are managed by HubSpot and shown here using their human-readable labels.</p>
-              <div className="flex justify-end gap-3 border-t border-crm-border-strong pt-4"><button type="button" onClick={() => setDealForm(null)} className="rounded-xl border border-crm-border-strong px-4 py-2 text-crm-text-muted">Cancel</button><button disabled={isSavingCrmEntity} className="rounded-xl bg-primary-cyan px-4 py-2 font-semibold text-slate-950 disabled:opacity-50">{isSavingCrmEntity ? "Saving…" : "Save & Sync HubSpot"}</button></div>
+              <label className="block space-y-1 text-crm-text-muted">
+                <span>Deal name</span>
+                <input
+                  required
+                  value={dealForm.title}
+                  onChange={(event) =>
+                    setDealForm({ ...dealForm, title: event.target.value })
+                  }
+                  className="w-full rounded-xl border border-crm-border-strong bg-crm-inner px-3 py-2 text-crm-text"
+                />
+              </label>
+
+              <div className="grid grid-cols-2 gap-3">
+                <label className="space-y-1 text-crm-text-muted">
+                  <span>Amount ($)</span>
+                  <input
+                    required
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={dealForm.amount}
+                    onChange={(event) =>
+                      setDealForm({ ...dealForm, amount: event.target.value })
+                    }
+                    className="w-full rounded-xl border border-crm-border-strong bg-crm-inner px-3 py-2 text-crm-text"
+                  />
+                </label>
+                <label className="space-y-1 text-crm-text-muted">
+                  <span>Expected close</span>
+                  <input
+                    type="date"
+                    value={dealForm.expectedCloseAt}
+                    onChange={(event) =>
+                      setDealForm({
+                        ...dealForm,
+                        expectedCloseAt: event.target.value,
+                      })
+                    }
+                    className="w-full rounded-xl border border-crm-border-strong bg-crm-inner px-3 py-2 text-crm-text"
+                  />
+                </label>
+              </div>
+
+              {/* Deal Status Selection */}
+              <label className="block space-y-1 text-crm-text-muted">
+                <span>Deal Status</span>
+                <select
+                  value={dealForm.status}
+                  onChange={(event) =>
+                    setDealForm({
+                      ...dealForm,
+                      status: event.target.value as "OPEN" | "CLOSED_WON" | "CLOSED_LOST",
+                    })
+                  }
+                  className="w-full rounded-xl border border-crm-border-strong bg-crm-inner px-3 py-2 text-crm-text focus:outline-none focus:border-emerald-500/60"
+                >
+                  <option value="OPEN">Open (Active in Sales Pipeline)</option>
+                  <option value="CLOSED_WON">Closed Won (Win & Trigger Zoho Handoff)</option>
+                  <option value="CLOSED_LOST">Closed Lost</option>
+                </select>
+              </label>
+
+              {/* Closed Won Special Handoff Section */}
+              {dealForm.status === "CLOSED_WON" && (
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 space-y-3">
+                  <div className="flex items-center gap-2 text-emerald-400 font-semibold text-[11px]">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Client Zoho CRM Handoff Details</span>
+                  </div>
+                  <p className="text-[10px] text-crm-text-muted">
+                    This deal and the customer will be dispatched to the client&apos;s Zoho CRM with a Note containing your closing details.
+                  </p>
+
+                  <label className="block space-y-1 text-crm-text-muted">
+                    <span>Close Outcome / Deal Agreement</span>
+                    <input
+                      type="text"
+                      placeholder="e.g. Client accepted enterprise proposal"
+                      value={dealForm.closeOutcome}
+                      onChange={(event) =>
+                        setDealForm({ ...dealForm, closeOutcome: event.target.value })
+                      }
+                      className="w-full rounded-lg border border-crm-border-strong bg-crm-inner px-2.5 py-1.5 text-crm-text text-xs"
+                    />
+                  </label>
+
+                  <label className="block space-y-1 text-crm-text-muted">
+                    <span>What Should The Client Do Next?</span>
+                    <input
+                      type="text"
+                      placeholder="e.g. Schedule onboarding kick-off call"
+                      value={dealForm.recommendedNextAction}
+                      onChange={(event) =>
+                        setDealForm({
+                          ...dealForm,
+                          recommendedNextAction: event.target.value,
+                        })
+                      }
+                      className="w-full rounded-lg border border-crm-border-strong bg-crm-inner px-2.5 py-1.5 text-crm-text text-xs"
+                    />
+                  </label>
+
+                  <label className="block space-y-1 text-crm-text-muted">
+                    <span>Handoff Notes & Special Instructions</span>
+                    <textarea
+                      rows={3}
+                      placeholder="Enter specific notes for the client (e.g. preferred contact method, deliverables agreed, timeline notes)..."
+                      value={dealForm.notes}
+                      onChange={(event) =>
+                        setDealForm({ ...dealForm, notes: event.target.value })
+                      }
+                      className="w-full rounded-lg border border-crm-border-strong bg-crm-inner px-2.5 py-1.5 text-crm-text text-xs"
+                    />
+                  </label>
+                </div>
+              )}
+
+              {dealForm.status !== "CLOSED_WON" && (
+                <label className="block space-y-1 text-crm-text-muted">
+                  <span>Internal Deal Notes</span>
+                  <textarea
+                    rows={2}
+                    placeholder="Internal sales notes..."
+                    value={dealForm.notes}
+                    onChange={(event) =>
+                      setDealForm({ ...dealForm, notes: event.target.value })
+                    }
+                    className="w-full rounded-xl border border-crm-border-strong bg-crm-inner px-3 py-2 text-crm-text text-xs"
+                  />
+                </label>
+              )}
+
+              <div className="grid grid-cols-2 gap-3 rounded-xl border border-crm-border-strong bg-crm-inner p-3">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-crm-text-muted">
+                    Pipeline
+                  </p>
+                  <p className="mt-1 text-crm-text">{dealForm.pipelineLabel}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-crm-text-muted">
+                    Stage
+                  </p>
+                  <p className="mt-1 text-crm-text">{dealForm.stageLabel}</p>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 border-t border-crm-border-strong pt-4">
+                <button
+                  type="button"
+                  onClick={() => setDealForm(null)}
+                  className="rounded-xl border border-crm-border-strong px-4 py-2 text-crm-text-muted"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={isSavingCrmEntity}
+                  className={`rounded-xl px-4 py-2 font-semibold text-slate-950 disabled:opacity-50 transition-all flex items-center gap-1.5 ${
+                    dealForm.status === "CLOSED_WON"
+                      ? "bg-emerald-400 hover:bg-emerald-300"
+                      : "bg-primary-cyan hover:opacity-90"
+                  }`}
+                >
+                  {isSavingCrmEntity ? (
+                    "Saving…"
+                  ) : dealForm.status === "CLOSED_WON" ? (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Close Deal & Handoff to Zoho</span>
+                    </>
+                  ) : (
+                    "Save & Sync HubSpot"
+                  )}
+                </button>
+              </div>
             </form>
           </MultiCrmCard>
         </div>

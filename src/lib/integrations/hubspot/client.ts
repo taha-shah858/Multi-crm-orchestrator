@@ -225,3 +225,45 @@ export function updateHubSpotDeal(connection: IntegrationConnection, dealId: str
   if (deal.ownerExternalId) values.hubspot_owner_id = deal.ownerExternalId;
   return patchObject(connection, "deals", dealId, values);
 }
+
+export async function createHubSpotDeal(
+  connection: IntegrationConnection,
+  deal: DealWriteInput,
+  contactExternalId?: string,
+): Promise<{ id: string }> {
+  const token = await getValidHubSpotAccessToken(connection);
+  const values: Record<string, string> = { dealname: deal.name, amount: deal.amount };
+  if (deal.pipelineId) values.pipeline = deal.pipelineId;
+  if (deal.stageId) values.dealstage = deal.stageId;
+  if (deal.expectedCloseAt) values.closedate = deal.expectedCloseAt.toISOString();
+  if (deal.ownerExternalId) values.hubspot_owner_id = deal.ownerExternalId;
+
+  const payload: {
+    properties: Record<string, string>;
+    associations?: Array<{
+      to: { id: string };
+      types: Array<{ associationCategory: string; associationTypeId: number }>;
+    }>;
+  } = { properties: values };
+
+  if (contactExternalId) {
+    payload.associations = [
+      {
+        to: { id: contactExternalId },
+        types: [
+          {
+            associationCategory: "HUBSPOT_DEFINED",
+            associationTypeId: 3, // deal_to_contact
+          },
+        ],
+      },
+    ];
+  }
+
+  const response = await hubSpotRequest<{ id: string }>(token, "/crm/v3/objects/deals", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+  return { id: response.id };
+}

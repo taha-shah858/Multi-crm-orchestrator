@@ -431,3 +431,32 @@
 - HubSpot account `247075021` is persisted as a client-owned OAuth connection with an encrypted refresh token. Its manual-test `DEGRADED` status came from the missing email permission, not a lost installation; degraded connections now remain available to every sync entry point.
 - HubSpot object reads remain on the working CRM v3 endpoints used by Stage 2.5; the encrypted token lifecycle remains on the date-versioned OAuth endpoints. Provider HTTP remains isolated behind the HubSpot adapter.
 - Manual Sync Now and Retry remain deterministic failsafes. Webhooks were not made mandatory or started in this stage.
+
+## Stage 2.7 - Status
+
+### Completed
+- Changed the CRM ownership model: HubSpot is now the Agency CRM; Unified Leads is agency-level and backed by the Agency CRM sales pipeline across all clients.
+- Switching client accounts changes client-specific operational context (ActiveCampaign Client CRM), but does NOT clear, reload, or alter Unified Leads data.
+- Added ActiveCampaign integration as the planned Client CRM provider for client-specific operations, contacts, companies, deals, and notes.
+- Added Prisma schema models `DealHandoff` and `ClientCrmRecord`, enums `HandoffStatus` and `ClientRecordType`, and extended `AuditAction` with handoff and client CRM actions.
+- Created and applied migration `20260923140000_stage2_7_agency_client_crm_handoff` to the database.
+- Implemented Deal Handoff service: automatically detects when an Agency Deal becomes `CLOSED_WON` and creates/synchronizes a `DealHandoff` record to the associated client's ActiveCampaign CRM with idempotency and retry capability.
+- Implemented dedicated Client CRM service and operations page (`/client-crm`) allowing agents to view, sync, and edit client-specific CRM records with bidirectional ActiveCampaign push.
+- Added `scripts/stage2-7-agency-client-crm-test.cjs` and `"test:stage2.7"` script in `package.json`, verifying all 21 acceptance criteria in Section 26 of `stage 2.7.md`.
+- Verified zero TypeScript errors (`npx tsc --noEmit`), passed `npm run test:stage2.6`, passed `npm run test:system`, passed `npm run test:stage2.7`, and passed `npm run build`.
+
+### In Progress
+- None. Stage 2.7 implementation is complete and stopped for review.
+
+### Pending
+- Stage 3 UI/UX Refinement only after explicit approval.
+- Twilio, Calendar, and additional CRM providers remain unstarted as specified by the Stage 2.7 boundaries.
+
+### Notes / Decisions
+- HubSpot is now the Agency CRM.
+- Unified Leads is agency-level.
+- Client CRM is separate and client-scoped.
+- ActiveCampaign is the planned client CRM provider.
+- Deal Handoff bridges Agency Deals to Client CRM.
+- Agency Deals are agency-owned records (`organizationId = agency`) associated with a client account (`clientAccountId = client`).
+- Preloaded `.env.local` in `prisma.config.ts` so `npx prisma generate` runs directly from any shell or IDE environment without requiring manual environment export.

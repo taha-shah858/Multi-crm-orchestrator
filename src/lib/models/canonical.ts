@@ -94,3 +94,55 @@ export interface IntegrationConnectionSummary {
     canManage: boolean;
   };
 }
+
+export type HandoffStatus = "PENDING" | "SYNCING" | "SYNCED" | "FAILED" | "RETRYING";
+export type ClientRecordType = "CONTACT" | "COMPANY" | "DEAL" | "ACTIVITY" | "NOTE" | "TASK";
+
+export interface DealHandoffSummary {
+  id: string;
+  agencyDealId: string;
+  clientAccountId: string;
+  agentId: string | null;
+  dealName: string;
+  dealAmountCents: number;
+  currency: string;
+  closeStatus: string;
+  closeDate: string;
+  closeOutcome: string | null;
+  recommendedNextAction: string | null;
+  notes: string | null;
+  clientCrmProvider: IntegrationProvider;
+  clientCrmRecordId: string | null;
+  status: HandoffStatus;
+  retryCount: number;
+  lastAttemptedAt: string | null;
+  lastSuccessfulSyncAt: string | null;
+  lastError: string | null;
+  createdAt: string;
+  updatedAt: string;
+  clientAccount?: { id: string; name: string } | null;
+  agencyDeal?: { id: string; title: string; valueCents: number } | null;
+  agent?: { id: string; name: string; email: string } | null;
+}
+
+export interface ClientCrmRecordSummary {
+  id: string;
+  organizationId: string;
+  clientAccountId: string;
+  connectionId: string | null;
+  provider: IntegrationProvider;
+  recordType: ClientRecordType;
+  externalId: string | null;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  companyName: string | null;
+  status: string | null;
+  stage: string | null;
+  amount: string | null;
+  details: string | null;
+  customFields?: Record<string, unknown> | null;
+  lastSyncedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}

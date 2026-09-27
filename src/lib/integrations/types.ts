@@ -101,6 +101,7 @@ export interface IntegrationAdapter {
     salesCrm: boolean;
     updateCompany: boolean;
     updateDeal: boolean;
+    createDeal?: boolean;
     disconnect: boolean;
   };
   listContacts?(connection: IntegrationConnection, options?: ContactListOptions): Promise<NormalizedContact[]>;
@@ -108,6 +109,7 @@ export interface IntegrationAdapter {
   fetchSalesCrm?(connection: IntegrationConnection): Promise<SalesCrmSnapshot>;
   updateCompany?(connection: IntegrationConnection, externalId: string, company: CompanyWriteInput): Promise<void>;
   updateDeal?(connection: IntegrationConnection, externalId: string, deal: DealWriteInput): Promise<void>;
+  createDeal?(connection: IntegrationConnection, deal: DealWriteInput, contactExternalId?: string): Promise<{ id: string }>;
 }
 
 export type CrmAdapter = IntegrationAdapter;

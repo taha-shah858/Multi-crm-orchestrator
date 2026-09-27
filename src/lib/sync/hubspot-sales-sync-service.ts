@@ -244,12 +244,24 @@ async function persistActivities(context: RequestContext, connection: Integratio
 
 export async function syncHubSpotSalesCrm(context: RequestContext, connection: IntegrationConnection, requestId: string): Promise<ContactSyncSummary> {
   await assertClientAccess(context.user, context.activeClientAccountId);
-  if (connection.provider !== "HUBSPOT" || connection.organizationId !== context.user.organizationId || connection.clientAccountId !== context.activeClientAccountId || connection.ownershipType !== "CLIENT_ACCOUNT") {
-    throw new AppError("CLIENT_ACCESS_DENIED", 403, "HubSpot connection is outside the active client account.", "Choose the HubSpot integration for the active client account.");
+  const isCompanyConnection = connection.ownershipType === "COMPANY" && connection.organizationId === context.user.organizationId;
+  const isClientConnection = connection.ownershipType === "CLIENT_ACCOUNT" && connection.organizationId === context.user.organizationId && connection.clientAccountId === context.activeClientAccountId;
+
+  if (connection.provider !== "HUBSPOT" || (!isCompanyConnection && !isClientConnection)) {
+    throw new AppError("CLIENT_ACCESS_DENIED", 403, "HubSpot connection is outside the authorized scope.", "Choose the authorized HubSpot integration.");
   }
   const adapter = getIntegrationAdapter("HUBSPOT");
   if (!adapter.fetchSalesCrm) throw new AppError("CRM_PROVIDER_UNAVAILABLE", 422, "HubSpot sales CRM capability is unavailable.", "HubSpot sales CRM synchronization is unavailable.");
-  const syncRun = await prisma.syncRun.create({ data: { organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, connectionId: connection.id, userId: context.user.id, provider: "HUBSPOT", status: "RUNNING" } });
+  const syncRun = await prisma.syncRun.create({
+    data: {
+      organizationId: context.user.organizationId,
+      clientAccountId: connection.clientAccountId || context.activeClientAccountId,
+      connectionId: connection.id,
+      userId: context.user.id,
+      provider: "HUBSPOT",
+      status: "RUNNING",
+    },
+  });
   await recordAuditEvent(context, { action: "SALES_CRM_SYNC_STARTED", entityType: "SYNC_RUN", entityId: syncRun.id, requestId, source: "HUBSPOT" });
 
   const counts: CategoryCounts = { contacts: emptyCounts(), companies: emptyCounts(), deals: emptyCounts(), owners: emptyCounts(), pipelines: emptyCounts(), activities: emptyCounts() };

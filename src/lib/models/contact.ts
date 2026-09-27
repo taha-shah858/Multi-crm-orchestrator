@@ -9,7 +9,7 @@ export interface NormalizedContact {
   email: string;
   phone: string;
   company: string;
-  source_crm: "HubSpot" | "Mock CRM" | "Salesforce" | "Zoho" | "Pipedrive";
+  source_crm: "HubSpot" | "Mock CRM" | "Salesforce" | "Zoho" | "Pipedrive" | "ActiveCampaign";
   raw_created_at?: string;
   raw_updated_at?: string;
 }

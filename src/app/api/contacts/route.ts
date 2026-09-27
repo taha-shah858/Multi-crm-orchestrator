@@ -5,11 +5,15 @@ import { getActiveClientContacts } from "@/lib/sync/contact-sync-service";
 
 export const dynamic = "force-dynamic";
 
-/** Returns canonical contacts for the agent's currently selected client account. */
 export async function GET(request: NextRequest) {
   return withApiErrorHandling(request, async (requestId) => {
     const context = await requireRequestContext(request);
-    const contacts = await getActiveClientContacts(context);
+    const scope = request.nextUrl.searchParams.get("scope");
+    const clientAccountId = request.nextUrl.searchParams.get("clientAccountId") || undefined;
+    const contacts = await getActiveClientContacts(context, {
+      scope: scope === "agency" ? "agency" : "client",
+      clientAccountId,
+    });
     return success({ contacts }, requestId);
   });
 }

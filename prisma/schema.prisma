@@ -53,6 +53,23 @@ enum ConnectionStatus {
   DISCONNECTED
 }
 
+enum HandoffStatus {
+  PENDING
+  SYNCING
+  SYNCED
+  FAILED
+  RETRYING
+}
+
+enum ClientRecordType {
+  CONTACT
+  COMPANY
+  DEAL
+  ACTIVITY
+  NOTE
+  TASK
+}
+
 enum AuditAction {
   AUTH_SIGNED_IN
   AUTH_SIGNED_OUT
@@ -104,6 +121,16 @@ enum AuditAction {
   DEAL_UPDATED
   DEAL_OUTBOUND_SYNC_COMPLETED
   DEAL_OUTBOUND_SYNC_FAILED
+  DEAL_HANDOFF_CREATED
+  DEAL_HANDOFF_SYNC_STARTED
+  DEAL_HANDOFF_SYNC_COMPLETED
+  DEAL_HANDOFF_SYNC_FAILED
+  CLIENT_CRM_RECORD_CREATED
+  CLIENT_CRM_RECORD_UPDATED
+  CLIENT_CRM_SYNC_COMPLETED
+  CLIENT_CRM_SYNC_FAILED
+  ZOHO_CONNECTED
+  ZOHO_DISCONNECTED
 }
 
 enum ScriptChannel {
@@ -265,6 +292,8 @@ model Organization {
   crmCompanies            CrmCompany[]
   crmOwners               CrmOwner[]
   crmPipelines            CrmPipeline[]
+  dealHandoffs            DealHandoff[]
+  clientCrmRecords        ClientCrmRecord[]
 }
 
 model User {
@@ -296,6 +325,7 @@ model User {
   connectedIntegrations   IntegrationConnection[] @relation("IntegrationConnectedBy")
   ownedOAuthStates        OAuthState[]            @relation("OAuthStateOwner")
   initiatedOAuthStates    OAuthState[]            @relation("OAuthStateInitiator")
+  dealHandoffs            DealHandoff[]
 
   @@index([organizationId])
 }
@@ -342,6 +372,8 @@ model ClientAccount {
   crmCompanies                    CrmCompany[]
   crmOwners                       CrmOwner[]
   crmPipelines                    CrmPipeline[]
+  dealHandoffs                    DealHandoff[]
+  clientCrmRecords                ClientCrmRecord[]
 
   @@index([organizationId])
 }
@@ -383,6 +415,7 @@ model IntegrationConnection {
   externalRecords     ExternalRecord[]
   syncRuns            SyncRun[]
   crmPipelines        CrmPipeline[]
+  clientCrmRecords    ClientCrmRecord[]
 
   @@unique([ownershipKey, provider])
   @@index([organizationId, ownershipType, status])
@@ -715,6 +748,7 @@ model Deal {
   externalRecords  ExternalRecord[]
   contactLinks     DealContact[]
   interactionLinks InteractionDeal[]
+  handoffs         DealHandoff[]
 
   @@index([organizationId, clientAccountId, status])
   @@index([contactId])
@@ -948,4 +982,65 @@ model Document {
   @@index([contactId, updatedAt])
   @@index([leadAnalysisId])
   @@index([dealId])
+}
+
+model DealHandoff {
+  id                    String              @id @default(cuid())
+  organizationId        String
+  clientAccountId       String
+  agencyDealId          String
+  agentId               String?
+  dealName              String
+  dealAmountCents       Int
+  currency              String              @default("USD")
+  closeStatus           String              @default("CLOSED_WON")
+  closeDate             DateTime            @default(now())
+  closeOutcome          String?
+  recommendedNextAction String?
+  notes                 String?
+  clientCrmProvider     IntegrationProvider @default(ZOHO)
+  clientCrmRecordId     String?
+  status                HandoffStatus       @default(PENDING)
+  retryCount            Int                 @default(0)
+  lastAttemptedAt       DateTime?
+  lastSuccessfulSyncAt  DateTime?
+  lastError             String?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  organization          Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clientAccount         ClientAccount       @relation(fields: [clientAccountId], references: [id], onDelete: Cascade)
+  agencyDeal            Deal                @relation(fields: [agencyDealId], references: [id], onDelete: Cascade)
+  agent                 User?               @relation(fields: [agentId], references: [id], onDelete: SetNull)
+
+  @@unique([agencyDealId, clientAccountId])
+  @@index([organizationId, clientAccountId, status])
+  @@index([agencyDealId])
+}
+
+model ClientCrmRecord {
+  id              String                 @id @default(cuid())
+  organizationId  String
+  clientAccountId String
+  connectionId    String?
+  provider        IntegrationProvider    @default(ZOHO)
+  recordType      ClientRecordType
+  externalId      String?
+  name            String
+  email           String?
+  phone           String?
+  companyName     String?
+  status          String?
+  stage           String?
+  amount          String?
+  details         String?
+  customFields    Json?
+  lastSyncedAt    DateTime?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  organization    Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clientAccount   ClientAccount          @relation(fields: [clientAccountId], references: [id], onDelete: Cascade)
+  connection      IntegrationConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+
+  @@unique([connectionId, recordType, externalId])
+  @@index([organizationId, clientAccountId, recordType])
 }

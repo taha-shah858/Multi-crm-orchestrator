@@ -18,12 +18,14 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   LogOut,
+  Briefcase,
 } from "lucide-react";
 
 const workspaceNavigation = [
   { name: "Home Dashboard", href: "/", icon: LayoutGrid },
   { name: "Integrations Hub", href: "/integrations", icon: Network },
   { name: "Unified Lead Directory", href: "/leads", icon: Users },
+  { name: "Client CRM", href: "/client-crm", icon: Briefcase },
   { name: "Twilio Smart Dialer", href: "/dialer", icon: Phone },
   { name: "Aggregation Timeline", href: "/timeline", icon: TrendingUp },
   { name: "AI Copilot Suite", href: "/copilot", icon: Bot },

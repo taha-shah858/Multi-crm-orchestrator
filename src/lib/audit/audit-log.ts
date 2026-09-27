@@ -7,7 +7,8 @@ export interface AuditEvent {
   entityType: string;
   entityId?: string;
   requestId: string;
-  source: "PLATFORM" | "HUBSPOT" | "MOCK" | "TWILIO";
+  source: "PLATFORM" | "HUBSPOT" | "MOCK" | "TWILIO" | "ACTIVECAMPAIGN" | "ZOHO";
+  clientAccountId?: string;
   metadata?: Prisma.InputJsonValue;
 }
 
@@ -16,10 +17,11 @@ export interface AuditEvent {
  * limited to operational values, never credentials or raw CRM payloads.
  */
 export async function recordAuditEvent(context: RequestContext, event: AuditEvent) {
+  const targetClientAccountId = event.clientAccountId ?? context.activeClientAccountId;
   await prisma.auditLog.create({
     data: {
       organizationId: context.user.organizationId,
-      clientAccountId: context.activeClientAccountId,
+      clientAccountId: targetClientAccountId,
       userId: context.user.id,
       action: event.action,
       entityType: event.entityType,
