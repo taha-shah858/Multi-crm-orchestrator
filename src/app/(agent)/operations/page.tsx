@@ -30,7 +30,7 @@ type CommissionStatus = "PENDING" | "PARTIALLY_PAID" | "PAID";
 type LedgerType = "PAYMENT" | "ADJUSTMENT";
 interface Contact { id: string; firstName: string; lastName: string; company: string | null; email?: string | null; }
 interface LedgerEntry { id: string; type: "EXPECTED" | LedgerType; amountCents: number; note: string; occurredAt: string; }
-interface Commission { id: string; expectedCents: number; receivedCents: number; currency: string; status: CommissionStatus; source: "MANUAL"; notes: string | null; isManualOverride: boolean; deal: { id: string; title: string; valueCents: number; status: string; contact: Contact | null } | null; ledgerEntries: LedgerEntry[]; }
+interface Commission { id: string; expectedCents: number; receivedCents: number; currency: string; status: CommissionStatus; source: "MANUAL" | "CRM"; notes: string | null; isManualOverride: boolean; deal: { id: string; title: string; valueCents: number; commissionRate: number | null; status: string; contact: Contact | null } | null; ledgerEntries: LedgerEntry[]; }
 interface TimeLog { id: string; minutes: number; description: string; loggedAt: string; isManualOverride: boolean; contact: Contact | null; }
 interface Summary { expectedCents: number; receivedCents: number; pendingCents: number; dealValueCents: number; closedDeals: number; activeMinutes: number; billableHours: number; }
 
@@ -777,7 +777,7 @@ export default function OperationsPage() {
             <div>
               <p className="text-sm font-semibold">Commission ledger</p>
               <p className="mt-1 text-[10px] font-mono text-crm-text-muted">
-                Every payout and correction remains traceable to its source deal.
+                CRM deals marked Closed Won appear automatically. Record payments and corrections here.
               </p>
             </div>
             <HandCoins className="h-5 w-5 text-secondary-pink" />
@@ -801,6 +801,9 @@ export default function OperationsPage() {
                         <MultiCrmTag variant={statusVariant(commission.status)}>
                           {commission.status.replaceAll("_", " ")}
                         </MultiCrmTag>
+                        <MultiCrmTag variant="cyan">
+                          {commission.source === "CRM" ? "CRM CLOSED WON" : "MANUAL"}
+                        </MultiCrmTag>
                         {commission.isManualOverride && (
                           <span className="text-[10px] font-mono text-secondary-pink">MANUALLY CORRECTED</span>
                         )}
@@ -808,6 +811,7 @@ export default function OperationsPage() {
                       <p className="mt-1 text-[11px] font-mono text-crm-text-muted">
                         {contactName(commission.deal?.contact ?? null)} · Deal value{" "}
                         {money(commission.deal?.valueCents ?? 0, commission.currency)}
+                        {commission.deal?.commissionRate != null && ` · Commission ${commission.deal.commissionRate}%`}
                       </p>
                     </div>
                     <button
@@ -866,7 +870,7 @@ export default function OperationsPage() {
                 <Sparkles className="mx-auto h-5 w-5 text-secondary-pink" />
                 <p className="mt-3 text-sm font-semibold">Start with a closed deal</p>
                 <p className="mx-auto mt-1 max-w-sm text-xs text-crm-text-muted">
-                  Add a CRM or off-platform outcome, expected commission, and any payment already received.
+                  Mark a CRM deal Closed Won to create its commission automatically, or add an off-platform sale manually.
                 </p>
                 <button onClick={openDeal} className="mt-4 text-xs font-bold text-primary-cyan cursor-pointer">
                   Add first deal

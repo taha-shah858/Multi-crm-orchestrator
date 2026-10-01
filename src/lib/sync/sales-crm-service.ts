@@ -13,6 +13,7 @@ import type { CompanyWriteInput, DealWriteInput } from "@/lib/integrations/types
 import type { RequestContext } from "@/lib/models/canonical";
 import { prepareActiveClientSync } from "@/lib/sync/contact-sync-service";
 import { createDealHandoffFromAgencyDeal } from "@/lib/handoff/handoff-service";
+import { ensureClosedDealCommission } from "@/lib/operations/closed-deal-commission";
 
 type Input = Record<string, unknown>;
 const text = (value: unknown) => typeof value === "string" ? value.trim() : "";
@@ -110,19 +111,23 @@ export async function updateAgencyDeal(context: RequestContext, dealId: string, 
     ? deal.closedAt || new Date()
     : null;
 
-  const persisted = await prisma.deal.update({
-    where: { id: deal.id },
-    data: {
-      title,
-      valueCents: Math.round(amount * 100),
-      status: newStatus,
-      closedAt,
-      pipelineId: input.pipelineId === undefined ? deal.pipelineId : nullableText(input.pipelineId),
-      stageId: input.stageId === undefined ? deal.stageId : nullableText(input.stageId),
-      stageLabel: input.stageLabel === undefined ? deal.stageLabel : nullableText(input.stageLabel),
-      expectedCloseAt: input.expectedCloseAt === undefined ? deal.expectedCloseAt : dateValue(input.expectedCloseAt),
-      crmOwnerId,
-    },
+  const persisted = await prisma.$transaction(async (tx) => {
+    await tx.deal.update({
+      where: { id: deal.id },
+      data: {
+        title,
+        valueCents: Math.round(amount * 100),
+        status: newStatus,
+        closedAt,
+        pipelineId: input.pipelineId === undefined ? deal.pipelineId : nullableText(input.pipelineId),
+        stageId: input.stageId === undefined ? deal.stageId : nullableText(input.stageId),
+        stageLabel: input.stageLabel === undefined ? deal.stageLabel : nullableText(input.stageLabel),
+        expectedCloseAt: input.expectedCloseAt === undefined ? deal.expectedCloseAt : dateValue(input.expectedCloseAt),
+        crmOwnerId,
+      },
+    });
+    if (newStatus === "CLOSED_WON") await ensureClosedDealCommission(tx, context, deal.id);
+    return tx.deal.findUniqueOrThrow({ where: { id: deal.id } });
   });
   await recordAuditEvent(context, { action: "DEAL_UPDATED", entityType: "DEAL", entityId: deal.id, requestId, source: "PLATFORM", metadata: { localFirst: true } });
 
@@ -275,26 +280,28 @@ export async function createAgencyDeal(
       ? "Closed Won"
       : "Initial Contact";
 
-  const createdDeal = await prisma.deal.create({
-    data: {
-      organizationId: context.user.organizationId,
-      clientAccountId,
-      contactId: contact ? contact.id : null,
-      companyId: contact?.crmCompanyId || null,
-      userId: context.user.id,
-      title,
-      valueCents: Math.round(rawAmount * 100),
-      currency: "USD",
-      status,
-      stageLabel,
-      expectedCloseAt: dateValue(input.expectedCloseAt) ?? null,
-      closedAt: status === "CLOSED_WON" ? new Date() : null,
-      notes: nullableText(input.notes),
-      isManual: true,
-    },
-    include: {
-      contact: true,
-    },
+  const createdDeal = await prisma.$transaction(async (tx) => {
+    const created = await tx.deal.create({
+      data: {
+        organizationId: context.user.organizationId,
+        clientAccountId,
+        contactId: contact ? contact.id : null,
+        companyId: contact?.crmCompanyId || null,
+        userId: context.user.id,
+        title,
+        valueCents: Math.round(rawAmount * 100),
+        currency: "USD",
+        status,
+        stageLabel,
+        expectedCloseAt: dateValue(input.expectedCloseAt) ?? null,
+        closedAt: status === "CLOSED_WON" ? new Date() : null,
+        notes: nullableText(input.notes),
+        isManual: true,
+      },
+      include: { contact: true },
+    });
+    if (created.status === "CLOSED_WON") await ensureClosedDealCommission(tx, context, created.id);
+    return tx.deal.findUniqueOrThrow({ where: { id: created.id }, include: { contact: true } });
   });
 
   await recordAuditEvent(context, {

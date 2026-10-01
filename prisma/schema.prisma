@@ -232,6 +232,7 @@ enum CommissionStatus {
 
 enum CommissionSource {
   MANUAL
+  CRM
 }
 
 enum LedgerEntryType {

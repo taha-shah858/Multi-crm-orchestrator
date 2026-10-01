@@ -26,11 +26,13 @@ export interface AdminDashboardData {
     id: string;
     expectedCents: number;
     receivedCents: number;
+    currency: string;
+    source: "MANUAL" | "CRM";
     status: string;
     updatedAt: string;
     clientAccount: { id: string; name: string };
     user: { id: string; name: string } | null;
-    deal: { title: string; valueCents: number } | null;
+    deal: { title: string; valueCents: number; commissionRate: number | null } | null;
   }>;
   timeLogs: Array<{
     id: string;

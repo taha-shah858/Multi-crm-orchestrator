@@ -34,7 +34,7 @@ const headings: Record<AdminView, { title: string; description: string }> = {
   audit: { title: "Audit Logs", description: "Review security, administration, synchronization, and manual-override activity." },
 };
 
-const money = (cents: number) => new Intl.NumberFormat(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(cents / 100);
+const money = (cents: number, currency = "USD") => new Intl.NumberFormat(undefined, { style: "currency", currency, maximumFractionDigits: 2 }).format(cents / 100);
 const dateTime = (value: string | null) => value ? new Date(value).toLocaleString() : "—";
 
 export default function AdminWorkspacePage({ view }: { view: AdminView }) {
@@ -188,7 +188,7 @@ function OperationsView({ dashboard }: { dashboard: AdminDashboardData }) {
 }
 
 function CommissionsView({ dashboard }: { dashboard: AdminDashboardData }) {
-  return <div className="space-y-6"><Metrics dashboard={dashboard} /><MultiCrmCard className="space-y-4"><SectionTitle icon={CircleDollarSign} title="Company commission ledger" detail="Expected versus received across all agents and accounts" /><DataTable headers={["Agent", "Client", "Deal", "Expected", "Received", "Status"]} rows={dashboard.commissions.map((record) => [record.user?.name ?? "Unassigned", record.clientAccount.name, record.deal?.title ?? "Manual commission", money(record.expectedCents), money(record.receivedCents), record.status])} /></MultiCrmCard></div>;
+  return <div className="space-y-6"><Metrics dashboard={dashboard} /><MultiCrmCard className="space-y-4"><SectionTitle icon={CircleDollarSign} title="Company commission ledger" detail="Closed Won CRM deals appear automatically; manual sales remain available." /><DataTable headers={["Agent", "Client", "Deal", "Deal value", "Rate", "Source", "Expected", "Received", "Status"]} rows={dashboard.commissions.map((record) => [record.user?.name ?? "Unassigned", record.clientAccount.name, record.deal?.title ?? "Manual commission", money(record.deal?.valueCents ?? 0, record.currency), record.deal?.commissionRate == null ? "—" : `${record.deal.commissionRate}%`, record.source === "CRM" ? "CRM Closed Won" : "Manual", money(record.expectedCents, record.currency), money(record.receivedCents, record.currency), record.status])} /></MultiCrmCard></div>;
 }
 
 function AnalyticsView({ dashboard }: { dashboard: AdminDashboardData }) {

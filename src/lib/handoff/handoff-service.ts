@@ -7,6 +7,8 @@ import { syncHandoffToActiveCampaign } from "@/lib/integrations/activecampaign/c
 import { syncHandoffToZoho } from "@/lib/integrations/zoho/client";
 import { isSyncableConnectionStatus } from "@/lib/integrations/connection-resolution";
 import type { RequestContext, DealHandoffSummary } from "@/lib/models/canonical";
+import { assertClientAccess } from "@/lib/auth/auth-service";
+import { ensureClosedDealCommission } from "@/lib/operations/closed-deal-commission";
 
 export interface CreateHandoffOptions {
   closeOutcome?: string;
@@ -38,6 +40,7 @@ export async function createDealHandoffFromAgencyDeal(
   if (!clientAccountId) {
     throw new AppError("CLIENT_CONTEXT_REQUIRED", 422, "Deal has no associated client account.", "Associate the deal with a client account before handing off.");
   }
+  await assertClientAccess(context.user, clientAccountId);
 
   // Resolve client's CRM connection (prefer ZOHO)
   const connection =
@@ -60,34 +63,19 @@ export async function createDealHandoffFromAgencyDeal(
   const recommendedNextAction = options?.recommendedNextAction || "Begin onboarding";
   const notes = options?.notes || deal.notes || null;
 
-  const effectiveAgentId = deal.userId || context.user.id;
-  const agentUser = await prisma.user.findUnique({
-    where: { id: effectiveAgentId },
-    select: { defaultCommissionRate: true },
+  // Financial state is committed before attempting any external handoff.
+  const commission = await prisma.$transaction(async (tx) => {
+    await tx.deal.update({
+      where: { id: deal.id },
+      data: {
+        status: "CLOSED_WON",
+        closedAt: deal.closedAt || new Date(),
+        notes: notes ?? deal.notes,
+      },
+    });
+    return ensureClosedDealCommission(tx, context, deal.id);
   });
-  const clientAcc = await prisma.clientAccount.findUnique({
-    where: { id: clientAccountId },
-    select: { defaultCommissionRate: true },
-  });
-
-  const commissionRate = deal.commissionRate ?? (
-    typeof deal.commissionRate === "number"
-      ? deal.commissionRate
-      : agentUser?.defaultCommissionRate ?? clientAcc?.defaultCommissionRate ?? 10.0
-  );
-  const expectedRevenueCents = deal.expectedRevenueCents ?? Math.round(deal.valueCents * (commissionRate / 100));
-
-  // Mark Deal as CLOSED_WON in local database if not already, and snapshot commission
-  await prisma.deal.update({
-    where: { id: deal.id },
-    data: {
-      status: "CLOSED_WON",
-      closedAt: deal.closedAt || new Date(),
-      notes: notes ?? deal.notes,
-      commissionRate,
-      expectedRevenueCents,
-    },
-  });
+  const effectiveAgentId = commission.userId || deal.userId || context.user.id;
 
   // Update ClientCrmRecord for this deal and contact
   await prisma.clientCrmRecord.updateMany({
@@ -149,7 +137,7 @@ export async function createDealHandoffFromAgencyDeal(
       organizationId: context.user.organizationId,
       clientAccountId,
       agencyDealId: deal.id,
-      agentId: deal.userId || context.user.id,
+      agentId: effectiveAgentId,
       dealName: deal.title,
       dealAmountCents: deal.valueCents,
       currency: deal.currency,
@@ -211,6 +199,7 @@ export async function dispatchHandoffToClientCrm(
           title: true,
           valueCents: true,
           contactId: true,
+          status: true,
         },
       },
       agent: { select: { id: true, name: true, email: true } },
@@ -219,6 +208,10 @@ export async function dispatchHandoffToClientCrm(
 
   if (!handoff || handoff.organizationId !== context.user.organizationId) {
     throw new AppError("HANDOFF_NOT_FOUND", 404, "Deal handoff was not found.", "Select a valid deal handoff.");
+  }
+  await assertClientAccess(context.user, handoff.clientAccountId);
+  if (handoff.agencyDeal.status === "CLOSED_WON") {
+    await prisma.$transaction((tx) => ensureClosedDealCommission(tx, context, handoff.agencyDeal.id));
   }
 
   await prisma.dealHandoff.update({
