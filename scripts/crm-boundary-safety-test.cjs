@@ -76,13 +76,32 @@ function table(model) {
     },
     deleteMany: async () => { throw new Error("CRM record deletion is forbidden in this regression suite"); },
     updateMany: async () => { throw new Error("Inferred CRM bulk updates are forbidden"); },
-    create: async () => { throw new Error("Unexpected database create"); },
+    create: async (args) => {
+      write("create", args);
+      if (model === "contacts") {
+        const { externalRecords, ...data } = args.data;
+        const row = { id: "contact-" + rows().length, createdAt: now, updatedAt: now, crmOwner: null, crmCompany: null, dealLinks: [], deals: [], interactions: [], externalRecords: [], ...data };
+        if (externalRecords?.create) {
+          const mapping = { id: "external-" + state.externalRecords.length, contactId: row.id, ...externalRecords.create };
+          state.externalRecords.push(mapping);
+          row.externalRecords.push({ ...mapping, connection: state.connections.find((item) => item.id === mapping.connectionId) });
+        }
+        rows().push(row); return hydrate(model, row, args);
+      }
+      if (model === "syncRuns" || model === "audits") {
+        const row = { id: model + "-" + rows().length, ...args.data };
+        rows().push(row); return hydrate(model, row, args);
+      }
+      throw new Error("Unexpected database create for " + model);
+    },
   };
 }
 const prisma = {
   clientAccount: table("clients"), integrationConnection: table("connections"), clientCrmRecord: table("records"),
   contact: table("contacts"), deal: table("deals"), dealHandoff: table("handoffs"), user: table("users"),
   integrationCredential: { findUnique: async () => state.credential },
+  externalRecord: table("externalRecords"), syncRun: table("syncRuns"), crmPipeline: table("pipelines"), auditLog: table("audits"),
+  $transaction: async (operation) => typeof operation === "function" ? operation(prisma) : Promise.all(operation),
 };
 
 function providerCall(kind, connection, externalId) {
@@ -99,6 +118,12 @@ const legacyDouble = {
   createOrUpdateActiveCampaignRecord: async (connection, type, data, externalId) => { providerCall("LEGACY_UPDATE", connection, externalId); return { externalId }; },
   syncHandoffToActiveCampaign: async (connection) => { providerCall("LEGACY_HANDOFF", connection); return { externalId: "legacy-deal" }; },
 };
+const hubspotDouble = {
+  fetchSalesCrm: async (connection) => {
+    providerCall("HUBSPOT_IMPORT", connection);
+    return state.salesSnapshot;
+  },
+};
 
 const originalLoad = Module._load;
 const originalResolve = Module._resolveFilename;
@@ -113,6 +138,10 @@ Module._load = function (request, parent, isMain) {
   if (request === "@/lib/integrations/zoho/client") return zohoDouble;
   if (request === "@/lib/integrations/activecampaign/client") return legacyDouble;
   if (request === "@/lib/agent-crm/agent-sales-service") return { syncDealToClickUp: async () => {} };
+  if (request === "@/lib/integrations/registry") return {
+    getCrmAdapter: (provider) => { assert.equal(provider, "HUBSPOT"); return hubspotDouble; },
+    getIntegrationAdapter: (provider) => { assert.equal(provider, "HUBSPOT"); return hubspotDouble; },
+  };
   return originalLoad.call(this, request, parent, isMain);
 };
 Module._resolveFilename = function (request, parent, isMain, options) {
@@ -142,11 +171,17 @@ const syncRoute = require(path.join(root, "src/app/api/client-crm/sync/route.ts"
 const handoffRoute = require(path.join(root, "src/app/api/handoffs/route.ts"));
 const retryRoute = require(path.join(root, "src/app/api/handoffs/[id]/retry/route.ts"));
 const contactsRoute = require(path.join(root, "src/app/api/contacts/route.ts"));
+const importRoute = require(path.join(root, "src/app/api/contacts/import/route.ts"));
+const directoryLoader = require(path.join(root, "src/lib/leads/load-directory.ts"));
+const integrationService = require(path.join(root, "src/lib/integrations/integration-service.ts"));
+const { repairAgencyHubSpotOwnership } = require("./repair-agency-hubspot-ownership.cjs");
 
 beforeEach(() => {
   state = {
     clients: ["a", "b"].map((id) => ({ id, organizationId: "org", status: "ACTIVE", agentAssignments: id === "a" ? [{ userId: "agent" }] : [], defaultCommissionRate: 10 })),
     users: [{ id: "agent", defaultCommissionRate: 10 }], connections: [connection()], records: [], contacts: [], deals: [], handoffs: [],
+    externalRecords: [], syncRuns: [], pipelines: [],
+    salesSnapshot: { contacts: [{ id: "hubspot-contact", first_name: "Agency", last_name: "Lead", email: "lead@example.invalid" }], contactRecords: [], companies: [], deals: [], owners: [], pipelines: [], activities: [], failures: [] },
     writes: [], providers: [], http: [], audits: [], imports: [{ recordType: "CONTACT", externalId: "12345", name: "Imported" }],
     credential: { encryptedAccessToken: "fixture", metadata: { apiDomain: "https://zoho.example.com", apiUrl: "https://legacy.example.com/api/3" } }, token: "fixture-token",
   };
@@ -299,6 +334,87 @@ test("agency directory excludes private client contacts and selects agency prove
 });
 test("contact override cannot bypass assignments even in agency scope", async () => {
   await denied(contacts.getActiveClientContacts(context(), { scope: "agency", clientAccountId: "b" }));
+});
+test("agency Import selects company HubSpot, persists visible contacts, and stays stable across clients", async () => {
+  state.connections.push(connection("legacy-hubspot", "HUBSPOT"), connection("personal-hubspot", "HUBSPOT", null, { ownershipType: "USER" }), connection("agency-hubspot", "HUBSPOT", null, { ownershipType: "COMPANY" }));
+  const imported = await importRoute.POST(request("/api/contacts/import", {}));
+  assert.equal(imported.status, 200); assert.equal((await imported.json()).count, 1);
+  assert.deepEqual(state.providers.map((item) => [item.kind, item.connectionId]), [["HUBSPOT_IMPORT", "agency-hubspot"]]);
+  const response = await contactsRoute.GET(request("/api/contacts?scope=agency"));
+  const rows = (await response.json()).contacts;
+  assert.equal(rows.length, 1); assert.equal(rows[0].sourceCrm, "HubSpot"); assert.equal(rows[0].externalId, "hubspot-contact");
+  state.clients[1].agentAssignments = [{ userId: "agent" }];
+  await contacts.syncAgencyHubSpotContacts(context("b"), "second-import");
+  assert.equal(state.contacts.length, 1);
+  assert.deepEqual((await contacts.getActiveClientContacts(context("b"), { scope: "agency" })).map((item) => item.id), rows.map((item) => item.id));
+});
+test("missing agency HubSpot cannot fall back to client Zoho or legacy HubSpot", async () => {
+  state.connections.push(connection("client-hubspot", "HUBSPOT"));
+  const response = await importRoute.POST(request("/api/contacts/import", {}));
+  assert.equal(response.status, 409);
+  assert.match((await response.json()).error.message, /agency HubSpot/i);
+  assert.deepEqual(state.providers, []); assert.deepEqual(state.writes, []);
+});
+test("agency import rejects unauthorized selected clients before provider calls", async () => {
+  state.connections.push(connection("agency", "HUBSPOT", null, { ownershipType: "COMPANY" }));
+  await denied(contacts.syncAgencyHubSpotContacts(context("b"), "request"));
+  assert.deepEqual(state.providers, []); assert.deepEqual(state.writes, []);
+});
+test("failed agency import returns failure and retains saved contacts", async () => {
+  state.connections.push(connection("agency", "HUBSPOT", null, { ownershipType: "COMPANY" }));
+  state.contacts = [{ id: "saved", organizationId: "org" }]; state.providerFailure = true;
+  assert.equal((await importRoute.POST(request("/api/contacts/import", {}))).status, 502);
+  assert.equal(state.contacts[0].id, "saved"); assert.equal(state.syncRuns[0].status, "FAILED");
+});
+test("failed assessments do not hide successfully loaded agency contacts", async () => {
+  const result = await directoryLoader.loadAgencyDirectory(async (url) => String(url).includes("lead-analyses")
+    ? Response.json({ success: false, error: { message: "Assessment error" } }, { status: 500 })
+    : Response.json({ success: true, contacts: [{ id: "visible" }] }));
+  assert.deepEqual(result.contacts, [{ id: "visible" }]); assert.deepEqual(result.analyses, []); assert.ok(result.analysisWarning);
+});
+test("non-JSON assessment responses also preserve contacts", async () => {
+  const result = await directoryLoader.loadAgencyDirectory(async (url) => String(url).includes("lead-analyses")
+    ? new Response("Unavailable", { status: 503 })
+    : Response.json({ success: true, contacts: [{ id: "visible" }] }));
+  assert.equal(result.contacts.length, 1); assert.ok(result.analysisWarning);
+});
+test("directory keeps available assessments and reports contact load errors", async () => {
+  const result = await directoryLoader.loadAgencyDirectory(async (url) => Response.json(String(url).includes("lead-analyses")
+    ? { success: true, analyses: [{ id: "analysis" }] }
+    : { success: true, contacts: [{ id: "visible" }] }));
+  assert.equal(result.analyses[0].id, "analysis"); assert.equal(result.analysisWarning, null);
+  await assert.rejects(directoryLoader.loadAgencyDirectory(async (url) => String(url).includes("lead-analyses")
+    ? Response.json({ success: true, analyses: [] })
+    : Response.json({ success: false, error: { message: "Contact access denied" } }, { status: 403 })), /Contact access denied/);
+});
+test("ownership repair is explicit, reviewable, idempotent and keeps credentials/mappings", async () => {
+  const legacy = connection("legacy-hubspot", "HUBSPOT", "a", { ownershipKey: "client:a" }); state.connections.push(legacy);
+  state.externalRecords = [{ id: "mapping", connectionId: legacy.id, externalId: "12345" }];
+  const credentialBefore = structuredClone(state.credential); const mappingsBefore = structuredClone(state.externalRecords);
+  const plan = await repairAgencyHubSpotOwnership(prisma, legacy.id);
+  assert.equal(plan.after.ownershipType, "COMPANY"); assert.deepEqual(state.writes, []);
+  const result = await repairAgencyHubSpotOwnership(prisma, legacy.id, true);
+  assert.equal(result.applied, true); assert.equal(legacy.id, result.connectionId); assert.equal(legacy.clientAccountId, null);
+  assert.equal(state.audits.at(-1).metadata.before.ownershipKey, "client:a");
+  assert.deepEqual(state.credential, credentialBefore); assert.deepEqual(state.externalRecords, mappingsBefore);
+  assert.equal((await repairAgencyHubSpotOwnership(prisma, legacy.id, true)).alreadyAgencyOwned, true);
+});
+test("ownership repair cannot replace an existing agency account or promote Zoho/personal HubSpot", async () => {
+  const legacy = connection("legacy", "HUBSPOT", "a", { ownershipKey: "client:a" }); state.connections.push(legacy, connection("agency", "HUBSPOT", null, { ownershipType: "COMPANY" }));
+  await assert.rejects(repairAgencyHubSpotOwnership(prisma, legacy.id, true), /already exists/);
+  await assert.rejects(repairAgencyHubSpotOwnership(prisma, "zoho-a", true), /HubSpot/);
+  state.connections.push(connection("personal", "HUBSPOT", null, { ownershipType: "USER" }));
+  await assert.rejects(repairAgencyHubSpotOwnership(prisma, "personal", true), /client-owned/);
+  assert.deepEqual(state.writes, []);
+});
+test("agents may sync agency HubSpot but cannot connect/disconnect it or onboard client HubSpot", async () => {
+  state.connections.push(connection("agency", "HUBSPOT", null, { ownershipType: "COMPANY" }));
+  const agency = (await integrationService.listIntegrationConnections(context().user, "a")).find((item) => item.id === "agency");
+  assert.equal(agency.permissions.canSync, true); assert.equal(agency.permissions.canRetry, true);
+  assert.equal(agency.permissions.canConnect, false); assert.equal(agency.permissions.canDisconnect, false);
+  await assert.rejects(integrationService.beginHubSpotOAuth(context().user, { ownershipType: "CLIENT_ACCOUNT" }, "a"), { code: "INVALID_INTEGRATION_TARGET" });
+  await assert.rejects(integrationService.beginHubSpotOAuth(context().user, {}, "a"), { code: "FORBIDDEN" });
+  assert.deepEqual(state.providers, []); assert.deepEqual(state.writes, []);
 });
 test("routes return 403 for forged handoff, retry, and requested client", async () => {
   state.deals = [deal({ clientAccountId: "b" })]; state.handoffs = [handoff({ clientAccountId: "b" })];

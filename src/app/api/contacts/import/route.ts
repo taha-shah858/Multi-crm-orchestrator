@@ -4,13 +4,13 @@ import { recordAuditEvent } from "@/lib/audit/audit-log";
 import { withApiErrorHandling, success } from "@/lib/http/api-response";
 import {
   prepareActiveClientSync,
-  syncActiveClientContacts,
+  syncAgencyHubSpotContacts,
 } from "@/lib/sync/contact-sync-service";
 
 /**
  * GET /api/contacts/import
- * Compatibility endpoint for the existing leads UI. Phase 2 turns its manual
- * import into a persisted sync for the active client account's CRM connection.
+ * Unified Lead Directory import: the agency-owned HubSpot connection only.
+ * The selected client supplies authorized work context, not a CRM source.
  */
 export const dynamic = "force-dynamic";
 
@@ -26,7 +26,7 @@ async function handleManualSync(request: NextRequest) {
       source: "PLATFORM",
     });
 
-    const sync = await syncActiveClientContacts(context, requestId);
+    const sync = await syncAgencyHubSpotContacts(context, requestId);
 
     await recordAuditEvent(context, {
       action: "CONTACT_IMPORT_COMPLETED",

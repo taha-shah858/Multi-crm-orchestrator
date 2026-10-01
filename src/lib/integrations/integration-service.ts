@@ -72,11 +72,12 @@ function permissionsFor(user: AuthenticatedUser, connection: IntegrationConnecti
   const elevated = isAdminWorkspaceRole(user.role);
   const ownUserConnection = connection.ownershipType === "USER" && connection.userId === user.id;
   const assignedClientConnection = connection.ownershipType === "CLIENT_ACCOUNT" && Boolean(connection.clientAccountId);
+  const agencyHubSpot = connection.ownershipType === "COMPANY" && connection.provider === "HUBSPOT";
   return {
     canConnect: elevated || ownUserConnection || (user.role === "AGENT" && assignedClientConnection && allowAgentManagement),
     canDisconnect: elevated || ownUserConnection,
-    canSync: elevated || assignedClientConnection || ownUserConnection,
-    canRetry: elevated || assignedClientConnection || ownUserConnection,
+    canSync: elevated || assignedClientConnection || ownUserConnection || agencyHubSpot,
+    canRetry: elevated || assignedClientConnection || ownUserConnection || agencyHubSpot,
     canManage: elevated || ownUserConnection,
   };
 }
@@ -139,7 +140,10 @@ export async function getIntegrationConnectPermissions(user: AuthenticatedUser, 
 }
 
 export async function beginHubSpotOAuth(user: AuthenticatedUser, input: Record<string, unknown>, activeClientAccountId?: string | null) {
-  const target = await resolveOwnershipTarget(user, input, activeClientAccountId);
+  if (input.ownershipType !== undefined && input.ownershipType !== "COMPANY") {
+    throw new AppError("INVALID_INTEGRATION_TARGET", 422, "HubSpot must be connected as the agency CRM.", "Connect HubSpot for the agency. Use Zoho for client CRM accounts.");
+  }
+  const target = await resolveOwnershipTarget(user, { ...input, ownershipType: "COMPANY" }, activeClientAccountId);
   const state = randomBytes(32).toString("base64url");
   const authorizationUrl = buildHubSpotAuthorizationUrl(state);
   await prisma.$transaction([

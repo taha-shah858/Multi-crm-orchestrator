@@ -9,6 +9,7 @@ import { recordAuditEvent } from "@/lib/audit/audit-log";
 import { assertClientAccess } from "@/lib/auth/auth-service";
 import {
   activeClientIntegrationWhere,
+  agencyIntegrationWhere,
   hubspotConnectionWhere,
 } from "@/lib/integrations/connection-resolution";
 import { normalizeRichTextToPlainText } from "@/lib/text/plain-text";
@@ -236,7 +237,27 @@ export async function syncActiveClientContacts(
   return summary;
 }
 
-/** Runs one client-owned connection through the same canonical contact pipeline. */
+/** Unified Leads imports only the agency's HubSpot, regardless of selected client. */
+export async function syncAgencyHubSpotContacts(
+  context: RequestContext,
+  requestId: string,
+): Promise<ContactSyncSummary> {
+  await prepareActiveClientSync(context);
+  const connection = await prisma.integrationConnection.findFirst({
+    where: agencyIntegrationWhere(context, "HUBSPOT"),
+    orderBy: { updatedAt: "desc" },
+  });
+  if (!connection) {
+    throw new AppError("SYNC_CONNECTION_NOT_FOUND", 409, "No usable agency HubSpot connection was found.", "Ask an Admin or Manager to connect the agency HubSpot account in Admin Integrations. Client CRM connections do not populate Unified Leads.");
+  }
+  const result = await syncSingleConnectionContacts(context, connection, requestId);
+  if (result.runs.length === 0 || result.runs.every((run) => run.status === "FAILED")) {
+    throw new AppError("SYNC_FAILED", 502, "Agency HubSpot sync failed.", result.runs.find((run) => run.error)?.error || "HubSpot sync failed. Existing agency contacts were retained; check the integration and retry.");
+  }
+  return result;
+}
+
+/** Runs one authorized agency/client connection through its provider pipeline. */
 export async function syncSingleConnectionContacts(
   context: RequestContext,
   connection: IntegrationConnection,

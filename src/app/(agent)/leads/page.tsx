@@ -40,6 +40,7 @@ import {
   MultiCrmTag,
 } from "@/components/ui/MultiCrmCard";
 import { useClientAccount } from "@/context/ClientAccountContext";
+import { loadAgencyDirectory } from "@/lib/leads/load-directory";
 
 // Comprehensive Lead Data Structure
 interface Lead {
@@ -159,7 +160,6 @@ export default function LeadsPage() {
   const [isImporting, setIsImporting] = useState(false);
   const [isLoadingContacts, setIsLoadingContacts] = useState(true);
   const contactRequestVersion = useRef(0);
-  const currentClientAccountId = useRef(activeClientAccount.id);
   const [importFeedback, setImportFeedback] = useState<{
     type: "success" | "error" | null;
     message: string;
@@ -185,21 +185,21 @@ export default function LeadsPage() {
       mobile: "N/A",
       leadSource: `${contact.sourceCrm} Sync Import`,
       crmSource: contact.sourceCrm,
-      pulledFrom: `${contact.sourceCrm} client-account sync`,
+      pulledFrom: "Agency HubSpot sync",
       pulledAt: new Date(contact.updatedAt).toLocaleString(),
       syncStatus: "Synced",
-      leadOwner: contact.crmOwner?.displayName ?? `${activeClientAccount.name} Integration`,
+      leadOwner: contact.crmOwner?.displayName ?? "Agency HubSpot Integration",
       status: "Active Lead",
       rating: analysis?.temperature === "Hot" || analysis?.temperature === "Warm" || analysis?.temperature === "Cold" ? analysis.temperature : "Unrated",
       score: analysis?.leadScore ?? null,
       industry: contact.companyDetails?.industry || "General",
       annualRevenue: "N/A",
       website: contact.companyDetails?.website || (contact.companyDetails?.domain ? `https://${contact.companyDetails.domain}` : ""),
-      address: [contact.companyDetails?.address, contact.companyDetails?.city, contact.companyDetails?.state, contact.companyDetails?.country].filter(Boolean).join(", ") || `Imported for ${activeClientAccount.name}`,
-      description: `Imported via the ${activeClientAccount.name} client-account sync from ${contact.sourceCrm} Contact ID #${contact.externalId}`,
+      address: [contact.companyDetails?.address, contact.companyDetails?.city, contact.companyDetails?.state, contact.companyDetails?.country].filter(Boolean).join(", ") || "Not provided",
+      description: `Imported from Agency HubSpot Contact ID #${contact.externalId}`,
       variant: "neutral",
     };
-  }, [activeClientAccount.name]);
+  }, []);
 
   const loadPersistedContacts = useCallback(async (resetPendingSync = false, clearSelection = true): Promise<boolean> => {
     if (!isClientAccountReady) return false;
@@ -210,30 +210,22 @@ export default function LeadsPage() {
     if (clearSelection) setSelectedLead(null);
 
     try {
-      const [contactResponse, analysisResponse] = await Promise.all([
-        fetch("/api/contacts?scope=agency", { cache: "no-store" }),
-        fetch("/api/lead-analyses", { cache: "no-store" }),
-      ]);
-      const [contactData, analysisData] = await Promise.all([contactResponse.json(), analysisResponse.json()]);
-      if (!contactResponse.ok || !contactData.success || !analysisResponse.ok || !analysisData.success) {
-        const errorMessage = typeof contactData.error === "string" ? contactData.error : contactData.error?.message;
-        throw new Error(errorMessage || "Unable to load contacts for the agency sales pipeline.");
-      }
+      const directory = await loadAgencyDirectory<PersistedContact, PersistedLeadAnalysis>();
 
       if (requestVersion !== contactRequestVersion.current) return false;
 
       const latestAnalysisByContact = new Map<string, PersistedLeadAnalysis>();
-      for (const analysis of analysisData.analyses as PersistedLeadAnalysis[]) {
+      for (const analysis of directory.analyses) {
         if (analysis.contact && !latestAnalysisByContact.has(analysis.contact.id)) {
           latestAnalysisByContact.set(analysis.contact.id, analysis);
         }
       }
-      setLeads((contactData.contacts as PersistedContact[]).map((contact) => mapPersistedContactToLead(contact, latestAnalysisByContact.get(contact.id))));
+      setLeads(directory.contacts.map((contact) => mapPersistedContactToLead(contact, latestAnalysisByContact.get(contact.id))));
+      if (directory.analysisWarning) setImportFeedback({ type: "error", message: directory.analysisWarning });
       return true;
     } catch (error) {
       if (requestVersion !== contactRequestVersion.current) return false;
 
-      setLeads([]);
       setImportFeedback({
         type: "error",
         message: error instanceof Error ? error.message : "Unable to load contacts for the agency sales pipeline.",
@@ -247,56 +239,50 @@ export default function LeadsPage() {
   }, [isClientAccountReady, mapPersistedContactToLead]);
 
   useEffect(() => {
-    currentClientAccountId.current = activeClientAccount.id;
-    // Stage 2.7: Unified Leads is agency-level. Switching the active client in the header
-    // changes client-specific operational context (Client CRM), but does NOT clear or reload Unified Leads.
-    if (leads.length === 0) {
-      void loadPersistedContacts(false, false);
-    }
-  }, [activeClientAccount.id, leads.length, loadPersistedContacts]);
+    // Agency data loads once the session is ready; client switching does not replace it.
+    queueMicrotask(() => void loadPersistedContacts(false, false));
+  }, [loadPersistedContacts]);
 
   /**
    * Trigger backend import from HubSpot CRM and merge newly fetched contacts
    * while preventing duplicates based on the unique HubSpot Contact ID.
    */
-  const handleManualClientSync = async () => {
-    const clientAccountId = activeClientAccount.id;
-    const clientAccountName = activeClientAccount.name;
+  const handleManualAgencySync = async () => {
     setIsImporting(true);
     setImportFeedback({ type: null, message: "" });
 
     try {
       const res = await fetch("/api/contacts/import", { method: "POST" });
       const data = await res.json();
-      if (currentClientAccountId.current !== clientAccountId) return;
 
       if (!res.ok || !data.success) {
         const errorMessage =
           typeof data.error === "string" ? data.error : data.error?.message;
-        throw new Error(errorMessage || "Failed to sync contacts for the active client account.");
+        throw new Error(errorMessage || "Failed to sync the agency HubSpot contacts.");
       }
 
       const contactsLoaded = await loadPersistedContacts();
-      if (currentClientAccountId.current !== clientAccountId) return;
       if (!contactsLoaded) {
         throw new Error("Sync completed, but the persisted contacts could not be reloaded.");
       }
 
       const created = data.sync?.recordsCreated ?? 0;
       const updated = data.sync?.recordsUpdated ?? 0;
+      const partialError = data.sync?.runs?.find((run: { error?: string }) => run.error)?.error;
       setImportFeedback({
-        type: "success",
-        message: `${clientAccountName} sync complete: ${created} created, ${updated} updated.`,
+        type: partialError ? "error" : "success",
+        message: partialError
+          ? `Agency HubSpot sync completed with issues: ${partialError}`
+          : `Agency HubSpot sync complete: ${data.count ?? 0} contacts read; ${created} records created, ${updated} updated.`,
       });
     } catch (err: unknown) {
-      if (currentClientAccountId.current !== clientAccountId) return;
-      const errMsg = err instanceof Error ? err.message : "Unable to complete the client-account sync.";
+      const errMsg = err instanceof Error ? err.message : "Unable to sync the agency HubSpot account.";
       setImportFeedback({
         type: "error",
         message: errMsg,
       });
     } finally {
-      if (currentClientAccountId.current === clientAccountId) setIsImporting(false);
+      setIsImporting(false);
     }
   };
 
@@ -664,7 +650,7 @@ export default function LeadsPage() {
             <div className="flex items-center gap-3">
               {/* Manual Agency CRM sync */}
               <button
-                onClick={handleManualClientSync}
+                onClick={handleManualAgencySync}
                 disabled={isImporting}
                 className="px-4 py-2 rounded-xl bg-orange-500/10 border border-orange-500/30 text-xs font-mono text-orange-400 hover:bg-orange-500/20 hover:border-orange-500/50 transition-all flex items-center gap-2 shadow-inner cursor-pointer disabled:opacity-50"
                 title="Manually sync contacts from the Agency HubSpot CRM"
@@ -747,7 +733,7 @@ export default function LeadsPage() {
                   <span className="text-[11px] font-mono text-crm-text-muted px-2 flex items-center gap-1">
                     <Database className="w-3 h-3 text-primary-cyan" /> Source:
                   </span>
-                  {["All", "Salesforce", "HubSpot", "Mock CRM", "Zoho", "Pipedrive"].map(
+                  {["All", "HubSpot"].map(
                     (crm) => (
                       <button
                         key={crm}
