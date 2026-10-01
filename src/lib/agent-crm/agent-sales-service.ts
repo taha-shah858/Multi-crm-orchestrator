@@ -1,4 +1,5 @@
 import "server-only";
+import { reconciliationDateRange, summarizeCommissions, type ReconciliationFilters } from "@/lib/operations/reconciliation";
 
 import type { AuditAction } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
@@ -102,6 +103,7 @@ export async function syncDealToClickUp(
       clientAccount: true,
       contact: true,
       user: true,
+      commission: { select: { expectedCents: true } },
       handoffs: {
         orderBy: { createdAt: "desc" },
         take: 1,
@@ -123,9 +125,9 @@ export async function syncDealToClickUp(
     agentRate: deal.user?.defaultCommissionRate,
     clientRate: deal.clientAccount?.defaultCommissionRate,
   });
-  const expectedRevenueCents = deal.expectedRevenueCents ?? calculateExpectedRevenueCents(deal.valueCents, commissionRate);
+  const expectedRevenueCents = deal.commission?.expectedCents ?? deal.expectedRevenueCents ?? calculateExpectedRevenueCents(deal.valueCents, commissionRate);
 
-  if (!deal.commissionRate || !deal.expectedRevenueCents) {
+  if (deal.commissionRate == null || deal.expectedRevenueCents == null) {
     await prisma.deal.update({
       where: { id: dealId },
       data: { commissionRate, expectedRevenueCents },
@@ -408,14 +410,21 @@ export async function syncDealToClickUp(
  * Returns the agent's closed sales records and commission summary.
  * Agents can only see their own sales records.
  */
-export async function listAgentSales(user: AuthenticatedUser) {
+export async function listAgentSales(user: AuthenticatedUser, filters: ReconciliationFilters = {}, clientAccountId?: string) {
+  if (clientAccountId) {
+    const { assertClientAccess } = await import("@/lib/auth/auth-service");
+    await assertClientAccess(user, clientAccountId);
+  }
   const deals = await prisma.deal.findMany({
     where: {
       organizationId: user.organizationId,
       status: "CLOSED_WON",
+      ...(clientAccountId ? { clientAccountId } : {}),
+      closedAt: reconciliationDateRange(filters),
+      ...(filters.currency ? { currency: filters.currency } : {}),
       OR: [
         { userId: user.id },
-        { handoffs: { some: { agentId: user.id } } },
+        { userId: null, handoffs: { some: { agentId: user.id } } },
       ],
     },
     include: {
@@ -451,20 +460,15 @@ export async function listAgentSales(user: AuthenticatedUser) {
     select: { defaultCommissionRate: true },
   });
 
-  let totalExpectedCents = 0;
-  let totalReceivedCents = 0;
-
   const sales = deals.map((deal) => {
     const rate = deal.commissionRate ?? calculateEffectiveCommissionRate({
       dealRate: deal.commissionRate,
       agentRate: userRecord?.defaultCommissionRate,
       clientRate: deal.clientAccount?.defaultCommissionRate,
     });
-    const expectedRevenue = deal.expectedRevenueCents ?? calculateExpectedRevenueCents(deal.valueCents, rate);
+    const expectedRevenue = deal.commission?.expectedCents ?? deal.expectedRevenueCents ?? calculateExpectedRevenueCents(deal.valueCents, rate);
 
     const receivedRevenue = deal.commission?.receivedCents || 0;
-    totalExpectedCents += expectedRevenue;
-    totalReceivedCents += receivedRevenue;
 
     const clickUpRecord = deal.agentClickUpRecords[0];
 
@@ -493,9 +497,7 @@ export async function listAgentSales(user: AuthenticatedUser) {
   return {
     sales,
     summary: {
-      expectedCents: totalExpectedCents,
-      receivedCents: totalReceivedCents,
-      pendingCents: Math.max(0, totalExpectedCents - totalReceivedCents),
+      ...summarizeCommissions(sales.map(sale => ({ currency: sale.currency, expectedCents: sale.expectedRevenueCents, receivedCents: sale.receivedRevenueCents, deal: { valueCents: sale.valueCents, status: sale.status } }))),
       closedDeals: deals.length,
     },
     clickUpConnection: {

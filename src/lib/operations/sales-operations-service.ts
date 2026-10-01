@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db/prisma";
 import { AppError } from "@/lib/errors/app-error";
 import type { RequestContext } from "@/lib/models/canonical";
 import { prepareActiveClientSync } from "@/lib/sync/contact-sync-service";
+import { commissionPeriodWhere, reconciliationDateRange, summarizeCommissions, type ReconciliationFilters } from "@/lib/operations/reconciliation";
 
 type Input = Record<string, unknown>;
 type LedgerType = "PAYMENT" | "ADJUSTMENT";
@@ -15,7 +16,9 @@ const date = (value: unknown, name: string) => { const result = new Date(text(va
 function cents(value: unknown, code: "INVALID_COMMISSION_INPUT" | "INVALID_LEDGER_ENTRY", allowNegative = false) {
   const number = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(number) || (!allowNegative && number < 0)) throw new AppError(code, 422, "Invalid monetary value.", "Enter a valid monetary amount.");
-  return Math.round(number * 100);
+  const result = Math.round(number * 100);
+  if (!Number.isSafeInteger(result) || Math.abs(result) > 2147483647) throw new AppError(code, 422, "Monetary value is too large.", "Enter an amount within the supported range.");
+  return result;
 }
 
 function commissionStatus(expectedCents: number, receivedCents: number) {
@@ -30,16 +33,18 @@ async function contactFor(context: RequestContext, contactId: unknown) {
   return contact.id;
 }
 
-export async function listSalesOperations(context: RequestContext) {
+export async function listSalesOperations(context: RequestContext, filters: ReconciliationFilters = {}) {
   await prepareActiveClientSync(context);
-  const where = { organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, ...(context.user.role === "AGENT" ? { userId: context.user.id } : {}) };
-  const [commissions, timeLogs] = await Promise.all([
+  const scope = { organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, ...(context.user.role === "AGENT" ? { userId: context.user.id } : {}) };
+  const where = { ...scope, ...commissionPeriodWhere(filters) };
+  const [commissions, timeLogs, balances, timeTotal] = await prisma.$transaction([
     prisma.commissionRecord.findMany({ where, include: { deal: { include: { contact: contactSelection } }, ledgerEntries: { orderBy: { occurredAt: "desc" }, take: 10 } }, orderBy: { updatedAt: "desc" }, take: 100 }),
-    prisma.timeLog.findMany({ where, include: { contact: contactSelection }, orderBy: { loggedAt: "desc" }, take: 100 }),
-  ]);
-  const summary = commissions.reduce((totals, commission) => ({ expectedCents: totals.expectedCents + commission.expectedCents, receivedCents: totals.receivedCents + commission.receivedCents, dealValueCents: totals.dealValueCents + (commission.deal?.valueCents ?? 0), closedDeals: totals.closedDeals + (commission.deal?.status === "CLOSED_WON" ? 1 : 0) }), { expectedCents: 0, receivedCents: 0, dealValueCents: 0, closedDeals: 0 });
-  const activeMinutes = timeLogs.reduce((total, log) => total + log.minutes, 0);
-  return { commissions, timeLogs, summary: { ...summary, pendingCents: Math.max(0, summary.expectedCents - summary.receivedCents), activeMinutes, billableHours: Number((activeMinutes / 60).toFixed(2)) } };
+    prisma.timeLog.findMany({ where: { ...scope, loggedAt: reconciliationDateRange(filters) }, include: { contact: contactSelection }, orderBy: { loggedAt: "desc" }, take: 100 }),
+    prisma.commissionRecord.findMany({ where, select: { expectedCents: true, receivedCents: true, currency: true, deal: { select: { valueCents: true, status: true } } } }),
+    prisma.timeLog.aggregate({ where: { ...scope, loggedAt: reconciliationDateRange(filters) }, _sum: { minutes: true } }),
+  ], { isolationLevel: "RepeatableRead" });
+  const activeMinutes = timeTotal._sum.minutes ?? 0;
+  return { commissions, timeLogs, summary: { ...summarizeCommissions(balances), activeMinutes, billableHours: Number((activeMinutes / 60).toFixed(2)) } };
 }
 
 export async function createManualCommission(context: RequestContext, input: Input, requestId: string) {
@@ -67,28 +72,48 @@ export async function createManualCommission(context: RequestContext, input: Inp
 
 export async function updateCommission(context: RequestContext, id: string, input: Input, requestId: string) {
   await prepareActiveClientSync(context);
-  const existing = await prisma.commissionRecord.findFirst({ where: { id, organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, ...(context.user.role === "AGENT" ? { userId: context.user.id } : {}) } });
-  if (!existing) throw new AppError("COMMISSION_NOT_FOUND", 404, "Commission is outside active client.", "Choose a commission from the active client account.");
-  const action = text(input.action);
-  if (action === "LEDGER") {
-    const type = input.type === "PAYMENT" || input.type === "ADJUSTMENT" ? input.type as LedgerType : null;
-    const amountCents = cents(input.amount, "INVALID_LEDGER_ENTRY", type === "ADJUSTMENT"); const note = text(input.note);
-    if (!type || !note || amountCents === 0) throw new AppError("INVALID_LEDGER_ENTRY", 422, "Ledger entry details are required.", "Choose an entry type, enter an amount, and explain the adjustment.");
-    const nextExpected = type === "ADJUSTMENT" ? existing.expectedCents + amountCents : existing.expectedCents; const nextReceived = type === "PAYMENT" ? existing.receivedCents + amountCents : existing.receivedCents;
-    if (nextExpected < 0 || nextReceived < 0) throw new AppError("INVALID_LEDGER_ENTRY", 422, "Ledger entry would make a total negative.", "Use an amount that keeps commission totals at zero or above.");
-    const result = await prisma.$transaction(async (transaction) => {
-      const ledgerEntry = await transaction.commissionLedgerEntry.create({ data: { organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, commissionId: existing.id, userId: context.user.id, type, amountCents, note } });
-      const commission = await transaction.commissionRecord.update({ where: { id }, data: { expectedCents: nextExpected, receivedCents: nextReceived, status: commissionStatus(nextExpected, nextReceived), isManualOverride: true }, include: { deal: { include: { contact: contactSelection } }, ledgerEntries: { orderBy: { occurredAt: "desc" }, take: 10 } } });
-      return { commission, ledgerEntryId: ledgerEntry.id };
+  return prisma.$transaction(async (tx) => {
+    // Read balances only after locking, so concurrent payments/corrections cannot lose updates.
+    await tx.$queryRaw`SELECT "id" FROM "CommissionRecord" WHERE "id" = ${id}
+      AND "organizationId" = ${context.user.organizationId}
+      AND "clientAccountId" = ${context.activeClientAccountId} FOR UPDATE`;
+    const existing = await tx.commissionRecord.findFirst({ where: { id, organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, ...(context.user.role === "AGENT" ? { userId: context.user.id } : {}) } });
+    if (!existing) throw new AppError("COMMISSION_NOT_FOUND", 404, "Commission is outside active client.", "Choose a commission from the active client account.");
+    let expectedCents = existing.expectedCents;
+    let receivedCents = existing.receivedCents;
+    const entries: Array<{ type: LedgerType; amountCents: number; note: string }> = [];
+    const ledgerAction = text(input.action) === "LEDGER";
+    if (ledgerAction) {
+      const type = input.type === "PAYMENT" || input.type === "ADJUSTMENT" ? input.type as LedgerType : null;
+      const amountCents = cents(input.amount, "INVALID_LEDGER_ENTRY", type === "ADJUSTMENT");
+      const note = text(input.note);
+      if (!type || !note || amountCents === 0) throw new AppError("INVALID_LEDGER_ENTRY", 422, "Ledger entry details are required.", "Choose an entry type, enter an amount, and explain the adjustment.");
+      if (type === "ADJUSTMENT") expectedCents += amountCents;
+      else receivedCents += amountCents;
+      entries.push({ type, amountCents, note });
+    } else {
+      expectedCents = input.expectedCommission === undefined ? expectedCents : cents(input.expectedCommission, "INVALID_COMMISSION_INPUT");
+      receivedCents = input.receivedCommission === undefined ? receivedCents : cents(input.receivedCommission, "INVALID_COMMISSION_INPUT");
+      const note = text(input.note) || text(input.notes) || "Manual commission correction";
+      if (expectedCents !== existing.expectedCents) entries.push({ type: "ADJUSTMENT", amountCents: expectedCents - existing.expectedCents, note });
+      if (receivedCents !== existing.receivedCents) entries.push({ type: "PAYMENT", amountCents: receivedCents - existing.receivedCents, note });
+    }
+    if (expectedCents < 0 || receivedCents < 0 || expectedCents > 2147483647 || receivedCents > 2147483647) {
+      throw new AppError("INVALID_LEDGER_ENTRY", 422, "Correction would create invalid balances.", "Keep commission totals at zero or above and within the supported range.");
+    }
+    if (entries.length) await tx.commissionLedgerEntry.createMany({ data: entries.map(entry => ({ ...entry, organizationId: existing.organizationId, clientAccountId: existing.clientAccountId, commissionId: id, userId: context.user.id })) });
+    const commission = await tx.commissionRecord.update({
+      where: { id },
+      data: { expectedCents, receivedCents, notes: input.notes === undefined ? existing.notes : text(input.notes) || null, status: commissionStatus(expectedCents, receivedCents), isManualOverride: true },
+      include: { deal: { include: { contact: contactSelection } }, ledgerEntries: { orderBy: [{ occurredAt: "desc" }, { id: "desc" }], take: 10 } },
     });
-    await recordAuditEvent(context, { action: "COMMISSION_LEDGER_ADJUSTED", entityType: "COMMISSION_LEDGER_ENTRY", entityId: result.ledgerEntryId, requestId, source: "PLATFORM", metadata: { type, amountCents } });
-    return result.commission;
-  }
-  const expectedCents = input.expectedCommission === undefined ? existing.expectedCents : cents(input.expectedCommission, "INVALID_COMMISSION_INPUT"); const receivedCents = input.receivedCommission === undefined ? existing.receivedCents : cents(input.receivedCommission, "INVALID_COMMISSION_INPUT");
-  if (expectedCents <= 0) throw new AppError("INVALID_COMMISSION_INPUT", 422, "Expected commission must be positive.", "Enter an expected commission greater than zero.");
-  const commission = await prisma.commissionRecord.update({ where: { id }, data: { expectedCents, receivedCents, notes: input.notes === undefined ? existing.notes : text(input.notes) || null, status: commissionStatus(expectedCents, receivedCents), isManualOverride: true }, include: { deal: { include: { contact: contactSelection } }, ledgerEntries: { orderBy: { occurredAt: "desc" }, take: 10 } } });
-  await recordAuditEvent(context, { action: "COMMISSION_UPDATED", entityType: "COMMISSION_RECORD", entityId: commission.id, requestId, source: "PLATFORM", metadata: { expectedCents, receivedCents, status: commission.status, manualOverride: true } });
-  return commission;
+    await tx.auditLog.create({ data: {
+      organizationId: existing.organizationId, clientAccountId: existing.clientAccountId, userId: context.user.id,
+      action: ledgerAction ? "COMMISSION_LEDGER_ADJUSTED" : "COMMISSION_UPDATED", entityType: "COMMISSION_RECORD", entityId: id,
+      requestId, source: "PLATFORM", metadata: { expectedCents, receivedCents, previousExpectedCents: existing.expectedCents, previousReceivedCents: existing.receivedCents, entries, manualOverride: true },
+    } });
+    return commission;
+  });
 }
 
 export async function listTimeLogs(context: RequestContext) { await prepareActiveClientSync(context); return prisma.timeLog.findMany({ where: { organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, ...(context.user.role === "AGENT" ? { userId: context.user.id } : {}) }, include: { contact: contactSelection }, orderBy: { loggedAt: "desc" }, take: 100 }); }

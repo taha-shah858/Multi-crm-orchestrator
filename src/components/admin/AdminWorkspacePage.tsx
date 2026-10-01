@@ -19,6 +19,7 @@ import { MultiCrmCard, MultiCrmInnerPanel, MultiCrmTag } from "@/components/ui/M
 import { useAdminWorkspaceUser } from "@/components/admin/AdminWorkspaceShell";
 import { readApiJson } from "@/lib/http/client-api";
 import { AdminIntegrationManager } from "@/components/admin/AdminIntegrationManager";
+import { ReconciliationControls, currencySummary, downloadCommissionReport, reportQuery, type ReportDates } from "@/components/operations/ReconciliationControls";
 
 export type AdminView = "dashboard" | "agents" | "clients" | "assignments" | "operations" | "commissions" | "analytics" | "integrations" | "audit";
 
@@ -43,6 +44,7 @@ export default function AdminWorkspacePage({ view }: { view: AdminView }) {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [reportDates, setReportDates] = useState<ReportDates>({ from: "", to: "" });
 
   const refresh = useCallback(() => setRefreshKey((value) => value + 1), []);
 
@@ -51,7 +53,7 @@ export default function AdminWorkspacePage({ view }: { view: AdminView }) {
     setError(null);
     const load = async () => {
       try {
-        const response = await fetch("/api/admin/dashboard", { cache: "no-store", signal: controller.signal });
+        const response = await fetch(`/api/admin/dashboard?${view === "commissions" ? reportQuery(reportDates) : ""}`, { cache: "no-store", signal: controller.signal });
         const payload = await readApiJson<AdminDashboardData & { success: true }>(response);
         if (!controller.signal.aborted) setDashboard(payload);
       } catch (reason) {
@@ -60,7 +62,7 @@ export default function AdminWorkspacePage({ view }: { view: AdminView }) {
     };
     void load();
     return () => controller.abort();
-  }, [refreshKey]);
+  }, [refreshKey, view, reportDates.from, reportDates.to]);
 
   const mutate = useCallback(async (url: string, method: "POST" | "PATCH", body: Record<string, unknown>, successMessage: string) => {
     setError(null);
@@ -96,6 +98,13 @@ export default function AdminWorkspacePage({ view }: { view: AdminView }) {
           </button>
         </div>
       </header>
+
+      {view === "commissions" && <ReconciliationControls dates={reportDates} onChange={setReportDates}>
+        <button disabled={!dashboard?.summary.recordCount} onClick={async () => {
+          try { await downloadCommissionReport(`/api/admin/commissions/export?${reportQuery(reportDates)}`); }
+          catch (reason) { setError(reason instanceof Error ? reason.message : "Report export failed."); }
+        }} className="rounded-lg border border-crm-border px-3 py-2 text-xs text-primary-cyan disabled:opacity-40">Export commissions CSV</button>
+      </ReconciliationControls>}
 
       {error && <p role="alert" className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-xs font-mono text-rose-200">{error}</p>}
       {notice && <p role="status" className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-xs font-mono text-emerald-200">{notice}</p>}
@@ -188,7 +197,7 @@ function OperationsView({ dashboard }: { dashboard: AdminDashboardData }) {
 }
 
 function CommissionsView({ dashboard }: { dashboard: AdminDashboardData }) {
-  return <div className="space-y-6"><Metrics dashboard={dashboard} /><MultiCrmCard className="space-y-4"><SectionTitle icon={CircleDollarSign} title="Company commission ledger" detail="Closed Won CRM deals appear automatically; manual sales remain available." /><DataTable headers={["Agent", "Client", "Deal", "Deal value", "Rate", "Source", "Expected", "Received", "Status"]} rows={dashboard.commissions.map((record) => [record.user?.name ?? "Unassigned", record.clientAccount.name, record.deal?.title ?? "Manual commission", money(record.deal?.valueCents ?? 0, record.currency), record.deal?.commissionRate == null ? "—" : `${record.deal.commissionRate}%`, record.source === "CRM" ? "CRM Closed Won" : "Manual", money(record.expectedCents, record.currency), money(record.receivedCents, record.currency), record.status])} /></MultiCrmCard></div>;
+  return <div className="space-y-6"><Metrics dashboard={dashboard} /><MultiCrmCard className="space-y-4"><SectionTitle icon={CircleDollarSign} title="Company commission ledger" detail={`Showing ${dashboard.commissions.length} of ${dashboard.summary.recordCount} records. Totals and CSV export include every matching commission.`} /><DataTable headers={["Agent", "Client", "Deal", "Deal value", "Rate", "Source", "Expected", "Received", "Status"]} rows={dashboard.commissions.map((record) => [record.user?.name ?? "Unassigned", record.clientAccount.name, record.deal?.title ?? "Manual commission", money(record.deal?.valueCents ?? 0, record.currency), record.deal?.commissionRate == null ? "—" : `${record.deal.commissionRate}%`, record.source === "CRM" ? "CRM Closed Won" : "Manual", money(record.expectedCents, record.currency), money(record.receivedCents, record.currency), record.status])} /></MultiCrmCard></div>;
 }
 
 function AnalyticsView({ dashboard }: { dashboard: AdminDashboardData }) {
@@ -230,7 +239,7 @@ function AssignmentRow({ agent, clients, canManage, mutate }: { agent: AdminDash
 }
 
 function Metrics({ dashboard }: { dashboard: AdminDashboardData }) {
-  return <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"><Metric icon={CircleDollarSign} label="Expected commission" value={money(dashboard.summary.expectedCents)} /><Metric icon={BarChart3} label="Received / pending" value={`${money(dashboard.summary.receivedCents)} / ${money(dashboard.summary.pendingCents)}`} /><Metric icon={Clock3} label="Company time" value={`${(dashboard.summary.activeMinutes / 60).toFixed(1)}h`} /><Metric icon={Users} label="Active sales agents" value={String(dashboard.summary.activeAgents)} /></div>;
+  return <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"><Metric icon={CircleDollarSign} label="Expected commission" value={currencySummary(dashboard.summary.currencyTotals, "expectedCents")} /><Metric icon={BarChart3} label="Received / pending" value={`${currencySummary(dashboard.summary.currencyTotals, "receivedCents")} / ${currencySummary(dashboard.summary.currencyTotals, "pendingCents")}`} /><Metric icon={Clock3} label="Company time" value={`${(dashboard.summary.activeMinutes / 60).toFixed(1)}h`} /><Metric icon={Users} label="Active sales agents" value={String(dashboard.summary.activeAgents)} /></div>;
 }
 
 function Metric({ icon: Icon, label, value }: { icon: typeof Users; label: string; value: string }) { return <MultiCrmCard className="p-5"><div className="flex items-center justify-between"><p className="text-[10px] font-mono uppercase tracking-wider text-crm-text-muted">{label}</p><Icon className="h-4 w-4 text-primary-cyan" /></div><p className="mt-3 text-xl font-semibold tabular-nums">{value}</p></MultiCrmCard>; }

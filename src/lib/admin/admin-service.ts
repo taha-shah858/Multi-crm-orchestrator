@@ -3,6 +3,7 @@ import { isAdminWorkspaceRole } from "@/lib/auth/roles";
 import { prisma } from "@/lib/db/prisma";
 import { AppError } from "@/lib/errors/app-error";
 import type { AuthenticatedUser } from "@/lib/models/canonical";
+import { commissionPeriodWhere, reconciliationDateRange, summarizeCommissions, type ReconciliationFilters } from "@/lib/operations/reconciliation";
 
 const text = (value: unknown) => typeof value === "string" ? value.trim() : "";
 const email = (value: unknown) => text(value).toLowerCase();
@@ -19,10 +20,11 @@ function requireAdmin(user: AuthenticatedUser) {
   }
 }
 
-export async function getAdminDashboard(user: AuthenticatedUser) {
+export async function getAdminDashboard(user: AuthenticatedUser, filters: ReconciliationFilters = {}) {
   requireElevated(user);
   const organizationId = user.organizationId;
-  const [clients, agents, commissions, timeLogs, audits, syncRuns] = await Promise.all([
+  const commissionWhere = { organizationId, ...commissionPeriodWhere(filters) };
+  const [clients, agents, commissions, timeLogs, audits, syncRuns, balances, timeTotal] = await prisma.$transaction([
     prisma.clientAccount.findMany({
       where: { organizationId },
       select: {
@@ -53,7 +55,7 @@ export async function getAdminDashboard(user: AuthenticatedUser) {
       orderBy: [{ role: "asc" }, { name: "asc" }],
     }),
     prisma.commissionRecord.findMany({
-      where: { organizationId },
+      where: commissionWhere,
       select: {
         id: true,
         expectedCents: true,
@@ -70,7 +72,7 @@ export async function getAdminDashboard(user: AuthenticatedUser) {
       take: 100,
     }),
     prisma.timeLog.findMany({
-      where: { organizationId },
+      where: { organizationId, loggedAt: reconciliationDateRange(filters) },
       select: {
         id: true,
         minutes: true,
@@ -115,17 +117,11 @@ export async function getAdminDashboard(user: AuthenticatedUser) {
       orderBy: { startedAt: "desc" },
       take: 100,
     }),
-  ]);
+    prisma.commissionRecord.findMany({ where: commissionWhere, select: { expectedCents: true, receivedCents: true, currency: true, deal: { select: { valueCents: true, status: true } } } }),
+    prisma.timeLog.aggregate({ where: { organizationId, loggedAt: reconciliationDateRange(filters) }, _sum: { minutes: true } }),
+  ], { isolationLevel: "RepeatableRead" });
 
-  const summary = commissions.reduce(
-    (total, item) => ({
-      expectedCents: total.expectedCents + item.expectedCents,
-      receivedCents: total.receivedCents + item.receivedCents,
-      dealValueCents: total.dealValueCents + (item.deal?.valueCents ?? 0),
-    }),
-    { expectedCents: 0, receivedCents: 0, dealValueCents: 0 },
-  );
-  const activeMinutes = timeLogs.reduce((total, item) => total + item.minutes, 0);
+  const activeMinutes = timeTotal._sum.minutes ?? 0;
 
   return {
     clients,
@@ -135,8 +131,7 @@ export async function getAdminDashboard(user: AuthenticatedUser) {
     audits,
     syncRuns,
     summary: {
-      ...summary,
-      pendingCents: Math.max(0, summary.expectedCents - summary.receivedCents),
+      ...summarizeCommissions(balances),
       activeMinutes,
       activeAgents: agents.filter((agent) => agent.role === "AGENT" && agent.status === "ACTIVE").length,
     },

@@ -25,6 +25,8 @@ import {
 } from "lucide-react";
 import { MultiCrmCard, MultiCrmInnerPanel, MultiCrmTag } from "@/components/ui/MultiCrmCard";
 import { useClientAccount } from "@/context/ClientAccountContext";
+import type { CurrencyTotals } from "@/lib/operations/reconciliation";
+import { ReconciliationControls, currencySummary, downloadCommissionReport, reportQuery, type ReportDates } from "@/components/operations/ReconciliationControls";
 
 type CommissionStatus = "PENDING" | "PARTIALLY_PAID" | "PAID";
 type LedgerType = "PAYMENT" | "ADJUSTMENT";
@@ -32,7 +34,7 @@ interface Contact { id: string; firstName: string; lastName: string; company: st
 interface LedgerEntry { id: string; type: "EXPECTED" | LedgerType; amountCents: number; note: string; occurredAt: string; }
 interface Commission { id: string; expectedCents: number; receivedCents: number; currency: string; status: CommissionStatus; source: "MANUAL" | "CRM"; notes: string | null; isManualOverride: boolean; deal: { id: string; title: string; valueCents: number; commissionRate: number | null; status: string; contact: Contact | null } | null; ledgerEntries: LedgerEntry[]; }
 interface TimeLog { id: string; minutes: number; description: string; loggedAt: string; isManualOverride: boolean; contact: Contact | null; }
-interface Summary { expectedCents: number; receivedCents: number; pendingCents: number; dealValueCents: number; closedDeals: number; activeMinutes: number; billableHours: number; }
+interface Summary { currencyTotals: CurrencyTotals[]; recordCount: number; expectedCents: number; receivedCents: number; pendingCents: number; dealValueCents: number; closedDeals: number; activeMinutes: number; billableHours: number; }
 
 interface AgentSale {
   id: string;
@@ -82,6 +84,7 @@ const statusVariant = (status: CommissionStatus): "cyan" | "magenta" | "neutral"
 export default function OperationsPage() {
   const { activeClientAccount, isClientAccountReady } = useClientAccount();
   const [commissions, setCommissions] = useState<Commission[]>([]);
+  const [reportDates, setReportDates] = useState<ReportDates>({ from: "", to: "" });
   const [timeLogs, setTimeLogs] = useState<TimeLog[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [agentSales, setAgentSales] = useState<AgentSale[]>([]);
@@ -92,6 +95,8 @@ export default function OperationsPage() {
     destination: null,
   });
   const [summary, setSummary] = useState<Summary>({
+    currencyTotals: [],
+    recordCount: 0,
     expectedCents: 0,
     receivedCents: 0,
     pendingCents: 0,
@@ -125,9 +130,9 @@ export default function OperationsPage() {
     try {
       const signal = controller?.signal;
       const [commissionsRes, contactsRes, salesRes] = await Promise.all([
-        fetch("/api/commissions", { cache: "no-store", signal }),
+        fetch(`/api/commissions?${reportQuery(reportDates)}`, { cache: "no-store", signal }),
         fetch("/api/contacts", { cache: "no-store", signal }),
-        fetch("/api/agent-sales", { cache: "no-store", signal }),
+        fetch(`/api/agent-sales?${reportQuery(reportDates)}`, { cache: "no-store", signal }),
       ]);
 
       const [commData, contactsPayload, salesData] = await Promise.all([
@@ -136,10 +141,13 @@ export default function OperationsPage() {
         salesRes.json(),
       ]);
 
+      if (signal?.aborted) return;
       if (commData.success) {
         setCommissions(commData.commissions);
         setTimeLogs(commData.timeLogs);
         setSummary(commData.summary);
+      } else {
+        setMessage({ tone: "error", text: commData.error?.message ?? "Commission data could not be loaded." });
       }
       if (contactsPayload.success) {
         setContacts(contactsPayload.contacts);
@@ -172,7 +180,7 @@ export default function OperationsPage() {
 
     void init();
     return () => controller.abort();
-  }, [activeClientAccount.id, isClientAccountReady]);
+  }, [activeClientAccount.id, isClientAccountReady, reportDates.from, reportDates.to]);
 
   const selectedContact = contacts.find((contact) => contact.id === (modal === "deal" ? dealForm.contactId : timeForm.contactId)) ?? null;
   const filteredContacts = useMemo(
@@ -418,26 +426,12 @@ export default function OperationsPage() {
     await loadAll();
   };
 
-  const exportCsv = () => {
-    const rows = [
-      ["Client", "Deal", "Contact", "Deal value", "Expected commission", "Received commission", "Pending commission", "Status"],
-      ...commissions.map((c) => [
-        activeClientAccount.name,
-        c.deal?.title ?? "Manual commission",
-        contactName(c.deal?.contact ?? null),
-        (c.deal?.valueCents ?? 0) / 100,
-        c.expectedCents / 100,
-        c.receivedCents / 100,
-        (c.expectedCents - c.receivedCents) / 100,
-        c.status,
-      ]),
-    ];
-    const csv = rows.map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(",")).join("\n");
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-    link.download = `${activeClientAccount.name.toLowerCase().replaceAll(" ", "-")}-reconciliation.csv`;
-    link.click();
-    URL.revokeObjectURL(link.href);
+  const exportCsv = async () => {
+    try {
+      await downloadCommissionReport(`/api/commissions/export?${reportQuery(reportDates)}`);
+    } catch (error) {
+      setMessage({ tone: "error", text: error instanceof Error ? error.message : "Report export failed." });
+    }
   };
 
   return (
@@ -457,11 +451,11 @@ export default function OperationsPage() {
           <MultiCrmTag variant="cyan">{activeClientAccount.name}</MultiCrmTag>
           <button
             onClick={exportCsv}
-            disabled={!commissions.length}
+            disabled={!summary.recordCount || isLoading}
             className="rounded-xl border border-crm-border-strong bg-crm-surface px-3.5 py-2 text-xs font-mono text-crm-text-muted disabled:opacity-40 cursor-pointer"
           >
             <FileSpreadsheet className="mr-1.5 inline h-3.5 w-3.5 text-secondary-pink" />
-            Export CSV
+            Export commissions CSV
           </button>
           <button
             onClick={() => openTime()}
@@ -480,6 +474,8 @@ export default function OperationsPage() {
         </div>
       </header>
 
+      <ReconciliationControls dates={reportDates} onChange={setReportDates} />
+
       {message && (
         <p
           role="status"
@@ -497,20 +493,20 @@ export default function OperationsPage() {
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MultiCrmCard className="group p-5">
           <p className="text-[10px] font-mono uppercase tracking-wider text-crm-text-muted">Expected payout</p>
-          <p className="mt-3 text-2xl font-semibold tabular-nums text-crm-text">{money(summary.expectedCents)}</p>
+          <p className="mt-3 text-xl font-semibold tabular-nums text-crm-text">{currencySummary(summary.currencyTotals, "expectedCents")}</p>
           <p className="mt-2 text-[11px] text-crm-text-muted">Across {summary.closedDeals} closed deals</p>
         </MultiCrmCard>
 
         <MultiCrmCard className="group p-5 border-emerald-500/20">
           <p className="text-[10px] font-mono uppercase tracking-wider text-crm-text-muted">Received</p>
-          <p className="mt-3 text-2xl font-semibold tabular-nums text-emerald-400">{money(summary.receivedCents)}</p>
+          <p className="mt-3 text-xl font-semibold tabular-nums text-emerald-400">{currencySummary(summary.currencyTotals, "receivedCents")}</p>
           <p className="mt-2 text-[11px] text-crm-text-muted">Posted payments</p>
         </MultiCrmCard>
 
         <MultiCrmCard className="group p-5">
           <p className="text-[10px] font-mono uppercase tracking-wider text-crm-text-muted">Still pending</p>
-          <p className="mt-3 text-2xl font-semibold tabular-nums text-secondary-pink">{money(summary.pendingCents)}</p>
-          <p className="mt-2 text-[11px] text-crm-text-muted">Expected less received</p>
+          <p className="mt-3 text-xl font-semibold tabular-nums text-secondary-pink">{currencySummary(summary.currencyTotals, "pendingCents")}</p>
+          <p className="mt-2 text-[11px] text-crm-text-muted">Unpaid balance summed per deal</p>
         </MultiCrmCard>
 
         <MultiCrmCard className="group p-5">
@@ -777,7 +773,7 @@ export default function OperationsPage() {
             <div>
               <p className="text-sm font-semibold">Commission ledger</p>
               <p className="mt-1 text-[10px] font-mono text-crm-text-muted">
-                CRM deals marked Closed Won appear automatically. Record payments and corrections here.
+                Showing {commissions.length} of {summary.recordCount} records. Export CSV includes every matching commission.
               </p>
             </div>
             <HandCoins className="h-5 w-5 text-secondary-pink" />
@@ -810,7 +806,7 @@ export default function OperationsPage() {
                       </div>
                       <p className="mt-1 text-[11px] font-mono text-crm-text-muted">
                         {contactName(commission.deal?.contact ?? null)} · Deal value{" "}
-                        {money(commission.deal?.valueCents ?? 0, commission.currency)}
+                        {commission.currency} {money(commission.deal?.valueCents ?? 0, commission.currency)}
                         {commission.deal?.commissionRate != null && ` · Commission ${commission.deal.commissionRate}%`}
                       </p>
                     </div>

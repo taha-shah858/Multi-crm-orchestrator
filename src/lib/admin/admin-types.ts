@@ -1,3 +1,5 @@
+import type { CurrencyTotals } from "@/lib/operations/reconciliation";
+
 export type AdminRole = "ADMIN" | "MANAGER" | "AGENT";
 
 export interface AdminDashboardData {
@@ -66,6 +68,8 @@ export interface AdminDashboardData {
     clientAccount: { id: string; name: string };
   }>;
   summary: {
+    currencyTotals: CurrencyTotals[];
+    recordCount: number;
     expectedCents: number;
     receivedCents: number;
     pendingCents: number;

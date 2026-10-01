@@ -42,6 +42,8 @@ yarn-error.log*
 next-env.d.ts
 
 graphify-out/cache/
+# Local Graphify query memory
+graphify-out/memory/
 # Dependencies
 node_modules/
 

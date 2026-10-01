@@ -1,15 +1,16 @@
 import type { NextRequest } from "next/server";
-import { requireAuthenticatedUser } from "@/lib/auth/request-context";
+import { requireAuthenticatedUser, requireRequestContext } from "@/lib/auth/request-context";
 import {
   listAgentSales,
   syncDealToClickUp,
 } from "@/lib/agent-crm/agent-sales-service";
 import { success, withApiErrorHandling } from "@/lib/http/api-response";
+import { readReconciliationFilters } from "@/lib/operations/reconciliation";
 
 export async function GET(request: NextRequest) {
   return withApiErrorHandling(request, async (requestId) => {
-    const user = await requireAuthenticatedUser(request);
-    const result = await listAgentSales(user);
+    const context = await requireRequestContext(request);
+    const result = await listAgentSales(context.user, readReconciliationFilters(request.nextUrl.searchParams), context.activeClientAccountId);
     return success(result, requestId);
   });
 }
