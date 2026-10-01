@@ -273,12 +273,22 @@ async function main() {
   });
   assert(wonResult.deal.status === "CLOSED_WON", "Deal must transition to CLOSED_WON");
 
-  // Check that DealHandoff was automatically created and dispatched to ActiveCampaign
+  // New handoffs target Zoho; an installed legacy connection is not a fallback.
   const handoffsAfterWon = await prisma.dealHandoff.findMany({
     where: { agencyDealId: dealAlpha.id },
   });
   assert(handoffsAfterWon.length === 1, "Exactly one DealHandoff must be created for CLOSED_WON deal");
-  const handoff = handoffsAfterWon[0];
+  assert(handoffsAfterWon[0].clientCrmProvider === "ZOHO", "New handoff must target Zoho without a legacy fallback");
+  assert(handoffsAfterWon[0].status === "FAILED", "Missing Zoho must produce a visible failed handoff");
+  // Historical compatibility fixture only: current application flows cannot
+  // retarget an existing handoff or create a new ActiveCampaign handoff.
+  await prisma.dealHandoff.update({
+    where: { id: handoffsAfterWon[0].id },
+    data: { clientCrmProvider: "ACTIVECAMPAIGN" },
+  });
+  const handoff = await createDealHandoffFromAgencyDeal(contextA, dealAlpha.id, {
+    clientCrmProvider: "ACTIVECAMPAIGN",
+  });
   assert(handoff.clientAccountId === ids.clientA, "Handoff clientAccountId must match deal clientAccountId");
   assert(handoff.clientCrmProvider === "ACTIVECAMPAIGN", "Handoff clientCrmProvider must be ACTIVECAMPAIGN");
   assert(handoff.status === "SYNCED", `Handoff should complete sync (status was: ${handoff.status})`);
@@ -376,7 +386,7 @@ async function main() {
   assert(updatedRec.record.name === "Updated Record Name", "Record update must reflect new name");
 
   // Manual Client CRM Sync
-  const syncResult = await syncClientCrm(contextA);
+  const syncResult = await syncClientCrm(contextA, "ACTIVECAMPAIGN");
   assert(syncResult.count >= 0, "syncClientCrm must succeed");
 
   // 9. Cross-Client Handoff Isolation

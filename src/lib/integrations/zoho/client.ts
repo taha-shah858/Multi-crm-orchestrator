@@ -168,111 +168,72 @@ function getZohoFixtureRecords(clientAccountId: string): ZohoClientRecord[] {
   ];
 }
 
-export async function fetchZohoRecords(
-  connection: IntegrationConnection,
-): Promise<ZohoClientRecord[]> {
-  try {
-    const auth = await resolveZohoCredentials(connection);
-    if (auth.isMock) {
-      return getZohoFixtureRecords(connection.clientAccountId ?? "unknown");
-    }
+function objectValue(value: unknown): Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
 
-    const records: ZohoClientRecord[] = [];
+function textValue(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
+}
 
-    // 1. Fetch Contacts from Zoho CRM
-    try {
-      const contactsRes = await fetch(
-        `${auth.apiDomain}/crm/v3/Contacts?fields=First_Name,Last_Name,Email,Phone,Account_Name,Full_Name,id,Lead_Source`,
-        { headers: zohoHeaders(auth.accessToken), cache: "no-store" },
-      );
-      if (contactsRes.ok) {
-        const data = await contactsRes.json();
-        for (const c of data.data || []) {
-          const fullName =
-            c.Full_Name ||
-            [c.First_Name, c.Last_Name].filter(Boolean).join(" ").trim() ||
-            c.Email ||
-            "Zoho Contact";
-          const companyName =
-            typeof c.Account_Name === "object" && c.Account_Name !== null
-              ? c.Account_Name.name
-              : typeof c.Account_Name === "string"
-              ? c.Account_Name
-              : null;
-          records.push({
-            id: `zoho-contact-${c.id}`,
-            recordType: "CONTACT",
-            externalId: String(c.id),
-            name: fullName,
-            email: c.Email || null,
-            phone: c.Phone || null,
-            companyName: companyName || null,
-            status: "Lead",
-            stage: "Zoho Lead",
-            details: `Imported from Zoho CRM (${c.Lead_Source || "Contact"})`,
-          });
-        }
-      }
-    } catch (contactErr) {
-      console.warn("Failed fetching Zoho contacts:", contactErr);
-    }
+function providerRecordId(value: unknown): string {
+  if (typeof value === "string" && value.trim()) return value;
+  if (typeof value === "number" && Number.isSafeInteger(value) && value > 0) return String(value);
+  throw new AppError("EXTERNAL_SERVICE_ERROR", 502, "Zoho did not return a valid record ID.", "Zoho did not confirm a valid record identifier.");
+}
 
-    // 2. Fetch Deals from Zoho CRM
-    try {
-      const dealsRes = await fetch(
-        `${auth.apiDomain}/crm/v3/Deals?fields=Deal_Name,Amount,Stage,Closing_Date,Account_Name,Contact_Name,id,Description`,
-        { headers: zohoHeaders(auth.accessToken), cache: "no-store" },
-      );
-      if (dealsRes.ok) {
-        const data = await dealsRes.json();
-        for (const d of data.data || []) {
-          records.push({
-            id: `zoho-deal-${d.id}`,
-            recordType: "DEAL",
-            externalId: String(d.id),
-            name: d.Deal_Name || "Zoho Deal",
-            amount: d.Amount != null ? String(d.Amount) : null,
-            status: d.Stage === "Closed Won" ? "Won" : d.Stage === "Closed Lost" ? "Lost" : "Open",
-            stage: d.Stage || "Pipeline",
-            details: d.Description || `Zoho Deal closing on ${d.Closing_Date || "N/A"}`,
-          });
-        }
-      }
-    } catch (dealErr) {
-      console.warn("Failed fetching Zoho deals:", dealErr);
-    }
-
-    // 3. Fetch Notes from Zoho CRM
-    try {
-      const notesRes = await fetch(
-        `${auth.apiDomain}/crm/v3/Notes?fields=Note_Title,Note_Content,id`,
-        { headers: zohoHeaders(auth.accessToken), cache: "no-store" },
-      );
-      if (notesRes.ok) {
-        const data = await notesRes.json();
-        for (const n of data.data || []) {
-          records.push({
-            id: `zoho-note-${n.id}`,
-            recordType: "NOTE",
-            externalId: String(n.id),
-            name: n.Note_Title || "Zoho Note",
-            details: n.Note_Content || null,
-          });
-        }
-      }
-    } catch (noteErr) {
-      console.warn("Failed fetching Zoho notes:", noteErr);
-    }
-
-    if (records.length === 0) {
-      return getZohoFixtureRecords(connection.clientAccountId ?? "unknown");
-    }
-
-    return records;
-  } catch (err) {
-    console.error("fetchZohoRecords error:", err);
-    return getZohoFixtureRecords(connection.clientAccountId ?? "unknown");
+async function fetchZohoModule(auth: ZohoAuthContext, module: string, fields: string): Promise<Record<string, unknown>[]> {
+  const response = await fetch(auth.apiDomain + "/crm/v3/" + module + "?fields=" + fields, {
+    headers: zohoHeaders(auth.accessToken), cache: "no-store",
+  });
+  if (response.status === 204) return [];
+  if (!response.ok) {
+    throw new AppError("EXTERNAL_SERVICE_ERROR", 502, "Zoho " + module + " import failed (HTTP " + response.status + ").", "Zoho could not import records. Check the connection and permissions.");
   }
+  const payload = objectValue(await response.json());
+  if (!Array.isArray(payload.data)) {
+    throw new AppError("EXTERNAL_SERVICE_ERROR", 502, "Invalid Zoho " + module + " response.", "Zoho returned an invalid record response.");
+  }
+  return payload.data.map((item: unknown) => {
+    const record = objectValue(item);
+    return { ...record, id: providerRecordId(record.id) };
+  });
+}
+
+export async function fetchZohoRecords(connection: IntegrationConnection): Promise<ZohoClientRecord[]> {
+  const auth = await resolveZohoCredentials(connection);
+  // Only explicit mock credentials use fixtures; live errors and empty results never do.
+  if (auth.isMock) return getZohoFixtureRecords(connection.clientAccountId ?? "unknown");
+  const records: ZohoClientRecord[] = [];
+  const contacts = await fetchZohoModule(auth, "Contacts", "First_Name,Last_Name,Email,Phone,Account_Name,Full_Name,id,Lead_Source");
+  for (const contact of contacts) {
+    const account = objectValue(contact.Account_Name);
+    records.push({
+      id: "zoho-contact-" + contact.id, recordType: "CONTACT", externalId: String(contact.id),
+      name: textValue(contact.Full_Name) || [textValue(contact.First_Name), textValue(contact.Last_Name)].filter(Boolean).join(" ").trim() || textValue(contact.Email) || "Zoho Contact",
+      email: textValue(contact.Email), phone: textValue(contact.Phone),
+      companyName: textValue(account.name) || textValue(contact.Account_Name),
+      status: "Lead", stage: "Zoho Lead", details: "Imported from Zoho CRM",
+    });
+  }
+  const deals = await fetchZohoModule(auth, "Deals", "Deal_Name,Amount,Stage,Closing_Date,Account_Name,Contact_Name,id,Description");
+  for (const deal of deals) {
+    records.push({
+      id: "zoho-deal-" + deal.id, recordType: "DEAL", externalId: String(deal.id),
+      name: textValue(deal.Deal_Name) || "Zoho Deal",
+      amount: deal.Amount != null ? String(deal.Amount) : null,
+      status: deal.Stage === "Closed Won" ? "Won" : deal.Stage === "Closed Lost" ? "Lost" : "Open",
+      stage: textValue(deal.Stage) || "Pipeline", details: textValue(deal.Description),
+    });
+  }
+  const notes = await fetchZohoModule(auth, "Notes", "Note_Title,Note_Content,id");
+  for (const note of notes) {
+    records.push({
+      id: "zoho-note-" + note.id, recordType: "NOTE", externalId: String(note.id),
+      name: textValue(note.Note_Title) || "Zoho Note", details: textValue(note.Note_Content),
+    });
+  }
+  return records;
 }
 
 export async function createOrUpdateZohoRecord(
@@ -316,15 +277,21 @@ export async function createOrUpdateZohoRecord(
     );
   }
 
-  const result = await res.json();
-  const createdRecord = result.data?.[0];
-  const newExternalId = String(createdRecord?.details?.id || externalId || Date.now());
-
-  return { externalId: newExternalId };
+  const result = objectValue(await res.json());
+  const createdRecord = objectValue(Array.isArray(result.data) ? result.data[0] : null);
+  if (createdRecord.status !== "success" || createdRecord.code !== "SUCCESS") {
+    throw new AppError("EXTERNAL_SERVICE_ERROR", 502, "Zoho rejected the record update.", "Zoho rejected the record update. The local edit was retained.");
+  }
+  const confirmedId = providerRecordId(objectValue(createdRecord.details).id);
+  if (externalId && confirmedId !== externalId) {
+    throw new AppError("EXTERNAL_SERVICE_ERROR", 502, "Zoho confirmed a different record identifier.", "Zoho did not confirm the requested record update.");
+  }
+  return { externalId: confirmedId };
 }
 
 /**
- * Idempotent deal handoff to Zoho CRM:
+ * Closed-deal handoff to Zoho CRM. Durable recovery of partial creates is a
+ * separate sync concern; deterministic mock IDs do not prove live idempotency.
  * 1. Creates/updates Contact in Zoho CRM
  * 2. Creates/updates Deal in Zoho CRM
  * 3. Attaches Note with handoff context, close reason, agent, and next action
@@ -365,6 +332,7 @@ export async function syncHandoffToZoho(
       contactExternalId = contactResult.externalId;
     } catch (contactErr) {
       console.warn("Failed creating Zoho contact during handoff:", contactErr);
+      throw contactErr;
     }
   }
 
@@ -417,6 +385,7 @@ export async function syncHandoffToZoho(
     noteExternalId = noteResult.externalId;
   } catch (noteErr) {
     console.warn("Failed attaching Zoho note during handoff:", noteErr);
+    throw noteErr;
   }
 
   return {

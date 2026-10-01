@@ -256,13 +256,14 @@ async function main() {
 
     // 7. Test Client CRM operations & tenant isolation
     console.log("-> 7. Testing Client CRM record listing & client isolation...");
+    assert((await listClientCrmRecords(contextAgentA)).length === 0, "Reading an empty CRM must not import or mirror agency records");
+    await syncClientCrm(contextAgentA);
+    await syncClientCrm(contextAgentB);
     const clientCrmRecordsA = await listClientCrmRecords(contextAgentA, "CONTACT");
     const clientCrmRecordsB = await listClientCrmRecords(contextAgentB, "CONTACT");
 
-    // Ada Lovelace (Acme Corporation) belongs to Client A
-    assert(clientCrmRecordsA.some(r => r.name.includes("Ada") || r.companyName === "Acme Corporation"), "Client A sees Acme Corporation contact");
-    // Grace Hopper (Globex Industries) belongs to Client B
-    assert(clientCrmRecordsB.some(r => r.name.includes("Grace") || r.companyName === "Globex Industries"), "Client B sees Globex Industries contact");
+    assert(clientCrmRecordsA.length > 0 && clientCrmRecordsA.every(r => r.connectionId === ids.clientZohoConnA && r.provider === "ZOHO"), "Client A sees only its imported Zoho records");
+    assert(clientCrmRecordsB.length > 0 && clientCrmRecordsB.every(r => r.connectionId === ids.clientZohoConnB && r.provider === "ZOHO"), "Client B sees only its imported Zoho records");
 
     // Isolation check: Client A does NOT see Grace Hopper
     assert(!clientCrmRecordsA.some(r => r.email === `${marker}-grace@compiler.test`), "Client A must NOT see Client B's contact");
@@ -283,10 +284,10 @@ async function main() {
     assert(editResult.record.phone === "+1-555-0199", "Record phone updated locally");
     assert(editResult.outboundStatus === "COMPLETED", "Outbound sync to Zoho CRM must complete");
 
-    // Verify contact in Unified Lead Directory was also updated
+    // Client CRM edits must not infer or overwrite an agency contact.
     const updatedContactA = await prisma.contact.findUnique({ where: { id: contactA.id } });
     assert(updatedContactA.firstName === "Ada", "First name retained/updated");
-    assert(updatedContactA.lastName === "Countess Lovelace", "Last name synchronized back to unified contact");
+    assert(updatedContactA.lastName === "Lovelace", "Agency contact remains unchanged by client CRM edit");
 
     // 9. Deal Creation & Automatic Handoff to Zoho CRM
     console.log("-> 9. Creating Agency Deal and triggering Closed Won Handoff to Zoho CRM...");

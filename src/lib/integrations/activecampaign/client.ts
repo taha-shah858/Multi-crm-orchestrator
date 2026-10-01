@@ -58,6 +58,12 @@ function activeCampaignHeaders(apiKey: string) {
   };
 }
 
+function confirmedActiveCampaignId(value: unknown): string {
+  if (typeof value === "string" && value.trim()) return value;
+  if (typeof value === "number" && Number.isSafeInteger(value) && value > 0) return String(value);
+  throw new AppError("EXTERNAL_SERVICE_ERROR", 502, "ActiveCampaign did not confirm a record ID.", "The client CRM did not confirm a valid record identifier.");
+}
+
 export async function fetchActiveCampaignRecords(
   connection: IntegrationConnection,
 ): Promise<ActiveCampaignClientRecord[]> {
@@ -75,13 +81,15 @@ export async function fetchActiveCampaignRecords(
       headers: activeCampaignHeaders(config.apiKey),
       cache: "no-store",
     });
-    if (contactsRes.ok) {
+    if (!contactsRes.ok) throw new Error(`ActiveCampaign contact import failed: HTTP ${contactsRes.status}`);
+    if (contactsRes.status !== 204) {
       const data = await contactsRes.json();
+      if (!Array.isArray(data.contacts)) throw new Error("Invalid ActiveCampaign contact response.");
       for (const c of (data.contacts || [])) {
         records.push({
           id: `ac-contact-${c.id}`,
           recordType: "CONTACT",
-          externalId: String(c.id),
+          externalId: confirmedActiveCampaignId(c.id),
           name: `${c.firstName || ""} ${c.lastName || ""}`.trim() || c.email,
           email: c.email || null,
           phone: c.phone || null,
@@ -95,13 +103,15 @@ export async function fetchActiveCampaignRecords(
       headers: activeCampaignHeaders(config.apiKey),
       cache: "no-store",
     });
-    if (accountsRes.ok) {
+    if (!accountsRes.ok) throw new Error(`ActiveCampaign account import failed: HTTP ${accountsRes.status}`);
+    if (accountsRes.status !== 204) {
       const data = await accountsRes.json();
+      if (!Array.isArray(data.accounts)) throw new Error("Invalid ActiveCampaign account response.");
       for (const a of (data.accounts || [])) {
         records.push({
           id: `ac-company-${a.id}`,
           recordType: "COMPANY",
-          externalId: String(a.id),
+          externalId: confirmedActiveCampaignId(a.id),
           name: a.name,
           details: a.accountUrl || null,
         });
@@ -113,13 +123,15 @@ export async function fetchActiveCampaignRecords(
       headers: activeCampaignHeaders(config.apiKey),
       cache: "no-store",
     });
-    if (dealsRes.ok) {
+    if (!dealsRes.ok) throw new Error(`ActiveCampaign deal import failed: HTTP ${dealsRes.status}`);
+    if (dealsRes.status !== 204) {
       const data = await dealsRes.json();
+      if (!Array.isArray(data.deals)) throw new Error("Invalid ActiveCampaign deal response.");
       for (const d of (data.deals || [])) {
         records.push({
           id: `ac-deal-${d.id}`,
           recordType: "DEAL",
-          externalId: String(d.id),
+          externalId: confirmedActiveCampaignId(d.id),
           name: d.title,
           amount: d.value ? (Number(d.value) / 100).toFixed(2) : "0.00",
           status: d.status === 1 ? "Won" : d.status === 2 ? "Lost" : "Open",
@@ -128,10 +140,9 @@ export async function fetchActiveCampaignRecords(
       }
     }
 
-    return records.length ? records : getFixtureRecords(connection.clientAccountId ?? "unknown");
+    return records;
   } catch {
-    // Deterministic fallback for test/dev environments
-    return getFixtureRecords(connection.clientAccountId ?? "unknown");
+    throw new AppError("EXTERNAL_SERVICE_ERROR", 502, "ActiveCampaign import failed.", "The client CRM import failed. Existing records were retained.");
   }
 }
 
@@ -172,13 +183,12 @@ export async function createOrUpdateActiveCampaignRecord(
     }
 
     const resData = await res.json();
-    const id = resData[payloadKey]?.id || externalId || String(Date.now());
-    return { externalId: String(id) };
+    const id = confirmedActiveCampaignId(resData[payloadKey]?.id);
+    if (externalId && id !== externalId) throw new Error("ActiveCampaign confirmed a different record ID.");
+    return { externalId: id };
   } catch (error) {
-    if (process.env.NODE_ENV === "test") {
-      return { externalId: externalId || `ac-${recordType.toLowerCase()}-${Date.now()}` };
-    }
-    throw error;
+    if (error instanceof AppError) throw error;
+    throw new AppError("EXTERNAL_SERVICE_ERROR", 502, "ActiveCampaign update failed.", "The client CRM update failed. The local edit was retained.");
   }
 }
 
@@ -224,12 +234,10 @@ export async function syncHandoffToActiveCampaign(
     }
 
     const data = await dealRes.json();
-    return { externalId: String(data.deal?.id ?? `handoff-${handoff.agencyDealId}`) };
+    return { externalId: confirmedActiveCampaignId(data.deal?.id) };
   } catch (error) {
-    if (process.env.NODE_ENV === "test") {
-      return { externalId: `ac-deal-handoff-${handoff.agencyDealId}` };
-    }
-    throw error;
+    if (error instanceof AppError) throw error;
+    throw new AppError("EXTERNAL_SERVICE_ERROR", 502, "ActiveCampaign handoff failed.", "The client CRM rejected the handoff.");
   }
 }
 

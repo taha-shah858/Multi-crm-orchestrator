@@ -257,7 +257,7 @@ export async function syncSingleConnectionContacts(
 
   if (connection.provider === "ACTIVECAMPAIGN") {
     const { syncClientCrm } = await import("@/lib/client-crm/client-crm-service");
-    const syncRes = await syncClientCrm(context);
+    const syncRes = await syncClientCrm(context, "ACTIVECAMPAIGN", connection.id);
     return {
       contacts: [],
       recordsRead: syncRes.count,
@@ -554,12 +554,21 @@ export async function getActiveClientContacts(
   options?: { scope?: "agency" | "client"; clientAccountId?: string },
 ): Promise<PersistedContactSummary[]> {
   await prepareActiveClientSync(context);
+  if (options?.clientAccountId) {
+    await assertClientAccess(context.user, options.clientAccountId);
+  }
 
   const whereCondition: Record<string, unknown> = {
     organizationId: context.user.organizationId,
   };
 
   if (options?.scope === "agency") {
+    whereCondition.externalRecords = {
+      some: {
+        objectType: "CONTACT",
+        connection: { organizationId: context.user.organizationId, ownershipType: "COMPANY", provider: "HUBSPOT" },
+      },
+    };
     if (options.clientAccountId) {
       whereCondition.clientAccountId = options.clientAccountId;
     }
@@ -576,6 +585,9 @@ export async function getActiveClientContacts(
       deals: { include: { crmOwner: { select: { id: true, displayName: true, email: true } }, company: { select: { id: true, name: true } } } },
       interactions: { orderBy: { occurredAt: "desc" }, take: 10, select: { id: true, type: true, subject: true, body: true, occurredAt: true, source: true } },
       externalRecords: {
+        ...(options?.scope === "agency" ? {
+          where: { objectType: "CONTACT", connection: { organizationId: context.user.organizationId, ownershipType: "COMPANY", provider: "HUBSPOT" } },
+        } : {}),
         include: { connection: { select: { provider: true } } },
         orderBy: { updatedAt: "desc" },
       },
