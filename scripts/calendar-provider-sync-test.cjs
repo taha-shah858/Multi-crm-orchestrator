@@ -23,6 +23,7 @@ const { beginCalendarConnection, completeCalendarConnection, disconnectCalendar,
 const { createAppointment, updateAppointment, listCalendarWorkspace } = require("../src/lib/calendar/calendar-service.ts");
 const { syncCalendarAppointment, listCalendlyEventTypes } = require("../src/lib/calendar/calendar-sync-service.ts");
 const { safeCalendarUrl } = require("../src/lib/calendar/calendar-provider-client.ts");
+const { listManagedEventTypes, saveEventType, getEventTypeAvailability, saveEventTypeAvailability, validateAvailability } = require("../src/lib/calendar/calendly-event-types.ts");
 const routes = Object.fromEntries(["connections", "connections/[provider]/connect", "connections/[provider]/callback", "connections/[provider]/disconnect", "events/[id]/sync", "schedule", "events"].map(name => [name, require(`../src/app/api/calendar/${name}/route.ts`)]));
 const marker = `calendar-${Date.now()}`;
 const ids = { org: marker, foreign: `${marker}-foreign`, agent: `${marker}-agent`, other: `${marker}-other`, admin: `${marker}-admin`, client: `${marker}-client`, denied: `${marker}-denied`, contact: `${marker}-contact` };
@@ -30,6 +31,9 @@ const user = { id: ids.agent, organizationId: ids.org, name: "Calendar Agent", e
 const context = { user, activeClientAccountId: ids.client }, otherContext = { user: { ...user, id: ids.other }, activeClientAccountId: ids.client };
 const eventTypeUri = "https://api.calendly.com/event_types/solo-test";
 const calls = [], remoteEvents = new Map(), remoteInvitees = new Map();
+const managedTypes = new Map();
+const schedules = new Map();
+let failTypeCreate = false;
 let checks = 0, failCreate = null, googleSubject = "google-account", refreshes = 0, pauseToken = null;
 const json = (data, status = 200) => Response.json(data, { status });
 global.fetch = async (url, options = {}) => {
@@ -49,7 +53,26 @@ global.fetch = async (url, options = {}) => {
   if (address.hostname === "api.calendly.com" && address.pathname === "/users/me") return json({ resource: { uri: "https://api.calendly.com/users/calendly-account", name: "Calendly owner" } });
   if (address.hostname === "api.calendly.com" && address.pathname.startsWith("/event_types")) {
     const resource = { uri: eventTypeUri, active: true, kind: "solo", name: "30 minute meeting", duration: 30, profile: { owner: "https://api.calendly.com/users/calendly-account" }, scheduling_url: "https://calendly.com/local-check/meeting" };
+    if (address.pathname === "/event_types" && method === "POST") {
+      const created = { ...resource, ...body, uri: `https://api.calendly.com/event_types/type-${randomUUID()}`, description_plain: body.description, profile: { owner: body.owner } };
+      managedTypes.set(created.uri, created);
+      if (failTypeCreate) { failTypeCreate = false; throw Error("Lost type create response"); }
+      return json({ resource: created }, 201);
+    }
+    const uri = `https://api.calendly.com${address.pathname}`;
+    if (managedTypes.has(uri)) {
+      const managed = managedTypes.get(uri);
+      if (method === "PATCH") Object.assign(managed, body, { description_plain: body.description });
+      return json({ resource: managed });
+    }
+    if (address.pathname.endsWith("/foreign")) return json({ resource: { ...resource, uri, profile: { owner: "https://api.calendly.com/users/other" } } });
+    if (address.pathname === "/event_types" && !address.searchParams.has("active")) return json({ collection: [resource, ...managedTypes.values()] });
     return json(address.pathname === "/event_types" ? { collection: [resource, { ...resource, uri: "https://api.calendly.com/event_types/foreign", profile: { owner: "https://api.calendly.com/users/other" } }] } : { resource });
+  }
+  if (address.hostname === "api.calendly.com" && address.pathname === "/event_type_availability_schedules") {
+    const uri = address.searchParams.get("event_type");
+    if (method === "PATCH") { schedules.set(uri, body.availability_rule); return json({ resource: { event_type: uri, availability_rule: body.availability_rule } }); }
+    return json({ collection: [{ event_type: uri, availability_rule: schedules.get(uri) }] });
   }
   const provider = address.hostname === "www.googleapis.com" ? "GOOGLE" : address.hostname === "graph.microsoft.com" ? "OUTLOOK" : address.hostname === "api.calendly.com" ? "CALENDLY" : null;
   assert.ok(provider, `Unexpected network destination: ${address.hostname}`);
@@ -119,6 +142,39 @@ async function main() {
     await prisma.calendarOAuthState.update({ where: { stateHash: createHash("sha256").update(pending.searchParams.get("state")).digest("hex") }, data: { expiresAt: new Date(0) } });
     await assert.rejects(completeCalendarConnection(user, "GOOGLE", pending.searchParams.get("state"), "expired", marker));
     passed("OAuth uses encrypted tokens, PKCE and expiring single-use state bound to the agent and provider");
+
+    const template = { name: "Client discovery", duration: 45, description: "Discuss needs", active: false };
+    const managed = await saveEventType(context, { ...template, owner: "https://api.calendly.com/users/other" }, marker);
+    assert.equal(managed.active, false); assert.equal(managed.duration, 45);
+    assert.equal(managedTypes.get(managed.uri).profile.owner, "https://api.calendly.com/users/calendly-account");
+    const changedType = await saveEventType(context, { ...template, uri: managed.uri, name: "Updated discovery", duration: 60, active: true }, marker);
+    assert.equal(changedType.name, "Updated discovery"); assert.equal(changedType.duration, 60);
+    assert.ok((await listManagedEventTypes(context)).some(item => item.uri === managed.uri));
+    const beforeForeignType = calls.length;
+    await assert.rejects(saveEventType(context, { ...template, uri: "https://api.calendly.com/event_types/foreign" }, marker), error => error.status === 403);
+    assert.equal(calls.length, beforeForeignType + 1); assert.equal(calls.at(-1).method, "GET");
+    await assert.rejects(saveEventType(otherContext, template, marker), error => error.status === 422);
+    await assert.rejects(saveEventType(context, { ...template, duration: 0 }, marker), error => error.status === 422);
+    failTypeCreate = true;
+    await assert.rejects(saveEventType(context, { ...template, name: "Check before retrying" }, marker), error => /may have created/.test(error.safeMessage));
+    assert.ok((await listManagedEventTypes(context)).some(item => item.name === "Check before retrying"));
+    passed("Event-type create/edit uses the agent's own account, includes inactive types, rejects foreign writes and exposes uncertain creates");
+
+    const hours = { timezone: "Asia/Karachi", rules: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"].map(wday => ({ type: "wday", wday, intervals: wday === "monday" ? [{ from: "09:00", to: "12:00" }, { from: "13:00", to: "17:00" }] : [] })) };
+    hours.rules.push({ type: "date", date: "2026-12-25", intervals: [] });
+    schedules.set(managed.uri, hours);
+    const loadedHours = await getEventTypeAvailability(context, managed.uri);
+    assert.deepEqual(loadedHours, hours);
+    loadedHours.rules[0].intervals[0].from = "10:00";
+    await saveEventTypeAvailability(context, managed.uri, loadedHours, marker);
+    assert.deepEqual(schedules.get(managed.uri).rules.at(-1), { type: "date", date: "2026-12-25", intervals: [] });
+    const beforeInvalidHours = calls.length;
+    assert.throws(() => validateAvailability({ ...hours, timezone: "Invalid/Zone" }), error => error.status === 422);
+    await assert.rejects(saveEventTypeAvailability(context, managed.uri, { ...hours, rules: hours.rules.map((rule, i) => i ? rule : { ...rule, intervals: [{ from: "17:00", to: "09:00" }] }) }, marker), error => error.status === 422);
+    assert.equal(calls.length, beforeInvalidHours);
+    await assert.rejects(getEventTypeAvailability(context, "https://attacker.test/event_types/foreign"));
+    assert.ok(!calls.some(call => call.url.includes("attacker.test")));
+    passed("Availability changes preserve split shifts and date overrides and reject invalid times, zones and external references");
 
     let google = await createAppointment(context, booking("GOOGLE"), marker);
     assert.equal(google.calendarSyncStatus, "SYNCED"); assert.ok(google.externalId);

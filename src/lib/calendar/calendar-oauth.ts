@@ -6,7 +6,7 @@ import type { RemoteCalendarProvider } from "@/lib/calendar/calendar-types";
 const settings = {
   GOOGLE: { prefix: "GOOGLE_CALENDAR", authorize: "https://accounts.google.com/o/oauth2/v2/auth", token: "https://oauth2.googleapis.com/token", scopes: ["openid", "email", "https://www.googleapis.com/auth/calendar.events.owned"] },
   OUTLOOK: { prefix: "OUTLOOK_CALENDAR", authorize: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize", token: "https://login.microsoftonline.com/common/oauth2/v2.0/token", scopes: ["offline_access", "User.Read", "Calendars.ReadWrite"] },
-  CALENDLY: { prefix: "CALENDLY", authorize: "https://auth.calendly.com/oauth/authorize", token: "https://auth.calendly.com/oauth/token", scopes: ["users:read", "event_types:read", "scheduled_events:read", "scheduled_events:write"] },
+  CALENDLY: { prefix: "CALENDLY", authorize: "https://auth.calendly.com/oauth/authorize", token: "https://auth.calendly.com/oauth/token", scopes: ["users:read", "event_types:read", "event_types:write", "availability:read", "availability:write", "scheduled_events:read", "scheduled_events:write"] },
 } as const;
 export interface CalendarTokens { access_token: string; refresh_token?: string; expires_in: number; scope?: string; }
 export function calendarOAuthConfig(provider: RemoteCalendarProvider) {

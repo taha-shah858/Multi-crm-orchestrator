@@ -4,6 +4,7 @@ import { useClientAccount } from "@/context/ClientAccountContext";
 import { readApiJson } from "@/lib/http/client-api";
 import { MultiCrmCard } from "@/components/ui/MultiCrmCard";
 import type { CalendarConnectionSummary, CalendlyEventType, RemoteCalendarProvider } from "@/lib/calendar/calendar-types";
+import CalendlyEventTypeManager from "./CalendlyEventTypeManager";
 
 const labels = { GOOGLE: "Google Calendar", OUTLOOK: "Outlook Calendar", CALENDLY: "Calendly" };
 export default function CalendarConnectionsPanel({ onConnections, onEventTypes }: { onConnections: (connections: CalendarConnectionSummary[]) => void; onEventTypes: (eventTypes: CalendlyEventType[]) => void }) {
@@ -43,5 +44,6 @@ export default function CalendarConnectionsPanel({ onConnections, onEventTypes }
     <div><h2 className="text-sm font-semibold">Your calendars</h2><p className="mt-1 text-xs text-crm-text-muted">Connect a calendar to book client meetings. Manual scheduling is always available.</p></div>
     <div className="grid gap-3 md:grid-cols-3">{connections.map(connection => <div key={connection.provider} className="rounded-xl border border-crm-border bg-crm-inner p-3"><div className="flex items-center justify-between gap-2"><span className="text-xs font-semibold">{labels[connection.provider]}</span><span className="text-[10px] text-crm-text-muted">{connection.connected ? "Connected" : connection.configured ? "Disconnected" : "Needs setup"}</span></div>{connection.connected && <p className="mt-1 truncate text-[10px] text-crm-text-muted">{connection.accountName}</p>}<button type="button" disabled={Boolean(busy) || (!connection.connected && !connection.configured)} onClick={() => void act(connection.provider, connection.connected)} className="mt-3 rounded-lg border border-crm-border px-3 py-1.5 text-[11px] hover:text-primary-cyan disabled:opacity-40">{busy === connection.provider ? "Working…" : connection.connected ? "Disconnect" : "Connect"}</button></div>)}</div>
     {notice && <p role="status" className="text-xs text-crm-text-muted">{notice}</p>}
+    {connections.some(connection => connection.provider === "CALENDLY" && connection.connected) && <><button type="button" disabled={Boolean(busy)} onClick={() => void act("CALENDLY", false)} className="rounded-lg border border-crm-border px-3 py-2 text-xs disabled:opacity-40">Reconnect Calendly to update permissions</button><CalendlyEventTypeManager key={user?.id + activeClientAccount.id} onSaved={() => setRefreshKey(value => value + 1)} /></>}
   </MultiCrmCard>;
 }

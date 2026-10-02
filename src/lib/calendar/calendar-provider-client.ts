@@ -15,7 +15,7 @@ export async function calendarRequest(provider: RemoteCalendarProvider, token: s
   } catch { throw new CalendarRequestError("The calendar response was not received. Check the provider before retrying this booking.", method !== "GET"); }
   if (allowMissing && [404, 410].includes(response.status)) return null;
   if (!response.ok) {
-    const message = response.status === 401 ? "Calendar authorization expired. Reconnect the calendar." : response.status === 429 ? "The calendar is busy. Retry after the provider's rate limit clears." : provider === "CALENDLY" && response.status === 403 ? "Calendly direct booking requires a paid plan and booking permissions. Use the scheduling link or manual calendar." : response.status === 400 || response.status === 422 ? "The calendar rejected these meeting details. Check the time slot and event type." : "The calendar could not save this meeting. Your local meeting is retained.";
+    const message = response.status === 401 ? "Calendar authorization expired. Reconnect the calendar." : response.status === 429 ? "The calendar is busy. Retry after the provider's rate limit clears." : provider === "CALENDLY" && response.status === 403 ? "Calendly denied this request. Check the required permissions and account plan, or reconnect Calendly." : response.status === 400 || response.status === 422 ? "The calendar rejected these meeting details. Check the time slot and event type." : "The calendar could not save this meeting. Your local meeting is retained.";
     throw new CalendarRequestError(message, method !== "GET" && response.status >= 500, response.status);
   }
   if (response.status === 204 || method === "DELETE") return null;
