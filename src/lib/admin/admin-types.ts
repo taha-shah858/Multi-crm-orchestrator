@@ -39,6 +39,9 @@ export interface AdminDashboardData {
   timeLogs: Array<{
     id: string;
     minutes: number;
+    trackedSeconds: number;
+    source: "MANUAL" | "AUTO";
+    isManualOverride: boolean;
     description: string;
     loggedAt: string;
     clientAccount: { id: string; name: string };
@@ -75,6 +78,7 @@ export interface AdminDashboardData {
     pendingCents: number;
     dealValueCents: number;
     activeMinutes: number;
+    activeSeconds: number;
     activeAgents: number;
   };
 }

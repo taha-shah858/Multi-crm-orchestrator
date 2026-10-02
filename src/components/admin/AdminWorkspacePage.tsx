@@ -20,6 +20,7 @@ import { useAdminWorkspaceUser } from "@/components/admin/AdminWorkspaceShell";
 import { readApiJson } from "@/lib/http/client-api";
 import { AdminIntegrationManager } from "@/components/admin/AdminIntegrationManager";
 import { ReconciliationControls, currencySummary, downloadCommissionReport, reportQuery, type ReportDates } from "@/components/operations/ReconciliationControls";
+import { effectiveTimeSeconds, formatTrackedTime } from "@/lib/operations/time-tracking-policy";
 
 export type AdminView = "dashboard" | "agents" | "clients" | "assignments" | "operations" | "commissions" | "analytics" | "integrations" | "audit";
 
@@ -192,7 +193,7 @@ function OperationsView({ dashboard }: { dashboard: AdminDashboardData }) {
   }, [dashboard.timeLogs]);
   return <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
     <MultiCrmCard className="space-y-4 xl:col-span-4"><SectionTitle icon={Clock3} title="Time coverage" detail="Company totals by agent" /><div className="space-y-2">{byAgent.map(([name, minutes]) => <MultiCrmInnerPanel key={name} className="flex items-center justify-between"><span className="text-xs font-semibold">{name}</span><span className="text-xs font-mono text-primary-cyan">{(minutes / 60).toFixed(1)}h</span></MultiCrmInnerPanel>)}</div></MultiCrmCard>
-    <MultiCrmCard className="space-y-4 xl:col-span-8"><SectionTitle icon={BarChart3} title="Recent operational logs" detail="All client accounts and team members" /><DataTable headers={["Agent", "Client", "Description", "Duration", "Logged"]} rows={dashboard.timeLogs.map((log) => [log.user?.name ?? "Unassigned", log.clientAccount.name, log.description, `${log.minutes}m`, dateTime(log.loggedAt)])} /></MultiCrmCard>
+    <MultiCrmCard className="space-y-4 xl:col-span-8"><SectionTitle icon={BarChart3} title="Recent operational logs" detail="Automatic work sessions and manual entries across all clients" /><DataTable headers={["Agent", "Client", "Description", "Duration (min:sec)", "Source", "Logged"]} rows={dashboard.timeLogs.map((log) => [log.user?.name ?? "Unassigned", log.clientAccount.name, log.description, formatTrackedTime(effectiveTimeSeconds(log)), `${log.source === "AUTO" ? "Automatic" : "Manual"}${log.isManualOverride ? " · Corrected" : ""}`, dateTime(log.loggedAt)])} /></MultiCrmCard>
   </div>;
 }
 

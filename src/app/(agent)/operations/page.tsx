@@ -27,14 +27,16 @@ import { MultiCrmCard, MultiCrmInnerPanel, MultiCrmTag } from "@/components/ui/M
 import { useClientAccount } from "@/context/ClientAccountContext";
 import type { CurrencyTotals } from "@/lib/operations/reconciliation";
 import { ReconciliationControls, currencySummary, downloadCommissionReport, reportQuery, type ReportDates } from "@/components/operations/ReconciliationControls";
+import { TIME_LOG_UPDATED_EVENT } from "@/components/operations/ActiveTimeTracker";
+import { effectiveTimeSeconds, formatTrackedTime } from "@/lib/operations/time-tracking-policy";
 
 type CommissionStatus = "PENDING" | "PARTIALLY_PAID" | "PAID";
 type LedgerType = "PAYMENT" | "ADJUSTMENT";
 interface Contact { id: string; firstName: string; lastName: string; company: string | null; email?: string | null; }
 interface LedgerEntry { id: string; type: "EXPECTED" | LedgerType; amountCents: number; note: string; occurredAt: string; }
 interface Commission { id: string; expectedCents: number; receivedCents: number; currency: string; status: CommissionStatus; source: "MANUAL" | "CRM"; notes: string | null; isManualOverride: boolean; deal: { id: string; title: string; valueCents: number; commissionRate: number | null; status: string; contact: Contact | null } | null; ledgerEntries: LedgerEntry[]; }
-interface TimeLog { id: string; minutes: number; description: string; loggedAt: string; isManualOverride: boolean; contact: Contact | null; }
-interface Summary { currencyTotals: CurrencyTotals[]; recordCount: number; expectedCents: number; receivedCents: number; pendingCents: number; dealValueCents: number; closedDeals: number; activeMinutes: number; billableHours: number; }
+interface TimeLog { id: string; minutes: number; trackedSeconds: number; source: "AUTO" | "MANUAL"; description: string; loggedAt: string; isManualOverride: boolean; contact: Contact | null; }
+interface Summary { currencyTotals: CurrencyTotals[]; recordCount: number; expectedCents: number; receivedCents: number; pendingCents: number; dealValueCents: number; closedDeals: number; activeSeconds: number; activeMinutes: number; billableHours: number; }
 
 interface AgentSale {
   id: string;
@@ -75,6 +77,12 @@ const money = (cents: number, currency = "USD") =>
 const dateTime = (value: string) =>
   new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 
+const localDateTimeInput = (value: string | Date) => {
+  const date = new Date(value);
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+  return date.toISOString().slice(0, 16);
+};
+
 const contactName = (contact: Contact | null) =>
   contact ? `${contact.firstName} ${contact.lastName}` : "Off-platform / account-level";
 
@@ -102,6 +110,7 @@ export default function OperationsPage() {
     pendingCents: 0,
     dealValueCents: 0,
     closedDeals: 0,
+    activeSeconds: 0,
     activeMinutes: 0,
     billableHours: 0,
   });
@@ -182,6 +191,26 @@ export default function OperationsPage() {
     return () => controller.abort();
   }, [activeClientAccount.id, isClientAccountReady, reportDates.from, reportDates.to]);
 
+  useEffect(() => {
+    if (!isClientAccountReady) return;
+    let request: AbortController | undefined;
+    const refreshTime = async (event: Event) => {
+      if ((event as CustomEvent<{ clientAccountId: string }>).detail.clientAccountId !== activeClientAccount.id) return;
+      request?.abort();
+      const controller = new AbortController();
+      request = controller;
+      try {
+        const response = await fetch(`/api/time-logs?${reportQuery({ from: reportDates.from, to: reportDates.to })}`, { cache: "no-store", signal: controller.signal });
+        const payload = await response.json();
+        if (controller.signal.aborted || !payload.success) return;
+        setTimeLogs(payload.timeLogs);
+        setSummary(previous => ({ ...previous, activeSeconds: payload.summary.activeSeconds, activeMinutes: payload.summary.activeMinutes, billableHours: payload.summary.billableHours }));
+      } catch { /* The next saved heartbeat or page refresh retries the ledger. */ }
+    };
+    window.addEventListener(TIME_LOG_UPDATED_EVENT, refreshTime);
+    return () => { request?.abort(); window.removeEventListener(TIME_LOG_UPDATED_EVENT, refreshTime); };
+  }, [activeClientAccount.id, isClientAccountReady, reportDates.from, reportDates.to]);
+
   const selectedContact = contacts.find((contact) => contact.id === (modal === "deal" ? dealForm.contactId : timeForm.contactId)) ?? null;
   const filteredContacts = useMemo(
     () => contacts.filter((contact) => `${contact.firstName} ${contact.lastName} ${contact.company ?? ""}`.toLowerCase().includes(contactSearch.toLowerCase())).slice(0, 6),
@@ -198,8 +227,8 @@ export default function OperationsPage() {
     setEditingTimeLog(timeLog ?? null);
     setTimeForm(
       timeLog
-        ? { description: timeLog.description, minutes: String(timeLog.minutes), loggedAt: new Date(timeLog.loggedAt).toISOString().slice(0, 16), contactId: timeLog.contact?.id ?? "" }
-        : { description: "", minutes: "", loggedAt: new Date().toISOString().slice(0, 16), contactId: "" }
+        ? { description: timeLog.description, minutes: String(timeLog.minutes), loggedAt: localDateTimeInput(timeLog.loggedAt), contactId: timeLog.contact?.id ?? "" }
+        : { description: "", minutes: "", loggedAt: localDateTimeInput(new Date()), contactId: "" }
     );
     setContactSearch("");
     setModal("time");
@@ -512,7 +541,7 @@ export default function OperationsPage() {
         <MultiCrmCard className="group p-5">
           <p className="text-[10px] font-mono uppercase tracking-wider text-crm-text-muted">Account time</p>
           <p className="mt-3 text-2xl font-semibold tabular-nums text-primary-cyan">{summary.billableHours}h</p>
-          <p className="mt-2 text-[11px] text-crm-text-muted">{summary.activeMinutes} manually logged minutes</p>
+          <p className="mt-2 text-[11px] text-crm-text-muted">{summary.activeMinutes} minutes · automatic and manual logs</p>
         </MultiCrmCard>
       </section>
 
@@ -742,8 +771,9 @@ export default function OperationsPage() {
                 + Add
               </button>
             </div>
-            <div className="space-y-2">
-              {timeLogs.slice(0, 5).map((timeLog) => (
+            <p className="text-[10px] text-crm-text-muted">Focused work is tracked automatically. Pauses after two minutes of inactivity. Click an entry to correct it.</p>
+            <div className="max-h-96 space-y-2 overflow-y-auto">
+              {timeLogs.map((timeLog) => (
                 <button
                   key={timeLog.id}
                   onClick={() => openTime(timeLog)}
@@ -751,8 +781,9 @@ export default function OperationsPage() {
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="truncate text-xs font-semibold">{timeLog.description}</span>
-                    <span className="shrink-0 font-mono text-[10px] text-primary-cyan">{timeLog.minutes}m</span>
+                    <span className="shrink-0 font-mono text-[10px] text-primary-cyan">{formatTrackedTime(effectiveTimeSeconds(timeLog))}</span>
                   </div>
+                  <p className="mt-1 text-[10px] text-crm-text-muted">{timeLog.source === "AUTO" ? "Automatic" : "Manual"}{timeLog.isManualOverride ? " · Corrected" : ""} · min:sec</p>
                   <p className="mt-1 text-[10px] font-mono text-crm-text-muted">
                     {contactName(timeLog.contact)} · {dateTime(timeLog.loggedAt)}
                   </p>
@@ -1050,6 +1081,7 @@ export default function OperationsPage() {
 
             {modal === "time" && (
               <>
+                {editingTimeLog?.source === "AUTO" && <p className="text-xs text-crm-text-muted">Measured {formatTrackedTime(editingTimeLog.trackedSeconds)} (min:sec). Your correction sets the report duration; the measured time stays available.</p>}
                 <label className="block space-y-1 text-xs font-mono">
                   <span className="text-[10px] text-crm-text-muted">Work description</span>
                   <input
@@ -1066,7 +1098,7 @@ export default function OperationsPage() {
                     <input
                       required
                       type="number"
-                      min="1"
+                      min={editingTimeLog?.source === "AUTO" ? 0 : 1}
                       max="1440"
                       value={timeForm.minutes}
                       onChange={(event) => setTimeForm({ ...timeForm, minutes: event.target.value })}

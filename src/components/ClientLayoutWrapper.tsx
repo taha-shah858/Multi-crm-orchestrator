@@ -3,6 +3,7 @@
 import type { CSSProperties } from "react";
 import Sidebar from "@/components/Sidebar";
 import ClientAccountSwitcher from "@/components/ClientAccountSwitcher";
+import ActiveTimeTracker from "@/components/operations/ActiveTimeTracker";
 
 export default function ClientLayoutWrapper({
   children,
@@ -31,6 +32,7 @@ export default function ClientLayoutWrapper({
               </div>
 
               <div className="flex items-center gap-4 text-xs font-mono text-crm-text-muted">
+                <ActiveTimeTracker />
                 <ClientAccountSwitcher />
                 <span className="bg-white/5 backdrop-blur-md px-3 py-1.5 rounded-xl border border-crm-border-strong shadow-inner">
                   Active Pipeline:{" "}

@@ -4,6 +4,7 @@ import { AppError } from "@/lib/errors/app-error";
 import type { RequestContext } from "@/lib/models/canonical";
 import { prepareActiveClientSync } from "@/lib/sync/contact-sync-service";
 import { commissionPeriodWhere, reconciliationDateRange, summarizeCommissions, type ReconciliationFilters } from "@/lib/operations/reconciliation";
+import { summarizeTime } from "@/lib/operations/time-tracking-policy";
 
 type Input = Record<string, unknown>;
 type LedgerType = "PAYMENT" | "ADJUSTMENT";
@@ -41,10 +42,9 @@ export async function listSalesOperations(context: RequestContext, filters: Reco
     prisma.commissionRecord.findMany({ where, include: { deal: { include: { contact: contactSelection } }, ledgerEntries: { orderBy: { occurredAt: "desc" }, take: 10 } }, orderBy: { updatedAt: "desc" }, take: 100 }),
     prisma.timeLog.findMany({ where: { ...scope, loggedAt: reconciliationDateRange(filters) }, include: { contact: contactSelection }, orderBy: { loggedAt: "desc" }, take: 100 }),
     prisma.commissionRecord.findMany({ where, select: { expectedCents: true, receivedCents: true, currency: true, deal: { select: { valueCents: true, status: true } } } }),
-    prisma.timeLog.aggregate({ where: { ...scope, loggedAt: reconciliationDateRange(filters) }, _sum: { minutes: true } }),
+    prisma.timeLog.groupBy({ by: ["source", "isManualOverride"], orderBy: { source: "asc" }, where: { ...scope, loggedAt: reconciliationDateRange(filters) }, _sum: { minutes: true, trackedSeconds: true } }),
   ], { isolationLevel: "RepeatableRead" });
-  const activeMinutes = timeTotal._sum.minutes ?? 0;
-  return { commissions, timeLogs, summary: { ...summarizeCommissions(balances), activeMinutes, billableHours: Number((activeMinutes / 60).toFixed(2)) } };
+  return { commissions, timeLogs, summary: { ...summarizeCommissions(balances), ...summarizeTime(timeTotal) } };
 }
 
 export async function createManualCommission(context: RequestContext, input: Input, requestId: string) {
@@ -116,12 +116,39 @@ export async function updateCommission(context: RequestContext, id: string, inpu
   });
 }
 
-export async function listTimeLogs(context: RequestContext) { await prepareActiveClientSync(context); return prisma.timeLog.findMany({ where: { organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, ...(context.user.role === "AGENT" ? { userId: context.user.id } : {}) }, include: { contact: contactSelection }, orderBy: { loggedAt: "desc" }, take: 100 }); }
+export async function listTimeOperations(context: RequestContext, filters: ReconciliationFilters = {}) {
+  await prepareActiveClientSync(context);
+  const where = { organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, ...(context.user.role === "AGENT" ? { userId: context.user.id } : {}), loggedAt: reconciliationDateRange(filters) };
+  const [timeLogs, groups, recordCount] = await prisma.$transaction([
+    prisma.timeLog.findMany({ where, include: { contact: contactSelection }, orderBy: [{ loggedAt: "desc" }, { id: "desc" }], take: 100 }),
+    prisma.timeLog.groupBy({ by: ["source", "isManualOverride"], orderBy: { source: "asc" }, where, _sum: { minutes: true, trackedSeconds: true } }),
+    prisma.timeLog.count({ where }),
+  ], { isolationLevel: "RepeatableRead" });
+  return { timeLogs, summary: { ...summarizeTime(groups), recordCount } };
+}
+export async function listTimeLogs(context: RequestContext) { return (await listTimeOperations(context)).timeLogs; }
 
 export async function createManualTimeLog(context: RequestContext, input: Input, requestId: string) {
   await prepareActiveClientSync(context); const minutes = Number(input.minutes); const description = text(input.description); if (!Number.isInteger(minutes) || minutes < 1 || minutes > 1440 || !description) throw new AppError("INVALID_TIME_LOG_INPUT", 422, "Invalid time log.", "Enter a description and a duration between 1 and 1,440 minutes."); const contactId = await contactFor(context, input.contactId); const timeLog = await prisma.timeLog.create({ data: { organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, contactId, userId: context.user.id, source: "MANUAL", minutes, description, loggedAt: input.loggedAt ? date(input.loggedAt, "logged date") : new Date() }, include: { contact: contactSelection } }); await recordAuditEvent(context, { action: "TIME_LOG_CREATED", entityType: "TIME_LOG", entityId: timeLog.id, requestId, source: "PLATFORM", metadata: { minutes, source: timeLog.source } }); return timeLog;
 }
 
 export async function updateTimeLog(context: RequestContext, id: string, input: Input, requestId: string) {
-  await prepareActiveClientSync(context); const existing = await prisma.timeLog.findFirst({ where: { id, organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, ...(context.user.role === "AGENT" ? { userId: context.user.id } : {}) } }); if (!existing) throw new AppError("TIME_LOG_NOT_FOUND", 404, "Time log is outside active client.", "Choose a time log from the active client account."); const minutes = input.minutes === undefined ? existing.minutes : Number(input.minutes); const description = input.description === undefined ? existing.description : text(input.description); if (!Number.isInteger(minutes) || minutes < 1 || minutes > 1440 || !description) throw new AppError("INVALID_TIME_LOG_INPUT", 422, "Invalid time log.", "Enter a description and a duration between 1 and 1,440 minutes."); const timeLog = await prisma.timeLog.update({ where: { id }, data: { minutes, description, loggedAt: input.loggedAt === undefined ? existing.loggedAt : date(input.loggedAt, "logged date"), isManualOverride: true }, include: { contact: contactSelection } }); await recordAuditEvent(context, { action: "TIME_LOG_UPDATED", entityType: "TIME_LOG", entityId: timeLog.id, requestId, source: "PLATFORM", metadata: { minutes, manualOverride: true } }); return timeLog;
+  await prepareActiveClientSync(context);
+  const where = { id, organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, ...(context.user.role === "AGENT" ? { userId: context.user.id } : {}) };
+  const owned = await prisma.timeLog.findFirst({ where });
+  if (!owned) throw new AppError("TIME_LOG_NOT_FOUND", 404, "Time log is outside active client.", "Choose a time log from the active client account.");
+  return prisma.$transaction(async tx => {
+    // Same lock order as heartbeats: cursor first, then its time log.
+    if (owned.userId) await tx.$queryRaw`SELECT "id" FROM "TimeTrackingSession" WHERE "userId" = ${owned.userId} AND "organizationId" = ${context.user.organizationId} FOR UPDATE`;
+    await tx.$queryRaw`SELECT "id" FROM "TimeLog" WHERE "id" = ${id} FOR UPDATE`;
+    const existing = await tx.timeLog.findFirstOrThrow({ where });
+    const minutes = input.minutes === undefined ? existing.minutes : Number(input.minutes);
+    const description = input.description === undefined ? existing.description : text(input.description);
+    const minimum = existing.source === "AUTO" ? 0 : 1;
+    if (!Number.isInteger(minutes) || minutes < minimum || minutes > 1440 || !description) throw new AppError("INVALID_TIME_LOG_INPUT", 422, "Invalid time log.", `Enter a description and a duration between ${minimum} and 1,440 minutes.`);
+    await tx.timeTrackingSession.updateMany({ where: { organizationId: existing.organizationId, timeLogId: id }, data: { isRunning: false, timeLogId: null, lastHeartbeatAt: null, pauseReason: "MANUAL" } });
+    const log = await tx.timeLog.update({ where: { id }, data: { minutes, description, loggedAt: input.loggedAt === undefined ? existing.loggedAt : date(input.loggedAt, "logged date"), isManualOverride: true }, include: { contact: contactSelection } });
+    await tx.auditLog.create({ data: { organizationId: existing.organizationId, clientAccountId: existing.clientAccountId, userId: context.user.id, action: "TIME_LOG_UPDATED", entityType: "TIME_LOG", entityId: id, requestId, source: "PLATFORM", metadata: { minutes, previousMinutes: existing.minutes, trackedSeconds: existing.trackedSeconds, manualOverride: true, source: existing.source } } });
+    return log;
+  });
 }

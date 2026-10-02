@@ -243,6 +243,7 @@ enum LedgerEntryType {
 
 enum TimeLogSource {
   MANUAL
+  AUTO
 }
 
 enum DocumentType {
@@ -293,6 +294,7 @@ model Organization {
   commissionRecords       CommissionRecord[]
   commissionLedgerEntries CommissionLedgerEntry[]
   timeLogs                TimeLog[]
+  timeTrackingSessions    TimeTrackingSession[]
   documents               Document[]
   integrationConnections  IntegrationConnection[]
   oauthStates             OAuthState[]
@@ -327,6 +329,7 @@ model User {
   commissionRecords       CommissionRecord[]
   commissionLedgerEntries CommissionLedgerEntry[]
   timeLogs                TimeLog[]
+  timeTrackingSession     TimeTrackingSession?
   documents               Document[]
   sessions                AuthSession[]
   ownedIntegrations       IntegrationConnection[] @relation("IntegrationOwner")
@@ -378,6 +381,7 @@ model ClientAccount {
   commissionRecords               CommissionRecord[]
   commissionLedgerEntries         CommissionLedgerEntry[]
   timeLogs                        TimeLog[]
+  timeTrackingSessions            TimeTrackingSession[]
   documents                       Document[]
   crmCompanies                    CrmCompany[]
   crmOwners                       CrmOwner[]
@@ -952,6 +956,7 @@ model TimeLog {
   userId           String?
   source           TimeLogSource @default(MANUAL)
   minutes          Int
+  trackedSeconds   Int           @default(0)
   description      String
   loggedAt         DateTime      @default(now())
   isManualOverride Boolean       @default(false)
@@ -961,9 +966,31 @@ model TimeLog {
   clientAccount    ClientAccount @relation(fields: [clientAccountId], references: [id], onDelete: Cascade)
   contact          Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
   user             User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  trackingSession  TimeTrackingSession?
 
   @@index([organizationId, clientAccountId, loggedAt])
   @@index([contactId, loggedAt])
+}
+
+// One cursor per agent serializes tracking across tabs/devices. TimeLog retains
+// completed segments; this cursor only points to the current segment.
+model TimeTrackingSession {
+  id               String        @id @default(cuid())
+  organizationId   String
+  userId           String        @unique
+  clientAccountId  String?
+  timeLogId        String?       @unique
+  tabId            String?
+  sequence         Int           @default(0)
+  isRunning        Boolean       @default(false)
+  lastHeartbeatAt  DateTime?
+  pauseReason      String?
+  organization     Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientAccount    ClientAccount? @relation(fields: [clientAccountId], references: [id], onDelete: SetNull)
+  timeLog          TimeLog?       @relation(fields: [timeLogId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, clientAccountId])
 }
 
 model Document {

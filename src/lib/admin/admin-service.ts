@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db/prisma";
 import { AppError } from "@/lib/errors/app-error";
 import type { AuthenticatedUser } from "@/lib/models/canonical";
 import { commissionPeriodWhere, reconciliationDateRange, summarizeCommissions, type ReconciliationFilters } from "@/lib/operations/reconciliation";
+import { summarizeTime } from "@/lib/operations/time-tracking-policy";
 
 const text = (value: unknown) => typeof value === "string" ? value.trim() : "";
 const email = (value: unknown) => text(value).toLowerCase();
@@ -76,6 +77,9 @@ export async function getAdminDashboard(user: AuthenticatedUser, filters: Reconc
       select: {
         id: true,
         minutes: true,
+        trackedSeconds: true,
+        source: true,
+        isManualOverride: true,
         description: true,
         loggedAt: true,
         clientAccount: { select: { id: true, name: true } },
@@ -118,10 +122,9 @@ export async function getAdminDashboard(user: AuthenticatedUser, filters: Reconc
       take: 100,
     }),
     prisma.commissionRecord.findMany({ where: commissionWhere, select: { expectedCents: true, receivedCents: true, currency: true, deal: { select: { valueCents: true, status: true } } } }),
-    prisma.timeLog.aggregate({ where: { organizationId, loggedAt: reconciliationDateRange(filters) }, _sum: { minutes: true } }),
+    prisma.timeLog.groupBy({ by: ["source", "isManualOverride"], orderBy: { source: "asc" }, where: { organizationId, loggedAt: reconciliationDateRange(filters) }, _sum: { minutes: true, trackedSeconds: true } }),
   ], { isolationLevel: "RepeatableRead" });
 
-  const activeMinutes = timeTotal._sum.minutes ?? 0;
 
   return {
     clients,
@@ -132,7 +135,7 @@ export async function getAdminDashboard(user: AuthenticatedUser, filters: Reconc
     syncRuns,
     summary: {
       ...summarizeCommissions(balances),
-      activeMinutes,
+      ...summarizeTime(timeTotal),
       activeAgents: agents.filter((agent) => agent.role === "AGENT" && agent.status === "ACTIVE").length,
     },
   };
