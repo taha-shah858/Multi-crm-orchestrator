@@ -137,6 +137,10 @@ enum AuditAction {
   CLICKUP_TASK_SYNC_STARTED
   CLICKUP_TASK_SYNC_COMPLETED
   CLICKUP_TASK_SYNC_FAILED
+  CALENDAR_CONNECTED
+  CALENDAR_DISCONNECTED
+  APPOINTMENT_SYNC_COMPLETED
+  APPOINTMENT_SYNC_FAILED
 }
 
 enum ScriptChannel {
@@ -205,6 +209,15 @@ enum CalendarProvider {
   MOCK
   GOOGLE
   OUTLOOK
+  CALENDLY
+}
+
+enum CalendarSyncStatus {
+  LOCAL_ONLY
+  PENDING
+  SYNCED
+  FAILED
+  REVIEW_REQUIRED
 }
 
 enum AppointmentStatus {
@@ -295,6 +308,8 @@ model Organization {
   commissionLedgerEntries CommissionLedgerEntry[]
   timeLogs                TimeLog[]
   timeTrackingSessions    TimeTrackingSession[]
+  calendarConnections     CalendarConnection[]
+  calendarOAuthStates     CalendarOAuthState[]
   documents               Document[]
   integrationConnections  IntegrationConnection[]
   oauthStates             OAuthState[]
@@ -330,6 +345,8 @@ model User {
   commissionLedgerEntries CommissionLedgerEntry[]
   timeLogs                TimeLog[]
   timeTrackingSession     TimeTrackingSession?
+  calendarConnections     CalendarConnection[]
+  calendarOAuthStates     CalendarOAuthState[]
   documents               Document[]
   sessions                AuthSession[]
   ownedIntegrations       IntegrationConnection[] @relation("IntegrationOwner")
@@ -716,6 +733,16 @@ model Appointment {
   source           AppointmentSource @default(MANUAL)
   externalId       String?
   externalMetadata Json?
+  calendarConnectionId String?
+  externalAccountId    String?
+  calendarSyncStatus   CalendarSyncStatus @default(LOCAL_ONLY)
+  lastSyncError        String?
+  lastSyncedAt         DateTime?
+  attendeeEmail        String?
+  attendeeName         String?
+  sendInvite           Boolean @default(false)
+  timeZone             String @default("UTC")
+  calendlyEventTypeUri  String?
   intentDetected   Boolean           @default(false)
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
@@ -724,6 +751,7 @@ model Appointment {
   contact          Contact?          @relation(fields: [contactId], references: [id], onDelete: SetNull)
   interaction      Interaction?      @relation(fields: [interactionId], references: [id], onDelete: SetNull)
   user             User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  calendarConnection CalendarConnection? @relation(fields: [calendarConnectionId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, clientAccountId, startTime])
   @@index([contactId, startTime])
@@ -970,6 +998,45 @@ model TimeLog {
 
   @@index([organizationId, clientAccountId, loggedAt])
   @@index([contactId, loggedAt])
+}
+
+// Personal calendar credentials stay separate from the agency/client CRM graph.
+model CalendarConnection {
+  id                    String @id @default(cuid())
+  organizationId        String
+  userId                String
+  provider              CalendarProvider
+  providerAccountId     String
+  accountName           String
+  status                ConnectionStatus @default(CONNECTED)
+  encryptedAccessToken  String?
+  encryptedRefreshToken String?
+  accessTokenExpiresAt  DateTime?
+  scopes                String[] @default([])
+  connectedAt           DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user                  User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  appointments          Appointment[]
+
+  @@unique([userId, provider])
+  @@index([organizationId, userId])
+}
+
+model CalendarOAuthState {
+  id                String @id @default(cuid())
+  stateHash         String @unique
+  provider          CalendarProvider
+  organizationId    String
+  userId            String
+  encryptedVerifier String?
+  expiresAt         DateTime
+  usedAt            DateTime?
+  createdAt         DateTime @default(now())
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user              User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt, usedAt])
 }
 
 // One cursor per agent serializes tracking across tabs/devices. TimeLog retains

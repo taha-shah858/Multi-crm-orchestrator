@@ -1,6 +1,7 @@
 import { AppError } from "@/lib/errors/app-error";
 
-export type SupportedCalendarProvider = "MANUAL" | "MOCK" | "GOOGLE" | "OUTLOOK";
+import type { SupportedCalendarProvider } from "@/lib/calendar/calendar-types";
+export type { SupportedCalendarProvider } from "@/lib/calendar/calendar-types";
 
 interface CalendarAdapterInput {
   title: string;
@@ -39,9 +40,8 @@ const adapters: Partial<Record<SupportedCalendarProvider, CalendarAdapter>> = {
 };
 
 /**
- * Calendar providers stay behind this boundary. Manual appointments require no
- * external provider; MOCK supports the complete local MVP flow. Google and
- * Outlook can be registered here later without changing the API or dashboard.
+ * Local appointments need no credentials. Live providers use the authenticated
+ * connection and sync service; MOCK remains available for local system checks.
  */
 export function calendarAdapterFor(provider: SupportedCalendarProvider) {
   if (provider === "MANUAL") return null;
