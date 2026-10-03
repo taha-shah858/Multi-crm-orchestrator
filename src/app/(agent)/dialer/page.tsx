@@ -33,6 +33,7 @@ export default function SmartDialerPage() {
   const [contactSearch, setContactSearch] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [smsBody, setSmsBody] = useState("");
+  const [agentPhone, setAgentPhone] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [feedback, setFeedback] = useState<{ tone: "success" | "error"; text: string } | null>(null);
@@ -93,7 +94,8 @@ export default function SmartDialerPage() {
   }, [isClientAccountReady, activeClientAccount.id]);
 
   useEffect(() => {
-    void loadGateway();
+    const timer = setTimeout(() => { void loadGateway(); }, 0);
+    return () => clearTimeout(timer);
   }, [loadGateway]);
 
   const selectedIdentity = identities.find((identity) => identity.id === identityId);
@@ -127,6 +129,7 @@ export default function SmartDialerPage() {
           contactId: contactId || undefined,
           phoneNumber: contactId ? undefined : phoneNumber,
           body: smsBody,
+          agentPhone,
         }),
       });
       const data = await readApiJson<{ success: true; delivery: { provider: string } }>(response);
@@ -158,6 +161,10 @@ export default function SmartDialerPage() {
 
   return (
     <div className="space-y-6 text-crm-text font-sans">
+      <label className="block text-sm">Your phone for live calls
+        <input type="tel" value={agentPhone} onChange={event => setAgentPhone(event.target.value)} placeholder="+country code and number" className="ml-3 rounded border p-2 bg-crm-bg" />
+        <span className="block text-xs text-crm-text-muted">Twilio rings your phone first, then connects the contact using the selected client identity.</span>
+      </label>
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">

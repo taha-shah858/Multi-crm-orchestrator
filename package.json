@@ -12,6 +12,7 @@
     "test:reconciliation": "node scripts/commission-reconciliation-test.cjs",
     "test:time-tracking": "node scripts/active-time-tracking-test.cjs",
     "test:calendar": "node scripts/calendar-provider-sync-test.cjs",
+    "test:twilio": "node scripts/twilio-gateway-test.cjs",
     "test:stage2.6": "node scripts/stage2-6-sales-crm-test.cjs",
     "test:stage2.7": "node scripts/stage2-7-agency-client-crm-test.cjs",
     "test:stage2.8": "node scripts/stage2-8-agency-hubspot-zoho-client-crm-test.cjs",
@@ -30,7 +31,8 @@
     "react-dom": "19.2.4",
     "recharts": "^3.10.0",
     "tailwind-merge": "^3.6.0",
-    "three": "^0.185.1"
+    "three": "^0.185.1",
+    "twilio": "^6.1.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

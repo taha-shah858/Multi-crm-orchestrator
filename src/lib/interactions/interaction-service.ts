@@ -24,7 +24,9 @@ export async function listInteractions(context: RequestContext) {
     ...interaction,
     body: interaction.source === "HUBSPOT"
       ? normalizeRichTextToPlainText(interaction.body) ?? "Activity logged in HubSpot"
-      : interaction.body,
+      : interaction.source === "TWILIO" && interaction.type === "SMS" && interaction.metadata && typeof interaction.metadata === "object" && !Array.isArray(interaction.metadata) && typeof interaction.metadata.status === "string"
+        ? `${interaction.body}\nDelivery status: ${interaction.metadata.status}`
+        : interaction.body,
   }));
 }
 

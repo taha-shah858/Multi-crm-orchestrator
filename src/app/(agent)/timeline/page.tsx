@@ -304,6 +304,8 @@ export default function TimelinePage() {
 
   useEffect(() => {
     void loadInteractions(true);
+    const interval = setInterval(() => { if (document.visibilityState === "visible") void loadInteractions().catch(() => {}); }, 15000);
+    return () => clearInterval(interval);
   }, [loadInteractions]);
 
   const openManualLog = async () => {

@@ -3,9 +3,10 @@ import { prisma } from "@/lib/db/prisma";
 import { AppError } from "@/lib/errors/app-error";
 import type { RequestContext } from "@/lib/models/canonical";
 import { prepareActiveClientSync } from "@/lib/sync/contact-sync-service";
+import twilio from "twilio";
+import { twilioWebhookUrl } from "@/lib/communications/twilio-webhooks";
 
 type CommunicationKind = "CALL" | "SMS";
-type DispatchMode = "AUTOMATED" | "MANUAL";
 
 interface DispatchInput {
   kind?: unknown;
@@ -14,6 +15,7 @@ interface DispatchInput {
   contactId?: unknown;
   phoneNumber?: unknown;
   body?: unknown;
+  agentPhone?: unknown;
 }
 
 function normalizePhone(value: string) {
@@ -31,6 +33,8 @@ async function sendWithTwilio(input: {
   from: string;
   to: string;
   body: string;
+  agentPhone: string;
+  interactionId: string;
 }) {
   const credentials = twilioCredentials();
   if (!credentials) {
@@ -45,21 +49,17 @@ async function sendWithTwilio(input: {
   const endpoint = input.kind === "SMS"
     ? "Messages.json"
     : "Calls.json";
-  const form = new URLSearchParams({ From: input.from, To: input.to });
+  const callback = twilioWebhookUrl(`status?interactionId=${input.interactionId}`);
+  const form = new URLSearchParams({ From: input.from, To: input.kind === "CALL" ? input.agentPhone : input.to, StatusCallback: callback });
 
   if (input.kind === "SMS") {
     form.set("Body", input.body);
   } else {
-    const voiceUrl = process.env.TWILIO_VOICE_URL;
-    if (!voiceUrl) {
-      throw new AppError(
-        "INTEGRATION_CONFIGURATION_ERROR",
-        409,
-        "TWILIO_VOICE_URL is required for outbound calls.",
-        "Twilio calling is not fully configured. Use the manual dialer fallback to place and log this call.",
-      );
-    }
-    form.set("Url", voiceUrl);
+    const response = new twilio.twiml.VoiceResponse();
+    response.dial({ callerId: input.from, action: callback, method: "POST", answerOnBridge: true }, input.to);
+    form.set("Twiml", response.toString());
+    form.set("StatusCallbackMethod", "POST");
+    for (const event of ["initiated", "ringing", "answered", "completed"]) form.append("StatusCallbackEvent", event);
   }
 
   const response = await fetch(
@@ -71,6 +71,7 @@ async function sendWithTwilio(input: {
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: form,
+      signal: AbortSignal.timeout(15000),
     },
   );
 
@@ -84,7 +85,8 @@ async function sendWithTwilio(input: {
     );
   }
 
-  return typeof payload.sid === "string" ? payload.sid : null;
+  if (typeof payload.sid !== "string") throw new Error("Twilio returned an incomplete dispatch response. Check Twilio before retrying.");
+  return payload.sid;
 }
 
 export async function listCommunicationIdentities(context: RequestContext) {
@@ -120,12 +122,13 @@ export async function dispatchCommunication(
   const contactId = typeof input.contactId === "string" && input.contactId ? input.contactId : null;
   const enteredNumber = typeof input.phoneNumber === "string" ? normalizePhone(input.phoneNumber) : "";
   const body = typeof input.body === "string" ? input.body.trim() : "";
+  const agentPhone = typeof input.agentPhone === "string" ? normalizePhone(input.agentPhone) : "";
 
   if (
     (kind !== "CALL" && kind !== "SMS") ||
     (mode !== "AUTOMATED" && mode !== "MANUAL") ||
     !identityId ||
-    (kind === "SMS" && !body)
+    (kind === "SMS" && (!body || body.length > 1600))
   ) {
     throw new AppError(
       "INVALID_COMMUNICATION_INPUT",
@@ -167,7 +170,7 @@ export async function dispatchCommunication(
   }
 
   const to = normalizePhone(contact?.phone ?? enteredNumber);
-  if (!to || to.length < 7) {
+  if (!/^\+[1-9]\d{6,14}$/.test(to)) {
     throw new AppError(
       "INVALID_COMMUNICATION_INPUT",
       422,
@@ -176,12 +179,16 @@ export async function dispatchCommunication(
     );
   }
 
-  const externalId = mode === "AUTOMATED" && identity.provider === "TWILIO"
-    ? await sendWithTwilio({ kind, from: identity.phoneNumber, to, body })
-    : null;
+  const live = mode === "AUTOMATED" && identity.provider === "TWILIO";
+  if (live && kind === "CALL" && !/^\+[1-9]\d{6,14}$/.test(agentPhone)) throw new AppError("INVALID_COMMUNICATION_INPUT", 422, "Agent phone required.", "Enter your phone number with country code. Twilio rings you first, then connects the contact.");
+  if (live) {
+    if (!twilioCredentials()) throw new AppError("COMMUNICATION_PROVIDER_UNAVAILABLE", 409, "Twilio is not configured.", "Configure Twilio credentials or use manual dispatch.");
+    try { twilioWebhookUrl("status"); } catch { throw new AppError("INTEGRATION_CONFIGURATION_ERROR", 409, "Public Twilio URL missing.", "Configure TWILIO_PUBLIC_URL as your public HTTPS application address before live dispatch."); }
+  }
+  let externalId: string | null = null;
   const source = mode === "MANUAL" ? "MANUAL" : identity.provider;
   const recipient = contact ? `${contact.firstName} ${contact.lastName}` : to;
-  const interaction = await prisma.interaction.create({
+  let interaction = await prisma.interaction.create({
     data: {
       organizationId: context.user.organizationId,
       clientAccountId: context.activeClientAccountId,
@@ -202,9 +209,26 @@ export async function dispatchCommunication(
         from: identity.phoneNumber,
         to,
         externalId,
+        status: live ? "dispatching" : "manually-logged",
       },
     },
   });
+
+  if (live) {
+    try {
+      externalId = await sendWithTwilio({ kind, from: identity.phoneNumber, to, body, agentPhone, interactionId: interaction.id });
+      interaction = await prisma.$transaction(async tx => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${externalId}))`;
+        const current = await tx.interaction.findUniqueOrThrow({ where: { id: interaction.id } });
+        const metadata = current.metadata as Record<string, string | null>;
+        return tx.interaction.update({ where: { id: current.id }, data: { metadata: { ...metadata, externalId, status: metadata.status === "dispatching" ? "queued" : metadata.status } } });
+      });
+    } catch (error) {
+      await prisma.interaction.updateMany({ where: { id: interaction.id, metadata: { path: ["status"], equals: "dispatching" } }, data: { metadata: { ...(interaction.metadata as Record<string, string | null>), status: error instanceof AppError ? "failed" : "review-required" } } });
+      if (error instanceof AppError) throw error;
+      throw new AppError("EXTERNAL_SERVICE_ERROR", 502, "Twilio dispatch response uncertain.", "Twilio's response was not received. Check Twilio before retrying to avoid duplicate calls or messages.");
+    }
+  }
 
   await recordAuditEvent(context, {
     action: mode === "MANUAL" ? "COMMUNICATION_MANUALLY_LOGGED" : "COMMUNICATION_DISPATCHED",
