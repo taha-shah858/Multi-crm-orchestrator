@@ -5,6 +5,7 @@ interface MultiCrmCardProps extends React.HTMLAttributes<HTMLDivElement> {
   className?: string;
 }
 
+/** Enterprise flat card — white bg, subtle slate border, minimal shadow. */
 export function MultiCrmCard({
   children,
   className = "",
@@ -12,17 +13,15 @@ export function MultiCrmCard({
 }: MultiCrmCardProps) {
   return (
     <div
-      className={`bg-crm-card/90 border border-crm-border rounded-2xl p-6 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] shadow-primary-cyan/5 relative overflow-hidden transition-all duration-300 ${className}`}
+      className={`bg-white border border-slate-200 rounded-lg shadow-sm p-6 ${className}`}
       {...props}
     >
-      {/* True glassmorphism inner reflection / 1px highlight */}
-      <div className="absolute inset-0 rounded-2xl border border-crm-border pointer-events-none" style={{ mixBlendMode: 'overlay' }} />
-      <div className="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-primary-cyan/20 to-transparent pointer-events-none" />
       {children}
     </div>
   );
 }
 
+/** Enterprise inner panel — light slate surface inside a card. */
 export function MultiCrmInnerPanel({
   children,
   className = "",
@@ -30,7 +29,7 @@ export function MultiCrmInnerPanel({
 }: MultiCrmCardProps) {
   return (
     <div
-      className={`bg-crm-inner/80 border border-crm-border rounded-xl p-4 transition-all duration-300 shadow-inner ${className}`}
+      className={`bg-slate-50 border border-slate-200 rounded-md p-4 ${className}`}
       {...props}
     >
       {children}
@@ -38,6 +37,7 @@ export function MultiCrmInnerPanel({
   );
 }
 
+/** Enterprise status tag / badge. */
 export function MultiCrmTag({
   children,
   variant = "cyan",
@@ -47,16 +47,16 @@ export function MultiCrmTag({
   variant?: "cyan" | "magenta" | "purple" | "neutral";
   className?: string;
 }) {
-  const variants = {
-    cyan: "bg-primary-cyan/10 text-primary-cyan border-primary-cyan/20",
-    magenta: "bg-secondary-pink/10 text-secondary-pink border-secondary-pink/20",
-    purple: "bg-tertiary-purple/10 text-tertiary-purple border-tertiary-purple/20",
-    neutral: "bg-crm-surface/60 text-crm-text-muted border-crm-border/60",
+  const variants: Record<string, string> = {
+    cyan:    "bg-blue-50  text-blue-700  border border-blue-200",
+    magenta: "bg-violet-50 text-violet-700 border border-violet-200",
+    purple:  "bg-violet-50 text-violet-700 border border-violet-200",
+    neutral: "bg-slate-100 text-slate-600  border border-slate-200",
   };
 
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-mono border font-medium ${variants[variant]} ${className}`}
+      className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ${variants[variant] ?? variants.neutral} ${className}`}
     >
       {children}
     </span>

@@ -7,7 +7,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
   if (user) redirect(workspaceHomeForRole(user.role));
 
   return (
-    <main className="relative z-10 w-full min-h-screen flex flex-col items-center justify-center bg-transparent">
+    <main className="relative z-10 w-full min-h-screen flex flex-col items-center justify-center bg-[#F1F5F9]">
       {children}
     </main>
   );

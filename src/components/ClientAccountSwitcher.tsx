@@ -9,15 +9,15 @@ export default function ClientAccountSwitcher() {
   const [error, setError] = useState<string | null>(null);
 
   return (
-    <label className="flex items-center gap-2 text-[10px] font-mono text-crm-text-muted">
-      <Building2 className="h-3.5 w-3.5 text-primary-cyan" />
+    <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 font-sans">
+      <Building2 className="h-3.5 w-3.5 text-blue-600" />
       <span className="hidden xl:inline">CLIENT ACCOUNT</span>
       <select
         aria-label="Active client account"
         value={activeClientAccount.id}
         disabled={!isClientAccountReady || !clientAccounts.length}
         onChange={(event) => { setError(null); void selectClientAccount(event.target.value).catch((reason) => setError(reason instanceof Error ? reason.message : "Client selection failed.")); }}
-        className="max-w-44 bg-white/5 px-2 py-1.5 text-xs text-crm-text outline-none"
+        className="max-w-44 bg-white border border-slate-300 rounded-lg px-2 py-1 text-xs text-slate-800 font-sans shadow-2xs focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none"
       >
         {clientAccounts.map((clientAccount) => (
           <option key={clientAccount.id} value={clientAccount.id}>

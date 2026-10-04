@@ -14,7 +14,12 @@ interface IntegrationPayload {
 }
 
 const statusTone = (status: IntegrationConnectionSummary["status"]) =>
-  status === "CONNECTED" ? "text-emerald-400" : status === "DEGRADED" ? "text-amber-400" : "text-rose-400";
+  status === "CONNECTED"
+    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+    : status === "DEGRADED"
+    ? "bg-amber-50 text-amber-700 border-amber-200"
+    : "bg-red-50 text-red-700 border-red-200";
+
 const formatDate = (value: string | null) => (value ? new Date(value).toLocaleString() : "Not yet");
 
 export default function IntegrationsAppCenter() {
@@ -118,77 +123,74 @@ export default function IntegrationsAppCenter() {
   const clientConnections = connections.filter(
     (item) => item.ownershipType === "CLIENT_ACCOUNT" && item.clientAccountId === activeClientAccount.id,
   );
-  // HubSpot is the Agency CRM (company-wide or client-linked)
   const hubSpot =
     connections.find((item) => item.provider === "HUBSPOT" && item.clientAccountId === activeClientAccount.id) ||
     connections.find((item) => item.provider === "HUBSPOT");
-
-  // Zoho is the Client CRM (scoped to the active client account)
   const zoho = clientConnections.find((item) => item.provider === "ZOHO");
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-slate-900 font-sans">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="mb-2 flex items-center gap-2">
             <MultiCrmTag variant="cyan">INTEGRATION HUB</MultiCrmTag>
-            <span className="text-[10px] font-mono text-crm-text-muted">{activeClientAccount.name}</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">{activeClientAccount.name}</span>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-crm-text">Integration Hub</h1>
-          <p className="mt-1 max-w-2xl text-xs font-mono text-crm-text-muted">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Integration Hub</h1>
+          <p className="mt-1 max-w-2xl text-sm font-normal text-slate-600">
             Agency CRM (HubSpot sales source of truth) and Client CRM Providers (Zoho downstream handoffs).
           </p>
         </div>
         <button
           onClick={() => void loadConnections()}
           disabled={isLoading}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-crm-border bg-crm-inner px-4 py-2 text-xs font-mono text-crm-text-muted transition hover:text-primary-cyan disabled:opacity-50 cursor-pointer"
+          className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
         >
-          <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} />
+          <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
           Refresh status
         </button>
       </div>
 
       {message && (
         <div
-          className={`rounded-xl border px-4 py-3 text-xs font-mono ${
+          className={`rounded-lg border px-4 py-3 text-sm font-medium ${
             message.tone === "success"
-              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
               : message.tone === "info"
-              ? "border-cyan-500/30 bg-cyan-500/10 text-cyan-300"
-              : "border-rose-500/30 bg-rose-500/10 text-rose-300"
+              ? "border-blue-200 bg-blue-50 text-blue-800"
+              : "border-red-200 bg-red-50 text-red-700"
           }`}
         >
           {message.text}
         </div>
       )}
 
-      {/* CRM Architectures Distinction: Agency CRM vs Client CRM */}
+      {/* CRM Architectures: Agency CRM vs Client CRM */}
       <div className="grid gap-6 xl:grid-cols-12">
         {/* Agency CRM: HubSpot */}
         <MultiCrmCard className="space-y-5 xl:col-span-6">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <span className="text-[9px] font-mono uppercase tracking-wider text-orange-400 font-bold block mb-1">
+              <span className="text-xs font-semibold uppercase tracking-wider text-orange-600 block mb-1">
                 AGENCY CRM (SOURCE OF TRUTH)
               </span>
-              <h2 className="flex items-center gap-2 text-sm font-semibold text-crm-text">
-                <Building2 className="h-4 w-4 text-orange-400" />
+              <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
+                <Building2 className="h-4 w-4 text-orange-500" />
                 HubSpot Sales CRM
               </h2>
-              <p className="mt-1 text-[11px] font-mono text-crm-text-muted">
+              <p className="mt-1 text-xs text-slate-500">
                 Agency leads, deals, pipelines, activities, and unified sales data.
               </p>
             </div>
             {hubSpot && (
-              <span className={`text-[10px] font-mono ${statusTone(hubSpot.status)}`}>
+              <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${statusTone(hubSpot.status)}`}>
                 ● {hubSpot.status.replaceAll("_", " ")}
               </span>
             )}
           </div>
 
           {hubSpot ? (
-            <MultiCrmInnerPanel className="space-y-4">
+            <div className="bg-slate-50/70 border border-slate-200 rounded-lg p-4 space-y-4">
               <div className="grid gap-4 sm:grid-cols-3">
                 <Metric
                   label="Connected account"
@@ -198,7 +200,7 @@ export default function IntegrationsAppCenter() {
                 <Metric label="Last sales sync" value={formatDate(hubSpot.lastSyncAt)} />
               </div>
               {hubSpot.lastError && (
-                <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-[11px] font-mono text-amber-300">
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 font-medium">
                   {hubSpot.lastError}
                 </div>
               )}
@@ -206,16 +208,16 @@ export default function IntegrationsAppCenter() {
                 <button
                   onClick={() => void runSync(hubSpot)}
                   disabled={workingId === hubSpot.id || !hubSpot.permissions.canSync}
-                  className="inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-4 py-2 text-xs font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:opacity-50 cursor-pointer"
+                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm font-medium text-white shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
                 >
-                  <DatabaseZap className="h-3.5 w-3.5" />
+                  <DatabaseZap className="h-4 w-4" />
                   Sync agency leads
                 </button>
                 {(hubSpot.status === "DEGRADED" || hubSpot.status === "ERROR") && (
                   <button
                     onClick={() => void runSync(hubSpot, true)}
                     disabled={workingId === hubSpot.id || !hubSpot.permissions.canRetry}
-                    className="inline-flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs font-mono text-amber-300 disabled:opacity-50 cursor-pointer"
+                    className="inline-flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 px-3.5 py-2 text-xs font-medium text-amber-800 shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
                   >
                     <RefreshCw className="h-3.5 w-3.5" />
                     Retry failed sync
@@ -225,31 +227,31 @@ export default function IntegrationsAppCenter() {
                   <button
                     onClick={() => void connectHubSpot()}
                     disabled={workingId !== null}
-                    className="inline-flex items-center gap-2 rounded-xl border border-crm-border bg-crm-inner px-4 py-2 text-xs font-mono text-crm-text-muted hover:text-primary-cyan disabled:opacity-50 cursor-pointer"
+                    className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 px-3.5 py-2 text-xs font-medium text-slate-700 shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
                   >
                     <ArrowUpRight className="h-3.5 w-3.5" />
                     Reconnect OAuth
                   </button>
                 )}
               </div>
-            </MultiCrmInnerPanel>
+            </div>
           ) : (
-            <MultiCrmInnerPanel className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="bg-slate-50/70 border border-slate-200 rounded-lg p-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm font-semibold text-crm-text">No HubSpot account connected</p>
-                <p className="mt-1 text-[11px] font-mono text-crm-text-muted">
+                <p className="text-sm font-semibold text-slate-900">No HubSpot account connected</p>
+                <p className="mt-1 text-xs text-slate-500">
                   Connect the agency HubSpot CRM to populate unified leads and sales pipeline.
                 </p>
               </div>
               <button
                 onClick={() => void connectHubSpot()}
                 disabled={!canConnectClient || workingId !== null}
-                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-cyan-500 px-4 py-2 text-xs font-semibold text-slate-950 hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
+                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm font-medium text-white shadow-xs transition-colors disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
               >
-                <LockKeyhole className="h-3.5 w-3.5" />
+                <LockKeyhole className="h-4 w-4" />
                 Connect HubSpot
               </button>
-            </MultiCrmInnerPanel>
+            </div>
           )}
         </MultiCrmCard>
 
@@ -257,28 +259,30 @@ export default function IntegrationsAppCenter() {
         <MultiCrmCard className="space-y-5 xl:col-span-6">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <span className="text-[9px] font-mono uppercase tracking-wider text-emerald-400 font-bold block mb-1">
+              <span className="text-xs font-semibold uppercase tracking-wider text-emerald-700 block mb-1">
                 CLIENT CRM PROVIDER (DOWNSTREAM HANDOFF)
               </span>
-              <h2 className="flex items-center gap-2 text-sm font-semibold text-crm-text">
-                <Briefcase className="h-4 w-4 text-emerald-400" />
+              <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
+                <Briefcase className="h-4 w-4 text-emerald-600" />
                 Zoho CRM
               </h2>
-              <p className="mt-1 text-[11px] font-mono text-crm-text-muted">
+              <p className="mt-1 text-xs text-slate-500">
                 Configured per client account ({activeClientAccount.name}) for closed deal operations.
               </p>
             </div>
             {zoho ? (
-              <span className={`text-[10px] font-mono ${statusTone(zoho.status)}`}>
+              <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${statusTone(zoho.status)}`}>
                 ● {zoho.status.replaceAll("_", " ")}
               </span>
             ) : (
-              <span className="text-[10px] font-mono text-crm-text-muted">● NOT CONFIGURED</span>
+              <span className="px-2.5 py-1 rounded-full text-xs font-semibold border border-slate-200 bg-slate-100 text-slate-600">
+                ● NOT CONFIGURED
+              </span>
             )}
           </div>
 
           {zoho ? (
-            <MultiCrmInnerPanel className="space-y-4">
+            <div className="bg-slate-50/70 border border-slate-200 rounded-lg p-4 space-y-4">
               <div className="grid gap-4 sm:grid-cols-3">
                 <Metric
                   label="Client Connection"
@@ -288,7 +292,7 @@ export default function IntegrationsAppCenter() {
                 <Metric label="Last sync" value={formatDate(zoho.lastSyncAt)} />
               </div>
               {zoho.lastError && (
-                <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-[11px] font-mono text-amber-300">
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 font-medium">
                   {zoho.lastError}
                 </div>
               )}
@@ -296,35 +300,35 @@ export default function IntegrationsAppCenter() {
                 <button
                   onClick={() => void runSync(zoho)}
                   disabled={workingId === zoho.id || !zoho.permissions.canSync}
-                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2 text-xs font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:opacity-50 cursor-pointer"
+                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm font-medium text-white shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
                 >
-                  <DatabaseZap className="h-3.5 w-3.5" />
+                  <DatabaseZap className="h-4 w-4" />
                   Sync Zoho CRM
                 </button>
                 {(zoho.status === "DEGRADED" || zoho.status === "ERROR") && (
                   <button
                     onClick={() => void runSync(zoho, true)}
                     disabled={workingId === zoho.id || !zoho.permissions.canRetry}
-                    className="inline-flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs font-mono text-amber-300 disabled:opacity-50 cursor-pointer"
+                    className="inline-flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 px-3.5 py-2 text-xs font-medium text-amber-800 shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
                   >
                     <RefreshCw className="h-3.5 w-3.5" />
                     Retry sync
                   </button>
                 )}
               </div>
-            </MultiCrmInnerPanel>
+            </div>
           ) : (
-            <MultiCrmInnerPanel className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="bg-slate-50/70 border border-slate-200 rounded-lg p-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm font-semibold text-crm-text">No Zoho CRM connected for this client</p>
-                <p className="mt-1 text-[11px] font-mono text-crm-text-muted">
+                <p className="text-sm font-semibold text-slate-900">No Zoho CRM connected for this client</p>
+                <p className="mt-1 text-xs text-slate-500">
                   An Administrator configures Zoho CRM in Admin Settings to enable deal handoffs for this client.
                 </p>
               </div>
-              <span className="text-[11px] font-mono text-crm-text-muted px-3 py-1.5 rounded-lg border border-crm-border bg-crm-card">
+              <span className="text-xs font-medium text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 bg-white">
                 Admin Configured
               </span>
-            </MultiCrmInnerPanel>
+            </div>
           )}
         </MultiCrmCard>
       </div>
@@ -333,10 +337,10 @@ export default function IntegrationsAppCenter() {
       <div className="grid gap-6 xl:grid-cols-12">
         <MultiCrmCard className="space-y-4 xl:col-span-8">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-emerald-400" />
-            <h2 className="text-sm font-semibold text-crm-text">Architecture & Security Guarantees</h2>
+            <ShieldCheck className="h-5 w-5 text-emerald-600" />
+            <h2 className="text-base font-semibold text-slate-900">Architecture & Security Guarantees</h2>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 text-[11px] font-mono text-crm-text-muted">
+          <div className="grid gap-3 sm:grid-cols-2 text-xs text-slate-600">
             <SecurityLine text="HubSpot is the Agency CRM and sole source of truth for Unified Leads" />
             <SecurityLine text="Client selection NEVER alters the Unified Lead Directory" />
             <SecurityLine text="Zoho CRM credentials are encrypted server-side per client account" />
@@ -347,7 +351,7 @@ export default function IntegrationsAppCenter() {
         </MultiCrmCard>
 
         <MultiCrmCard className="space-y-3 xl:col-span-4">
-          <h2 className="text-sm font-semibold text-crm-text">Future Operational Integrations</h2>
+          <h2 className="text-base font-semibold text-slate-900">Future Operational Integrations</h2>
           <div className="space-y-2">
             <FutureCard name="Twilio (Client Voice / SMS)" />
             <FutureCard name="Calendar (Client Scheduling)" />
@@ -361,8 +365,8 @@ export default function IntegrationsAppCenter() {
 function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-[9px] font-mono uppercase tracking-wider text-crm-text-muted">{label}</p>
-      <p className="mt-1 truncate text-xs text-crm-text" title={value}>
+      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</p>
+      <p className="mt-1 truncate text-xs font-medium text-slate-900" title={value}>
         {value}
       </p>
     </div>
@@ -372,7 +376,7 @@ function Metric({ label, value }: { label: string; value: string }) {
 function SecurityLine({ text }: { text: string }) {
   return (
     <div className="flex items-center gap-2">
-      <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
       <span>{text}</span>
     </div>
   );
@@ -380,13 +384,13 @@ function SecurityLine({ text }: { text: string }) {
 
 function FutureCard({ name }: { name: string }) {
   return (
-    <div className="flex items-center justify-between rounded-xl border border-crm-border/70 bg-crm-card/50 px-4 py-3">
+    <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
       <div className="flex items-center gap-2">
-        <Unplug className="h-3.5 w-3.5 text-crm-text-muted" />
-        <span className="text-xs text-crm-text-muted">{name}</span>
+        <Unplug className="h-4 w-4 text-slate-400" />
+        <span className="text-xs font-medium text-slate-700">{name}</span>
       </div>
-      <span className="flex items-center gap-1 text-[9px] font-mono text-crm-text-muted">
-        <Clock3 className="h-3 w-3" />
+      <span className="flex items-center gap-1 text-xs font-semibold text-slate-400">
+        <Clock3 className="h-3.5 w-3.5" />
         STAGE 3
       </span>
     </div>

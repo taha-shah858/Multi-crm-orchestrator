@@ -55,3 +55,8 @@ out/
 .env*.local
 
 # Prisma generated files (if applicable)
+
+# Agent and tool scratch directories
+.agents/
+.gemini/
+graphify-out/

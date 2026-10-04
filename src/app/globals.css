@@ -1,240 +1,136 @@
 @import "tailwindcss";
 
 @theme {
-  /* Multi-CRM Orchestrator Palette Specs (Mapped to dynamic variables) */
-  --color-crm-base: var(--crm-base, #0b0f19);
-  --color-crm-surface: var(--crm-surface, #121827);
-  --color-crm-card: var(--crm-card, #161e2e);
-  --color-crm-inner: var(--crm-inner, #0f1420);
-  --color-crm-text: var(--crm-text, #f8fafc);
-  --color-crm-text-muted: var(--crm-text-muted, #94a3b8);
-  --color-crm-border: color-mix(in srgb, var(--crm-text) 10%, transparent);
-  --color-crm-border-strong: color-mix(in srgb, var(--crm-text) 20%, transparent);
+  /* ── Enterprise Palette ── */
+  --color-crm-base:          var(--crm-base,    #F8FAFC);
+  --color-crm-surface:       var(--crm-surface,  #FFFFFF);
+  --color-crm-card:          var(--crm-card,     #FFFFFF);
+  --color-crm-inner:         var(--crm-inner,    #F1F5F9);
+  --color-crm-text:          var(--crm-text,     #0F172A);
+  --color-crm-text-muted:    var(--crm-text-muted, #475569);
+  --color-crm-border:        var(--crm-border,   #E2E8F0);
+  --color-crm-border-strong: var(--crm-border-strong, #CBD5E1);
 
-  /* Multi-CRM Accents */
-  --color-primary-cyan: var(--primary-cyan, #00f2ff);
-  --color-secondary-pink: var(--secondary-pink, #ff00e5);
-  --color-tertiary-purple: var(--tertiary-purple, #7c3aed);
+  /* ── Accent Tokens ── */
+  --color-primary-cyan:    var(--primary-cyan,    #2563EB);
+  --color-secondary-pink:  var(--secondary-pink,  #7C3AED);
+  --color-tertiary-purple: var(--tertiary-purple, #7C3AED);
 
-  /* Typography Specs */
-  --font-sans: var(--font-geist-sans), "Inter", system-ui, -apple-system,
-    sans-serif;
+  /* ── Typography — sans-serif first ── */
+  --font-sans: var(--font-geist-sans), "Inter", system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-geist-mono), "JetBrains Mono", monospace;
 }
 
+/* ── Root: light high-contrast enterprise defaults ── */
 :root {
   color-scheme: light;
 
-  /* Match the provider's light default during SSR and hydration. */
-  --crm-base: #ffffff;
-  --crm-surface: #f8fafc;
-  --crm-card: #ffffff;
-  --crm-inner: #f1f5f9;
+  --crm-base:          #F8FAFC;
+  --crm-surface:       #FFFFFF;
+  --crm-card:          #FFFFFF;
+  --crm-inner:         #F1F5F9;
+  --crm-text:          #0F172A;
+  --crm-text-muted:    #64748B;
+  --crm-border:        #E2E8F0;
+  --crm-border-strong: #CBD5E1;
 
-  --primary-cyan: #0ea5e9;
-  --secondary-pink: #ec4899;
-  --tertiary-purple: #7c3aed;
-  --crm-text: #0f172a;
-  --crm-text-muted: #64748b;
+  --primary-cyan:    #2563EB;
+  --secondary-pink:  #7C3AED;
+  --tertiary-purple: #7C3AED;
 }
 
-/* ==========================================================================
-   THEME PRESET CLASSES (Controlled by your Floating Widget / ThemeContext)
-   ========================================================================== */
-
-.theme-obsidian {
-  --crm-base: #0b0f19;
-  --crm-surface: #121827;
-  --crm-card: #161e2e;
-  --crm-inner: #0f1420;
-  --primary-cyan: #00f2ff;
-  --secondary-pink: #ff00e5;
-  --tertiary-purple: #7c3aed;
-}
-
-.theme-light {
-  --crm-base: #f8fafc;
-  --crm-surface: #ffffff;
-  --crm-card: #f1f5f9;
-  --crm-inner: #e2e8f0;
-  --primary-cyan: #0284c7;
-  --secondary-pink: #db2777;
-  --tertiary-purple: #7c3aed;
-}
-
-.theme-matrix {
-  --crm-base: #020804;
-  --crm-surface: #051a0c;
-  --crm-card: #092612;
-  --crm-inner: #031006;
-  --primary-cyan: #00ff66;
-  --secondary-pink: #00ccff;
-  --tertiary-purple: #10b981;
-}
-
-.theme-plasma {
-  --crm-base: #0f0518;
-  --crm-surface: #1d092c;
-  --crm-card: #270c3d;
-  --crm-inner: #150624;
-  --primary-cyan: #ff007f;
-  --secondary-pink: #7928ca;
-  --tertiary-purple: #ffb800;
-}
-
+/* ── Body reset ── */
 body {
   margin: 0;
-  background-color: var(--color-crm-base);
-  color: var(--color-crm-text);
+  background-color: #F8FAFC;
+  color: #0F172A;
   font-family: var(--font-sans);
   overflow-x: hidden;
   min-height: 100vh;
-  transition: background-color 0.4s ease, color 0.4s ease;
 }
 
-/* Shared dashboard overlay boundary. Fixed drawers and modals begin below the
-   persistent client-account header, whose height is owned by the dashboard shell. */
+/* ── Dashboard overlay anchor ── */
 .dashboard-overlay {
   position: fixed;
   inset: var(--dashboard-header-height, 4rem) 0 0;
   z-index: 30;
 }
 
-/* ==========================================================================
-   CUSTOM SCROLLBARS (Preserved for Dashboard Polish)
-   ========================================================================== */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
+/* ── Enterprise scrollbars ── */
+::-webkit-scrollbar        { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: #F1F5F9; }
+::-webkit-scrollbar-thumb  { background: #CBD5E1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
 
-::-webkit-scrollbar-track {
-  background: var(--color-crm-base);
-}
-
-::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--color-primary-cyan) 20%, transparent);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--color-primary-cyan) 40%, transparent);
-}
-
-/* ==========================================================================
-   SECURE GLASSMORPHISM SYSTEM (Additive Refactor)
-   ========================================================================== */
-
-/* Outer Chassis Panels */
+/* ── Enterprise card surface (replaces glass-panel) ── */
 .glass-panel {
-  background-color: color-mix(
-    in srgb,
-    var(--color-crm-surface) 94%,
-    transparent
-  ) !important;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid
-    color-mix(in srgb, var(--color-primary-cyan) 22%, transparent);
-  border-top-color: color-mix(
-    in srgb,
-    var(--color-primary-cyan) 45%,
-    transparent
-  );
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.95),
-    0 0 20px 0 color-mix(in srgb, var(--color-primary-cyan) 8%, transparent),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
-  transition: background-color 0.4s ease, border-color 0.4s ease,
-    box-shadow 0.4s ease;
+  background-color: #FFFFFF !important;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 1px 3px 0 rgba(0,0,0,0.07), 0 1px 2px -1px rgba(0,0,0,0.07);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
-/* Inner Nested Blocks */
+/* ── Enterprise inner block (replaces glass-card-inner) ── */
 .glass-card-inner {
-  background-color: var(--color-crm-inner);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.5);
-  transition: all 0.2s ease-in-out;
+  background-color: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  box-shadow: none;
 }
-
 .glass-card-inner:hover {
-  border-color: color-mix(in srgb, var(--color-primary-cyan) 40%, transparent);
-  background-color: color-mix(
-    in srgb,
-    var(--color-primary-cyan) 8%,
-    var(--color-crm-surface)
-  );
-  box-shadow: 0 0 15px 0
-      color-mix(in srgb, var(--color-primary-cyan) 12%, transparent),
-    inset 0 2px 4px 0 rgba(0, 0, 0, 0.5);
+  border-color: #93C5FD;
+  background-color: #EFF6FF;
 }
 
-/* ==========================================================================
-   MULTI-CRM UTILITY & BUTTON CLASSES
-   ========================================================================== */
-
-/* Primary Multi-CRM Gradient Button */
+/* ── Primary button ── */
 .btn-multicrm-primary {
-  background: linear-gradient(
-    90deg,
-    var(--color-primary-cyan) 0%,
-    var(--color-secondary-pink) 100%
-  );
-  color: #ffffff;
-  font-family: var(--font-mono, monospace);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  background: #2563EB;
+  color: #FFFFFF;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: 0.01em;
   border: none;
-  box-shadow: 0 0 25px
-    color-mix(in srgb, var(--color-primary-cyan) 40%, transparent);
-  transition: all 0.2s ease-in-out;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  transition: background 0.15s ease, box-shadow 0.15s ease;
 }
-
 .btn-multicrm-primary:hover {
-  filter: brightness(1.15);
-  box-shadow: 0 0 35px
-    color-mix(in srgb, var(--color-secondary-pink) 60%, transparent);
-  transform: translateY(-1px);
+  background: #1D4ED8;
+  box-shadow: 0 4px 6px rgba(37,99,235,0.25);
 }
 
-/* Secondary Multi-CRM Outlined Button */
+/* ── Secondary button ── */
 .btn-multicrm-outlined {
-  background: color-mix(in srgb, var(--color-crm-inner) 80%, transparent);
-  color: var(--color-primary-cyan);
-  border: 1px solid
-    color-mix(in srgb, var(--color-primary-cyan) 40%, transparent);
-  font-family: var(--font-mono, monospace);
-  transition: all 0.2s ease-in-out;
+  background: #FFFFFF;
+  color: #374151;
+  border: 1px solid #D1D5DB;
+  font-family: var(--font-sans);
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
-
 .btn-multicrm-outlined:hover {
-  background: color-mix(in srgb, var(--color-primary-cyan) 10%, transparent);
-  border-color: var(--color-primary-cyan);
-  box-shadow: 0 0 15px
-    color-mix(in srgb, var(--color-primary-cyan) 20%, transparent);
+  background: #F9FAFB;
+  border-color: #9CA3AF;
 }
 
-/* Section Monospaced Labels */
+/* ── Enterprise label (sans-serif, no monospace) ── */
 .label-multicrm,
 .font-technical {
-  font-family: var(--font-mono, monospace);
-  color: var(--color-primary-cyan);
-  font-size: 0.75rem;
-  letter-spacing: 0.1em;
+  font-family: var(--font-sans);
+  color: #1E40AF;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  font-weight: 600;
+  font-weight: 700;
 }
 
-/* Danger / Terminate Multi-CRM Button */
+/* ── Danger button ── */
 .btn-multicrm-danger {
-  background: rgba(244, 63, 94, 0.1);
-  border: 1px solid rgba(244, 63, 94, 0.3);
-  color: #fb7185;
-  font-family: var(--font-mono, monospace);
-  transition: all 0.2s ease-in-out;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #DC2626;
+  font-family: var(--font-sans);
+  transition: background 0.15s ease;
 }
-
 .btn-multicrm-danger:hover {
-  background: rgba(244, 63, 94, 0.25);
-  border-color: rgba(244, 63, 94, 0.5);
+  background: #FEE2E2;
+  border-color: #F87171;
 }
