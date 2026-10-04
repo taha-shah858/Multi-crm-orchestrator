@@ -21,6 +21,7 @@ export default function IntegrationsAppCenter() {
   const { activeClientAccount, isClientAccountReady } = useClientAccount();
   const [connections, setConnections] = useState<IntegrationConnectionSummary[]>([]);
   const [canConnectClient, setCanConnectClient] = useState(false);
+  const [canConnectCompany, setCanConnectCompany] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [workingId, setWorkingId] = useState<string | null>(null);
   const [message, setMessage] = useState<{ tone: "success" | "error" | "info"; text: string } | null>(null);
@@ -36,6 +37,7 @@ export default function IntegrationsAppCenter() {
       if (version !== requestVersion.current) return;
       setConnections(data.connections);
       setCanConnectClient(data.permissions.canConnectClient);
+      setCanConnectCompany(data.permissions.canConnectCompany);
     } catch (error) {
       if (version === requestVersion.current)
         setMessage({
@@ -75,7 +77,7 @@ export default function IntegrationsAppCenter() {
       const response = await fetch("/api/integrations/hubspot/connect", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ownershipType: "CLIENT_ACCOUNT" }),
+        body: JSON.stringify({ ownershipType: "COMPANY" }),
       });
       const data = await readApiJson<{ success: true; authorizationUrl: string }>(response);
       window.location.assign(data.authorizationUrl);
@@ -118,10 +120,8 @@ export default function IntegrationsAppCenter() {
   const clientConnections = connections.filter(
     (item) => item.ownershipType === "CLIENT_ACCOUNT" && item.clientAccountId === activeClientAccount.id,
   );
-  // HubSpot is the Agency CRM (company-wide or client-linked)
-  const hubSpot =
-    connections.find((item) => item.provider === "HUBSPOT" && item.clientAccountId === activeClientAccount.id) ||
-    connections.find((item) => item.provider === "HUBSPOT");
+  // The agency connection is stable across client switches and excludes personal accounts.
+  const hubSpot = connections.find((item) => item.provider === "HUBSPOT" && item.ownershipType === "COMPANY");
 
   // Zoho is the Client CRM (scoped to the active client account)
   const zoho = clientConnections.find((item) => item.provider === "ZOHO");
@@ -221,7 +221,7 @@ export default function IntegrationsAppCenter() {
                     Retry failed sync
                   </button>
                 )}
-                {canConnectClient && (
+                {canConnectCompany && (
                   <button
                     onClick={() => void connectHubSpot()}
                     disabled={workingId !== null}
@@ -238,12 +238,12 @@ export default function IntegrationsAppCenter() {
               <div>
                 <p className="text-sm font-semibold text-crm-text">No HubSpot account connected</p>
                 <p className="mt-1 text-[11px] font-mono text-crm-text-muted">
-                  Connect the agency HubSpot CRM to populate unified leads and sales pipeline.
+                  An Admin or Manager must connect the agency HubSpot CRM to populate unified leads and sales pipeline.
                 </p>
               </div>
               <button
                 onClick={() => void connectHubSpot()}
-                disabled={!canConnectClient || workingId !== null}
+                disabled={!canConnectCompany || workingId !== null}
                 className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-cyan-500 px-4 py-2 text-xs font-semibold text-slate-950 hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
               >
                 <LockKeyhole className="h-3.5 w-3.5" />

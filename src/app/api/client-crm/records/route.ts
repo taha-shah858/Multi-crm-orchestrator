@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     const context = await requireRequestContext(request);
     const typeParam = (request.nextUrl.searchParams.get("type") ||
       request.nextUrl.searchParams.get("recordType")) as ClientRecordType | null;
-    const records = await listClientCrmRecords(context, typeParam || undefined);
+    const records = await listClientCrmRecords(context, typeParam || undefined, "ZOHO");
     return success({ records }, requestId);
   });
 }

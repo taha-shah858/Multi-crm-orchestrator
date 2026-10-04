@@ -189,7 +189,7 @@ export default function ClientCrmPage() {
       const res = await fetch("/api/client-crm/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientAccountId: activeClientAccount.id }),
+        body: JSON.stringify({ clientAccountId: activeClientAccount.id, provider: "ZOHO" }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
@@ -221,8 +221,10 @@ export default function ClientCrmPage() {
         throw new Error(data.error?.message || "Failed to retry handoff");
       }
       setFeedback({
-        type: "success",
-        message: "Handoff successfully dispatched to Client CRM!",
+        type: data.handoff?.status === "SYNCED" ? "success" : "error",
+        message: data.handoff?.status === "SYNCED"
+          ? "Handoff synchronized with the client CRM."
+          : `Handoff remains ${data.handoff?.status || "pending"}. ${data.handoff?.lastError || "Retry when the client CRM is available."}`,
       });
       await fetchRecords();
     } catch (err: unknown) {
@@ -353,7 +355,7 @@ export default function ClientCrmPage() {
       const extId = handoff?.clientCrmRecordId ? ` (Zoho Ext ID: #${handoff.clientCrmRecordId})` : "";
 
       setFeedback({
-        type: "success",
+        type: isSynced ? "success" : "error",
         message: isSynced
           ? `Deal "${dealTitle}" successfully marked as Closed Won and handed off to Zoho CRM!${extId}`
           : `Deal "${dealTitle}" marked as Closed Won. Handoff status: ${handoff?.status || "PENDING"}${handoff?.lastError ? ` (${handoff.lastError})` : ""}`,
@@ -459,11 +461,12 @@ export default function ClientCrmPage() {
       }
 
       setFeedback({
-        type: "success",
-        message:
-          createDealForm.status === "CLOSED_WON"
-            ? `Deal "${createDealForm.title}" created as Closed Won and handed off to ${providerDisplayName}!`
-            : `Deal "${createDealForm.title}" successfully created for ${dealContactTarget.name}! Synced with sales pipeline and Client CRM.`,
+        type: createDealForm.status === "CLOSED_WON" && data.handoff?.status !== "SYNCED" ? "error" : "success",
+        message: createDealForm.status === "CLOSED_WON"
+          ? data.handoff?.status === "SYNCED"
+            ? `Deal "${createDealForm.title}" closed and synchronized with the client CRM.`
+            : `Deal "${createDealForm.title}" saved as Closed Won. ${data.handoff?.lastError || "Client CRM handoff is pending."}`
+          : `Deal "${createDealForm.title}" saved for ${dealContactTarget.name}.`,
       });
 
       setIsCreateDealModalOpen(false);
@@ -512,8 +515,16 @@ export default function ClientCrmPage() {
         throw new Error(data.error?.message || "Failed to save record");
       }
       setFeedback({
-        type: "success",
-        message: `Record updated and synchronized across Client CRM${data.outboundStatus && data.outboundStatus !== "LOCAL_ONLY" ? " (pushed to Client CRM)" : ""} and Unified Lead Directory.`,
+        type: data.outboundStatus === "FAILED" ? "error" : "success",
+        message: data.outboundStatus === "COMPLETED"
+          ? "Record saved and synchronized with the client CRM."
+          : data.outboundStatus === "FAILED"
+          ? "Record saved locally. The client CRM update failed; your edit was retained."
+          : data.outboundStatus === "NOT_CONNECTED"
+          ? "Record saved locally. Reconnect the client CRM to synchronize changes."
+          : data.outboundStatus === "UNSUPPORTED"
+          ? "Record saved locally. CRM updates are unavailable for this record type."
+          : "Record saved locally. It is not linked to a verified client CRM record.",
       });
       setEditingRecord(null);
       await fetchRecords();
@@ -556,13 +567,7 @@ export default function ClientCrmPage() {
     );
   });
 
-  const activeProvider = records[0]?.provider || handoffs[0]?.clientCrmProvider || "ZOHO";
-  const providerDisplayName =
-    activeProvider === "ZOHO"
-      ? "Zoho CRM"
-      : activeProvider === "ACTIVECAMPAIGN"
-      ? "ActiveCampaign"
-      : activeProvider;
+  const providerDisplayName = "Zoho CRM";
 
   return (
     <div className="space-y-6 text-crm-text font-sans">
@@ -1392,7 +1397,7 @@ export default function ClientCrmPage() {
               <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-[11px] font-mono text-emerald-300 space-y-1">
                 <div className="flex items-center gap-1.5 font-bold">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>{providerDisplayName} Operational Guarantee:</span>
+                  <span>{providerDisplayName} Handoff Contents:</span>
                 </div>
                 <p className="text-[10px] text-crm-text-muted pl-5">
                   • Creates/Updates Deal in {providerDisplayName} (Stage: Closed Won)
@@ -1453,7 +1458,7 @@ export default function ClientCrmPage() {
                     Create New Deal
                   </h3>
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                    {providerDisplayName} Ready
+                    {providerDisplayName}
                   </span>
                 </div>
                 <p className="text-xs text-crm-text-muted font-mono">

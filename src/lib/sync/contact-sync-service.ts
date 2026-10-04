@@ -9,6 +9,7 @@ import { recordAuditEvent } from "@/lib/audit/audit-log";
 import { assertClientAccess } from "@/lib/auth/auth-service";
 import {
   activeClientIntegrationWhere,
+  agencyIntegrationWhere,
   hubspotConnectionWhere,
 } from "@/lib/integrations/connection-resolution";
 import { normalizeRichTextToPlainText } from "@/lib/text/plain-text";
@@ -236,7 +237,27 @@ export async function syncActiveClientContacts(
   return summary;
 }
 
-/** Runs one client-owned connection through the same canonical contact pipeline. */
+/** Unified Leads imports only the agency's HubSpot, regardless of selected client. */
+export async function syncAgencyHubSpotContacts(
+  context: RequestContext,
+  requestId: string,
+): Promise<ContactSyncSummary> {
+  await prepareActiveClientSync(context);
+  const connection = await prisma.integrationConnection.findFirst({
+    where: agencyIntegrationWhere(context, "HUBSPOT"),
+    orderBy: { updatedAt: "desc" },
+  });
+  if (!connection) {
+    throw new AppError("SYNC_CONNECTION_NOT_FOUND", 409, "No usable agency HubSpot connection was found.", "Ask an Admin or Manager to connect the agency HubSpot account in Admin Integrations. Client CRM connections do not populate Unified Leads.");
+  }
+  const result = await syncSingleConnectionContacts(context, connection, requestId);
+  if (result.runs.length === 0 || result.runs.every((run) => run.status === "FAILED")) {
+    throw new AppError("SYNC_FAILED", 502, "Agency HubSpot sync failed.", result.runs.find((run) => run.error)?.error || "HubSpot sync failed. Existing agency contacts were retained; check the integration and retry.");
+  }
+  return result;
+}
+
+/** Runs one authorized agency/client connection through its provider pipeline. */
 export async function syncSingleConnectionContacts(
   context: RequestContext,
   connection: IntegrationConnection,
@@ -257,7 +278,7 @@ export async function syncSingleConnectionContacts(
 
   if (connection.provider === "ACTIVECAMPAIGN") {
     const { syncClientCrm } = await import("@/lib/client-crm/client-crm-service");
-    const syncRes = await syncClientCrm(context);
+    const syncRes = await syncClientCrm(context, "ACTIVECAMPAIGN", connection.id);
     return {
       contacts: [],
       recordsRead: syncRes.count,
@@ -554,12 +575,21 @@ export async function getActiveClientContacts(
   options?: { scope?: "agency" | "client"; clientAccountId?: string },
 ): Promise<PersistedContactSummary[]> {
   await prepareActiveClientSync(context);
+  if (options?.clientAccountId) {
+    await assertClientAccess(context.user, options.clientAccountId);
+  }
 
   const whereCondition: Record<string, unknown> = {
     organizationId: context.user.organizationId,
   };
 
   if (options?.scope === "agency") {
+    whereCondition.externalRecords = {
+      some: {
+        objectType: "CONTACT",
+        connection: { organizationId: context.user.organizationId, ownershipType: "COMPANY", provider: "HUBSPOT" },
+      },
+    };
     if (options.clientAccountId) {
       whereCondition.clientAccountId = options.clientAccountId;
     }
@@ -576,6 +606,9 @@ export async function getActiveClientContacts(
       deals: { include: { crmOwner: { select: { id: true, displayName: true, email: true } }, company: { select: { id: true, name: true } } } },
       interactions: { orderBy: { occurredAt: "desc" }, take: 10, select: { id: true, type: true, subject: true, body: true, occurredAt: true, source: true } },
       externalRecords: {
+        ...(options?.scope === "agency" ? {
+          where: { objectType: "CONTACT", connection: { organizationId: context.user.organizationId, ownershipType: "COMPANY", provider: "HUBSPOT" } },
+        } : {}),
         include: { connection: { select: { provider: true } } },
         orderBy: { updatedAt: "desc" },
       },

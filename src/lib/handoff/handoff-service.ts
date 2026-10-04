@@ -1,16 +1,18 @@
 import "server-only";
+import type { DealHandoff } from "@prisma/client";
 
 import { prisma } from "@/lib/db/prisma";
 import { AppError } from "@/lib/errors/app-error";
 import { recordAuditEvent } from "@/lib/audit/audit-log";
 import { syncHandoffToActiveCampaign } from "@/lib/integrations/activecampaign/client";
 import { syncHandoffToZoho } from "@/lib/integrations/zoho/client";
-import { isSyncableConnectionStatus } from "@/lib/integrations/connection-resolution";
-import type { RequestContext, DealHandoffSummary } from "@/lib/models/canonical";
 import { assertClientAccess } from "@/lib/auth/auth-service";
+import { assertClientMutationTarget, isClientCrmProvider, resolveClientCrmConnection, type ClientCrmProvider } from "@/lib/client-crm/connection";
+import type { RequestContext, DealHandoffSummary } from "@/lib/models/canonical";
 import { ensureClosedDealCommission } from "@/lib/operations/closed-deal-commission";
 
 export interface CreateHandoffOptions {
+  clientCrmProvider?: ClientCrmProvider;
   closeOutcome?: string;
   recommendedNextAction?: string;
   notes?: string;
@@ -42,23 +44,18 @@ export async function createDealHandoffFromAgencyDeal(
   }
   await assertClientAccess(context.user, clientAccountId);
 
-  // Resolve client's CRM connection (prefer ZOHO)
-  const connection =
-    (await prisma.integrationConnection.findFirst({
-      where: {
-        organizationId: context.user.organizationId,
-        clientAccountId,
-        provider: "ZOHO",
-      },
-    })) ||
-    (await prisma.integrationConnection.findFirst({
-      where: {
-        organizationId: context.user.organizationId,
-        clientAccountId,
-      },
-    }));
-
-  const clientCrmProvider = connection?.provider || "ZOHO";
+  await assertClientMutationTarget(context, clientAccountId);
+  const previousHandoff = await prisma.dealHandoff.findUnique({
+    where: { agencyDealId_clientAccountId: { agencyDealId: deal.id, clientAccountId } },
+  });
+  if (previousHandoff && options?.clientCrmProvider && options.clientCrmProvider !== previousHandoff.clientCrmProvider) {
+    throw new AppError("HANDOFF_TARGET_CONFLICT", 409, "Existing handoff targets a different CRM.", "This deal already has a handoff to another CRM. Review its existing destination before migrating it to Zoho.");
+  }
+  // Existing explicitly legacy handoffs retain their provider. New handoffs default to Zoho.
+  const clientCrmProvider = options?.clientCrmProvider ?? previousHandoff?.clientCrmProvider ?? "ZOHO";
+  if (!isClientCrmProvider(clientCrmProvider)) {
+    throw new AppError("CRM_PROVIDER_UNAVAILABLE", 422, "Unsupported handoff provider.", "Choose a supported client CRM provider.");
+  }
   const closeOutcome = options?.closeOutcome || "Client accepted proposal";
   const recommendedNextAction = options?.recommendedNextAction || "Begin onboarding";
   const notes = options?.notes || deal.notes || null;
@@ -76,42 +73,6 @@ export async function createDealHandoffFromAgencyDeal(
     return ensureClosedDealCommission(tx, context, deal.id);
   });
   const effectiveAgentId = commission.userId || deal.userId || context.user.id;
-
-  // Update ClientCrmRecord for this deal and contact
-  await prisma.clientCrmRecord.updateMany({
-    where: {
-      organizationId: context.user.organizationId,
-      clientAccountId,
-      recordType: "DEAL",
-      OR: [
-        { externalId: `deal-${deal.id}` },
-        { name: deal.title },
-      ],
-    },
-    data: {
-      status: "Won",
-      stage: "Closed Won",
-      lastSyncedAt: new Date(),
-    },
-  });
-
-  if (deal.contactId) {
-    await prisma.clientCrmRecord.updateMany({
-      where: {
-        organizationId: context.user.organizationId,
-        clientAccountId,
-        recordType: "CONTACT",
-        OR: [
-          { externalId: `unified-${deal.contactId}` },
-          { externalId: deal.contactId },
-        ],
-      },
-      data: {
-        status: "Active Customer",
-        lastSyncedAt: new Date(),
-      },
-    });
-  }
 
   // Idempotent upsert by (agencyDealId, clientAccountId)
   const handoff = await prisma.dealHandoff.upsert({
@@ -214,6 +175,10 @@ export async function dispatchHandoffToClientCrm(
     await prisma.$transaction((tx) => ensureClosedDealCommission(tx, context, handoff.agencyDeal.id));
   }
 
+  await assertClientMutationTarget(context, handoff.clientAccountId);
+
+  if (handoff.status === "SYNCED") return formatHandoff(handoff);
+
   await prisma.dealHandoff.update({
     where: { id: handoff.id },
     data: { status: "SYNCING", lastAttemptedAt: new Date() },
@@ -229,24 +194,12 @@ export async function dispatchHandoffToClientCrm(
   });
 
   try {
-    // Find active client connection (prefer ZOHO, then fallback to other client connection)
-    const connection =
-      (await prisma.integrationConnection.findFirst({
-        where: {
-          organizationId: context.user.organizationId,
-          clientAccountId: handoff.clientAccountId,
-          provider: "ZOHO",
-        },
-      })) ||
-      (await prisma.integrationConnection.findFirst({
-        where: {
-          organizationId: context.user.organizationId,
-          clientAccountId: handoff.clientAccountId,
-        },
-      }));
-
-    if (!connection || !isSyncableConnectionStatus(connection.status)) {
-      throw new Error(`Client CRM (${connection?.provider || "Zoho CRM"}) is not connected for this client account.`);
+    if (!isClientCrmProvider(handoff.clientCrmProvider)) {
+      throw new Error("This handoff does not target a supported client CRM provider.");
+    }
+    const connection = await resolveClientCrmConnection(context, handoff.clientAccountId, handoff.clientCrmProvider);
+    if (!connection) {
+      throw new Error(`Client CRM (${handoff.clientCrmProvider}) is not connected for this client account.`);
     }
 
     let externalId: string;
@@ -255,8 +208,8 @@ export async function dispatchHandoffToClientCrm(
       // Resolve associated contact details if available
       let customerInfo: { firstName?: string; lastName?: string; email?: string; phone?: string; company?: string; agencyContactId?: string } | undefined;
       if (handoff.agencyDeal.contactId) {
-        const contact = await prisma.contact.findUnique({
-          where: { id: handoff.agencyDeal.contactId },
+        const contact = await prisma.contact.findFirst({
+          where: { id: handoff.agencyDeal.contactId, organizationId: context.user.organizationId },
         });
         if (contact) {
           customerInfo = {
@@ -304,6 +257,31 @@ export async function dispatchHandoffToClientCrm(
       externalId = result.externalId;
     }
 
+    if (!externalId?.trim()) {
+      throw new Error("Client CRM did not confirm a record identifier for this handoff.");
+    }
+    const customFields = {
+      source: "DEAL_HANDOFF", providerRecordId: externalId, handoffId: handoff.id,
+      dealId: handoff.agencyDealId, contactId: handoff.agencyDeal.contactId,
+    };
+
+    // Persist the verified mapping before reporting the handoff as synchronized.
+    await prisma.clientCrmRecord.upsert({
+      where: { connectionId_recordType_externalId: { connectionId: connection.id, recordType: "DEAL", externalId } },
+      update: {
+        name: handoff.dealName, amount: (handoff.dealAmountCents / 100).toFixed(2),
+        status: "Won", stage: "Closed Won", details: handoff.recommendedNextAction,
+        customFields, lastSyncedAt: new Date(),
+      },
+      create: {
+        organizationId: context.user.organizationId, clientAccountId: handoff.clientAccountId,
+        connectionId: connection.id, provider: connection.provider, recordType: "DEAL", externalId,
+        name: handoff.dealName, amount: (handoff.dealAmountCents / 100).toFixed(2),
+        status: "Won", stage: "Closed Won", details: handoff.recommendedNextAction,
+        customFields, lastSyncedAt: new Date(),
+      },
+    });
+
     const updated = await prisma.dealHandoff.update({
       where: { id: handoff.id },
       data: {
@@ -317,39 +295,6 @@ export async function dispatchHandoffToClientCrm(
         clientAccount: { select: { id: true, name: true } },
         agencyDeal: { select: { id: true, title: true, valueCents: true } },
         agent: { select: { id: true, name: true, email: true } },
-      },
-    });
-
-    // Mirror handoff record into ClientCrmRecord for client operational view
-    await prisma.clientCrmRecord.upsert({
-      where: {
-        connectionId_recordType_externalId: {
-          connectionId: connection.id,
-          recordType: "DEAL",
-          externalId,
-        },
-      },
-      update: {
-        name: handoff.dealName,
-        amount: (handoff.dealAmountCents / 100).toFixed(2),
-        status: "Won",
-        stage: "Closed Won",
-        details: handoff.recommendedNextAction,
-        lastSyncedAt: new Date(),
-      },
-      create: {
-        organizationId: context.user.organizationId,
-        clientAccountId: handoff.clientAccountId,
-        connectionId: connection.id,
-        provider: connection.provider,
-        recordType: "DEAL",
-        externalId,
-        name: handoff.dealName,
-        amount: (handoff.dealAmountCents / 100).toFixed(2),
-        status: "Won",
-        stage: "Closed Won",
-        details: handoff.recommendedNextAction,
-        lastSyncedAt: new Date(),
       },
     });
 
@@ -407,6 +352,10 @@ export async function retryDealHandoff(
     throw new AppError("HANDOFF_NOT_FOUND", 404, "Deal handoff was not found.", "Select a valid deal handoff.");
   }
 
+  await assertClientMutationTarget(context, handoff.clientAccountId);
+
+  if (handoff.status === "SYNCED") return dispatchHandoffToClientCrm(context, handoffId);
+
   await prisma.dealHandoff.update({
     where: { id: handoffId },
     data: { status: "RETRYING" },
@@ -417,12 +366,14 @@ export async function retryDealHandoff(
 
 export async function listDealHandoffs(
   context: RequestContext,
-  options?: { clientAccountId?: string },
+  options?: { clientAccountId?: string; clientCrmProvider?: ClientCrmProvider },
 ): Promise<DealHandoffSummary[]> {
   const targetClientAccountId = options?.clientAccountId ?? context.activeClientAccountId;
+  await assertClientAccess(context.user, targetClientAccountId);
   const where = {
     organizationId: context.user.organizationId,
-    ...(targetClientAccountId ? { clientAccountId: targetClientAccountId } : {}),
+    clientAccountId: targetClientAccountId,
+    ...(options?.clientCrmProvider ? { clientCrmProvider: options.clientCrmProvider } : {}),
   };
 
   const handoffs = await prisma.dealHandoff.findMany({
@@ -439,7 +390,11 @@ export async function listDealHandoffs(
   return handoffs.map(formatHandoff);
 }
 
-function formatHandoff(handoff: any): DealHandoffSummary {
+function formatHandoff(handoff: DealHandoff & {
+  clientAccount?: DealHandoffSummary["clientAccount"];
+  agencyDeal?: DealHandoffSummary["agencyDeal"];
+  agent?: DealHandoffSummary["agent"];
+}): DealHandoffSummary {
   return {
     id: handoff.id,
     agencyDealId: handoff.agencyDealId,
