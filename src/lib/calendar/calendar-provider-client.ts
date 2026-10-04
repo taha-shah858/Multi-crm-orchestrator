@@ -15,8 +15,25 @@ export async function calendarRequest(provider: RemoteCalendarProvider, token: s
   } catch { throw new CalendarRequestError("The calendar response was not received. Check the provider before retrying this booking.", method !== "GET"); }
   if (allowMissing && [404, 410].includes(response.status)) return null;
   if (!response.ok) {
+    // Interpret known provider codes without exposing raw responses or account data.
+    let googleReason: string | undefined;
+    if (provider === "GOOGLE") {
+      const payload = await response.json().catch(() => null);
+      const reasons = [
+        ...(Array.isArray(payload?.error?.errors) ? payload.error.errors.map((item: { reason?: unknown }) => item.reason) : []),
+        ...(Array.isArray(payload?.error?.details) ? payload.error.details.map((item: { reason?: unknown }) => item.reason) : []),
+      ];
+      googleReason = reasons.find((reason: unknown) => typeof reason === "string");
+    }
+    const googleMessage = provider !== "GOOGLE" ? undefined
+      : ["accessNotConfigured", "SERVICE_DISABLED"].includes(googleReason ?? "") ? "Google Calendar API is disabled for this OAuth project's credentials. Enable Google Calendar API in Google Cloud, then retry syncing this saved meeting."
+      : ["insufficientPermissions", "ACCESS_TOKEN_SCOPE_INSUFFICIENT"].includes(googleReason ?? "") ? "Google Calendar permission is missing. Reconnect Google Calendar and grant permission to create and edit your calendar events."
+      : ["rateLimitExceeded", "userRateLimitExceeded", "quotaExceeded"].includes(googleReason ?? "") ? "Google Calendar's usage limit was reached. Wait before retrying this saved meeting."
+      : response.status === 403 ? "Google Calendar denied access. Check Calendar API enablement and your calendar permissions, then reconnect Google Calendar."
+      : response.status === 404 ? "Google Calendar could not find the connected calendar or event. Check the connected Google account before retrying."
+      : undefined;
     const message = response.status === 401 ? "Calendar authorization expired. Reconnect the calendar." : response.status === 429 ? "The calendar is busy. Retry after the provider's rate limit clears." : provider === "CALENDLY" && response.status === 403 ? "Calendly denied this request. Check the required permissions and account plan, or reconnect Calendly." : response.status === 400 || response.status === 422 ? "The calendar rejected these meeting details. Check the time slot and event type." : "The calendar could not save this meeting. Your local meeting is retained.";
-    throw new CalendarRequestError(message, method !== "GET" && response.status >= 500, response.status);
+    throw new CalendarRequestError(googleMessage ?? message, method !== "GET" && response.status >= 500, response.status);
   }
   if (response.status === 204 || method === "DELETE") return null;
   try { return await response.json(); } catch { throw new CalendarRequestError("The calendar returned an incomplete response. Check the provider before retrying.", method !== "GET"); }

@@ -22,7 +22,7 @@ const { encryptIntegrationSecret, decryptIntegrationSecret } = require("../src/l
 const { beginCalendarConnection, completeCalendarConnection, disconnectCalendar, listCalendarConnections } = require("../src/lib/calendar/calendar-connections.ts");
 const { createAppointment, updateAppointment, listCalendarWorkspace } = require("../src/lib/calendar/calendar-service.ts");
 const { syncCalendarAppointment, listCalendlyEventTypes } = require("../src/lib/calendar/calendar-sync-service.ts");
-const { safeCalendarUrl } = require("../src/lib/calendar/calendar-provider-client.ts");
+const { safeCalendarUrl, calendarRequest } = require("../src/lib/calendar/calendar-provider-client.ts");
 const { listManagedEventTypes, saveEventType, getEventTypeAvailability, saveEventTypeAvailability, validateAvailability } = require("../src/lib/calendar/calendly-event-types.ts");
 const routes = Object.fromEntries(["connections", "connections/[provider]/connect", "connections/[provider]/callback", "connections/[provider]/disconnect", "events/[id]/sync", "schedule", "events"].map(name => [name, require(`../src/app/api/calendar/${name}/route.ts`)]));
 const marker = `calendar-${Date.now()}`;
@@ -115,6 +115,14 @@ const booking = (provider, extra = {}) => ({ title: "Client follow-up", descript
 async function token(userId) { const value = randomUUID(); await prisma.authSession.create({ data: { userId, tokenHash: createHash("sha256").update(value).digest("hex"), expiresAt: new Date(Date.now() + 600000) } }); return value; }
 function request(url, session, body, client = ids.client) { return new NextRequest(`http://localhost:3005${url}`, { method: body === undefined ? "GET" : "POST", headers: { ...(session ? { cookie: `multi_crm_session=${session}; multi_crm_active_client=${client}` } : {}), "content-type": "application/json" }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) }); }
 async function main() {
+  const controlledFetch = global.fetch;
+  try {
+    for (const [reason, expected] of [["accessNotConfigured", /API is disabled/], ["SERVICE_DISABLED", /API is disabled/], ["insufficientPermissions", /permission is missing/], ["rateLimitExceeded", /usage limit/]]) {
+      global.fetch = async () => json({ error: { errors: [{ reason }], details: [{ reason }], message: "private account details" } }, 403);
+      await assert.rejects(calendarRequest("GOOGLE", "fake", "/calendars/primary/events", "POST", {}), error => expected.test(error.message) && !error.message.includes("private account details") && error.httpStatus === 403 && !error.uncertain);
+    }
+    checks++;
+  } finally { global.fetch = controlledFetch; }
   try {
     await prisma.organization.create({ data: { id: ids.org, name: marker, users: { create: [{ id: ids.agent, name: user.name, email: user.email, role: "AGENT", status: "ACTIVE" }, { id: ids.other, name: "Other", email: `${marker}-other@example.test`, role: "AGENT", status: "ACTIVE" }, { id: ids.admin, name: "Admin", email: `${marker}-admin@example.test`, role: "ADMIN", status: "ACTIVE" }] }, clients: { create: [{ id: ids.client, name: "Scheduling client", brandName: "Scheduling" }, { id: ids.denied, name: "Denied", brandName: "Denied" }] } } });
     await prisma.organization.create({ data: { id: ids.foreign, name: "Foreign" } });
