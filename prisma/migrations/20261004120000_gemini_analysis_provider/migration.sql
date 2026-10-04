@@ -1,0 +1,1 @@
+ALTER TYPE "LeadAnalysisProvider" ADD VALUE IF NOT EXISTS 'GEMINI';

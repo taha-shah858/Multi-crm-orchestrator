@@ -22,54 +22,48 @@ import {
   Shield,
 } from "lucide-react";
 import { isAdminWorkspaceRole } from "@/lib/auth/roles";
+import BrandIcon from "@/components/ui/BrandIcon";
 
 const workspaceNavigation = [
-  { name: "Home Dashboard", href: "/", icon: LayoutGrid },
-  { name: "Integrations Hub", href: "/integrations", icon: Network },
-  { name: "Unified Lead Directory", href: "/leads", icon: Users },
-  { name: "Client CRM", href: "/client-crm", icon: Briefcase },
-  { name: "Twilio Smart Dialer", href: "/dialer", icon: Phone },
-  { name: "Aggregation Timeline", href: "/timeline", icon: TrendingUp },
-  { name: "AI Copilot Suite", href: "/copilot", icon: Bot },
-  { name: "Script Architect", href: "/scripts", icon: FileText },
-  { name: "Calendar Planner", href: "/calendar", icon: Calendar },
-  { name: "Sales Operations", href: "/operations", icon: WalletCards },
-  { name: "Documents & Proposals", href: "/documents", icon: FileText },
-  { name: "Multi-CRM Suite", href: "/multi-crm", icon: Sparkles },
+  { name: "Home Dashboard",       href: "/",            icon: LayoutGrid  },
+  { name: "Integrations Hub",     href: "/integrations", icon: Network    },
+  { name: "Unified Lead Directory", href: "/leads",      icon: Users      },
+  { name: "Client CRM",           href: "/client-crm",   icon: Briefcase  },
+  { name: "Twilio Smart Dialer",  href: "/dialer",       icon: Phone      },
+  { name: "Aggregation Timeline", href: "/timeline",     icon: TrendingUp },
+  { name: "AI Copilot Suite",     href: "/copilot",      icon: Bot        },
+  { name: "Script Architect",     href: "/scripts",      icon: FileText   },
+  { name: "Calendar Planner",     href: "/calendar",     icon: Calendar   },
+  { name: "Sales Operations",     href: "/operations",   icon: WalletCards},
+  { name: "Documents & Proposals",href: "/documents",    icon: FileText   },
+  { name: "Multi-CRM Suite",      href: "/multi-crm",    icon: Sparkles   },
 ];
 
 export default function Sidebar() {
-  const pathname = usePathname();
-  const router = useRouter();
-  const { user } = useClientAccount();
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [sidebarWidth, setSidebarWidth] = useState(256); // Default 256px (w-64)
-  const [isResizing, setIsResizing] = useState(false);
+  const pathname  = usePathname();
+  const router    = useRouter();
+  const { user }  = useClientAccount();
+  const [isCollapsed,  setIsCollapsed]  = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(256);
+  const [isResizing,   setIsResizing]   = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const sidebarRef = useRef<HTMLElement>(null);
 
-  // Handle smooth mouse-dragging for custom width resizing
+  /* Drag-to-resize */
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing) return;
       const newWidth = e.clientX;
-      if (newWidth >= 200 && newWidth <= 440) {
-        setSidebarWidth(newWidth);
-      }
+      if (newWidth >= 200 && newWidth <= 440) setSidebarWidth(newWidth);
     };
-
-    const handleMouseUp = () => {
-      setIsResizing(false);
-    };
-
+    const handleMouseUp = () => setIsResizing(false);
     if (isResizing) {
       window.addEventListener("mousemove", handleMouseMove);
-      window.addEventListener("mouseup", handleMouseUp);
+      window.addEventListener("mouseup",  handleMouseUp);
     }
-
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("mouseup",  handleMouseUp);
     };
   }, [isResizing]);
 
@@ -89,36 +83,29 @@ export default function Sidebar() {
   return (
     <aside
       ref={sidebarRef}
-      className={`border-r border-crm-border-strong flex flex-col justify-between shrink-0 h-screen sticky top-0 z-30 transition-all ${
+      className={`flex flex-col justify-between shrink-0 h-screen sticky top-0 z-30 bg-slate-900 border-r border-slate-800 transition-all ${
         isResizing ? "transition-none" : "duration-300 ease-in-out"
       }`}
-      style={{
-        width: isCollapsed ? "64px" : `${sidebarWidth}px`,
-        backgroundColor:
-          "color-mix(in srgb, var(--color-crm-surface) 50%, transparent)",
-        backdropFilter: "blur(24px)",
-        WebkitBackdropFilter: "blur(24px)",
-      }}
+      style={{ width: isCollapsed ? "64px" : `${sidebarWidth}px` }}
     >
       <div className="overflow-hidden flex flex-col h-full">
-        {/* Header with Collapse Toggle */}
+
+        {/* ── Brand Header ── */}
         <div
-          className={`p-4 border-b border-crm-border-strong flex items-center h-16 shrink-0 ${
+          className={`px-3 border-b border-slate-800 flex items-center h-14 shrink-0 ${
             isCollapsed ? "justify-center" : "justify-between"
           }`}
         >
           {!isCollapsed && (
-            <div className="flex items-center gap-3 overflow-hidden">
+            <div className="flex items-center gap-2.5 overflow-hidden">
               <div className="relative flex items-center justify-center shrink-0">
-                <span className="w-8 h-8 rounded-lg bg-primary-cyan/20 border border-primary-cyan/40 flex items-center justify-center text-primary-cyan font-bold text-xs">
-                  M
-                </span>
+                <BrandIcon size={28} />
               </div>
               <div className="overflow-hidden whitespace-nowrap">
-                <h1 className="font-bold text-xs tracking-widest uppercase text-crm-text">
+                <h1 className="font-bold text-[11px] tracking-widest uppercase text-white">
                   Multi-CRM
                 </h1>
-                <p className="text-[10px] font-mono text-primary-cyan tracking-widest uppercase">
+                <p className="text-[10px] font-sans font-medium text-blue-400 tracking-widest uppercase">
                   Orchestrator
                 </p>
               </div>
@@ -127,19 +114,17 @@ export default function Sidebar() {
 
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-1.5 rounded-lg text-crm-text-muted hover:text-crm-text hover:bg-crm-surface/60 border border-transparent hover:border-crm-border/50 transition-all shrink-0 cursor-pointer"
+            className="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition-colors duration-150 shrink-0 cursor-pointer"
             title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
-            {isCollapsed ? (
-              <PanelLeftOpen className="w-5 h-5 text-primary-cyan" />
-            ) : (
-              <PanelLeftClose className="w-5 h-5" />
-            )}
+            {isCollapsed
+              ? <PanelLeftOpen  className="w-4 h-4 text-blue-400" />
+              : <PanelLeftClose className="w-4 h-4" />}
           </button>
         </div>
 
-        {/* Navigation Items */}
-        <nav className="p-3 space-y-1.5 flex-1 overflow-y-auto">
+        {/* ── Navigation ── */}
+        <nav className="px-2 py-3 space-y-0.5 flex-1 overflow-y-auto">
           {[
             ...(user && isAdminWorkspaceRole(user.role)
               ? [{ name: "Admin Console", href: "/admin", icon: Shield }]
@@ -153,73 +138,66 @@ export default function Sidebar() {
                 key={item.name}
                 href={item.href}
                 title={isCollapsed ? item.name : undefined}
-                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] active:scale-[0.97] ${
-                  isCollapsed ? "justify-center px-0" : ""
+                className={`flex items-center gap-3 px-3 py-2 rounded-md text-xs font-medium transition-colors duration-150 ${
+                  isCollapsed ? "justify-center" : ""
                 } ${
                   isActive
-                    ? "bg-primary-cyan/15 text-primary-cyan border border-primary-cyan/30 shadow-[0_0_15px_color-mix(in_srgb,var(--color-primary-cyan)_15%,transparent)]"
-                    : "text-crm-text-muted hover:text-crm-text hover:bg-white/5 border border-transparent"
+                    ? "bg-blue-600 text-white"
+                    : "text-slate-300 hover:bg-slate-800 hover:text-white"
                 }`}
               >
                 <Icon
                   strokeWidth={1.75}
-                  className={`w-4 h-4 shrink-0 transition-colors duration-300 ${
-                    isActive ? "text-primary-cyan" : "text-slate-500 group-hover:text-crm-text-muted"
-                  }`}
+                  className={`w-4 h-4 shrink-0 ${isActive ? "text-white" : "text-slate-400"}`}
                 />
-                {!isCollapsed && <span className="truncate tracking-wide">{item.name}</span>}
+                {!isCollapsed && <span className="truncate">{item.name}</span>}
               </Link>
             );
           })}
         </nav>
 
-        {/* User Profile Bar */}
+        {/* ── User Profile Bar ── */}
         <div
-          className={`border-t border-crm-border-strong m-2 rounded-xl bg-black/20 shrink-0 transition-all ${
-            isCollapsed ? "p-2 flex flex-col items-center" : "p-4"
+          className={`border-t border-slate-800 mx-2 mb-2 rounded-lg bg-slate-800/60 shrink-0 ${
+            isCollapsed ? "p-2 flex flex-col items-center" : "p-3"
           }`}
         >
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-8 h-8 rounded-full bg-linear-to-tr from-purple-500 to-cyan-400 p-px shrink-0">
-              <div className="w-full h-full rounded-full bg-crm-base flex items-center justify-center text-xs font-bold text-crm-text">
-                ZA
-              </div>
+          <div className="flex items-center gap-2.5 overflow-hidden">
+            <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-blue-500 to-cyan-400 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
+              {user?.name?.slice(0, 2).toUpperCase() ?? "—"}
             </div>
             {!isCollapsed && (
               <div className="overflow-hidden">
-                <p className="text-xs font-medium text-crm-text truncate">
-                  {user?.name ?? "Loading user"}
+                <p className="text-xs font-medium text-white truncate">
+                  {user?.name ?? "Loading…"}
                 </p>
-                <p className="text-[10px] text-slate-500 font-mono truncate">
-                  Sales agent
-                </p>
+                <p className="text-[10px] text-slate-400 truncate">Sales agent</p>
               </div>
             )}
           </div>
+
           <button
             type="button"
             onClick={() => void signOut()}
             disabled={isSigningOut}
             title={isCollapsed ? "Sign out" : undefined}
-            className={`mt-3 flex items-center rounded-lg border border-crm-border text-[10px] font-mono text-crm-text-muted transition hover:border-rose-400/40 hover:bg-rose-500/10 hover:text-rose-300 disabled:cursor-wait disabled:opacity-50 ${
-              isCollapsed ? "h-8 w-8 justify-center" : "w-full justify-center gap-2 px-3 py-2"
+            className={`mt-2 flex items-center rounded-md border border-slate-700 text-[10px] font-medium text-slate-400 transition-colors hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400 disabled:cursor-wait disabled:opacity-50 ${
+              isCollapsed ? "h-7 w-7 justify-center" : "w-full justify-center gap-1.5 px-3 py-1.5"
             }`}
           >
-            <LogOut className="h-3.5 w-3.5" />
+            <LogOut className="h-3 w-3" />
             {!isCollapsed && <span>{isSigningOut ? "SIGNING OUT…" : "SIGN OUT"}</span>}
           </button>
         </div>
       </div>
 
-      {/* Interactive Resizing Drag Handle on the Right Border */}
+      {/* ── Drag Handle ── */}
       {!isCollapsed && (
         <div
-          className="absolute top-0 right-0 w-1.5 h-full cursor-col-resize group hover:bg-primary-cyan/40 transition-colors z-40"
+          className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-500/40 transition-colors z-40"
           onMouseDown={() => setIsResizing(true)}
           title="Drag to resize sidebar width"
-        >
-          <div className="absolute right-0 top-1/2 -translate-y-1/2 w-0.5 h-8 bg-white/20 group-hover:bg-primary-cyan rounded-full transition-colors" />
-        </div>
+        />
       )}
     </aside>
   );

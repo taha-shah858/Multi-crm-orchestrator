@@ -237,83 +237,69 @@ export default function OperationsPage() {
   const openWorkspaceModal = async () => {
     setIsWorking(true);
     try {
-      const res = await fetch("/api/integrations/clickup/workspaces");
+      const res = await fetch("/api/integrations/clickup/workspaces", { cache: "no-store" });
       const data = await res.json();
       if (data.success) {
         setWorkspacesData(data);
-        setSelectedListId(data.currentDestination?.listId || "");
+        if (data.currentDestination?.listId) {
+          setSelectedListId(data.currentDestination.listId);
+        }
         setModal("workspace");
+      } else {
+        setMessage({ tone: "error", text: data?.error?.message || "Failed to load ClickUp workspaces." });
       }
-    } catch (err) {
-      setMessage({ tone: "error", text: "Could not load ClickUp workspaces." });
+    } catch {
+      setMessage({ tone: "error", text: "Failed to load ClickUp workspaces." });
     } finally {
       setIsWorking(false);
     }
   };
 
   const saveWorkspaceList = async () => {
-    if (!workspacesData) return;
-    setIsWorking(true);
-    let chosenList: any = null;
-    let chosenTeam: any = null;
-    let chosenSpace: any = null;
-
-    for (const team of workspacesData.teams) {
-      for (const space of team.spaces || []) {
-        for (const list of space.lists || []) {
-          if (list.id === selectedListId) {
-            chosenList = list;
-            chosenTeam = team;
-            chosenSpace = space;
-            break;
-          }
-        }
-      }
+    if (!selectedListId) {
+      setMessage({ tone: "error", text: "Please select a ClickUp destination list." });
+      return;
     }
-
+    setIsWorking(true);
     try {
       const res = await fetch("/api/integrations/clickup/workspaces", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          teamId: chosenTeam?.id,
-          teamName: chosenTeam?.name,
-          spaceId: chosenSpace?.id,
-          spaceName: chosenSpace?.name,
-          listId: chosenList?.id || selectedListId,
-          listName: chosenList?.name,
-        }),
+        body: JSON.stringify({ listId: selectedListId }),
       });
       const data = await res.json();
       if (data.success) {
-        setClickUpInfo((prev) => ({
-          ...prev,
-          destination: data.destination,
-        }));
+        setMessage({ tone: "success", text: "ClickUp destination list updated successfully." });
         setModal(null);
-        setMessage({ tone: "success", text: "ClickUp sync destination list saved." });
+        await loadAll();
+      } else {
+        setMessage({ tone: "error", text: data?.error?.message || "Failed to save destination list." });
       }
     } catch {
-      setMessage({ tone: "error", text: "Could not save ClickUp destination." });
+      setMessage({ tone: "error", text: "Failed to save destination list." });
     } finally {
       setIsWorking(false);
     }
   };
 
-  const syncSingleDeal = async (dealId: string) => {
-    setSyncingDealId(dealId);
+  const syncSingleDeal = async (saleId: string) => {
+    setSyncingDealId(saleId);
     setMessage(null);
     try {
-      const res = await fetch(`/api/agent-sales/${dealId}/sync`, { method: "POST" });
+      const res = await fetch("/api/agent-sales/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dealId: saleId }),
+      });
       const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data?.error?.message || "ClickUp sync failed.");
+      if (data.success) {
+        setMessage({ tone: "success", text: "Deal successfully synced to ClickUp!" });
+        await loadAll();
+      } else {
+        setMessage({ tone: "error", text: data?.error?.message || "Failed to sync deal to ClickUp." });
       }
-      setMessage({ tone: "success", text: `Deal successfully synced to ClickUp (${data.action}).` });
-      await loadAll();
-    } catch (err: any) {
-      setMessage({ tone: "error", text: err.message || "Failed to sync deal to ClickUp." });
-      await loadAll();
+    } catch {
+      setMessage({ tone: "error", text: "Failed to sync deal to ClickUp." });
     } finally {
       setSyncingDealId(null);
     }
@@ -323,15 +309,20 @@ export default function OperationsPage() {
     setIsWorking(true);
     setMessage(null);
     try {
-      const res = await fetch("/api/agent-sales", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+      const res = await fetch("/api/agent-sales/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ syncAll: true }),
+      });
       const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data?.error?.message || "ClickUp batch sync failed.");
+      if (data.success) {
+        setMessage({ tone: "success", text: `Sync complete! Synced: ${data.syncedCount}, Failed: ${data.failedCount}.` });
+        await loadAll();
+      } else {
+        setMessage({ tone: "error", text: data?.error?.message || "Sync failed." });
       }
-      setMessage({ tone: "success", text: "Batch ClickUp sync completed for your closed deals." });
-      await loadAll();
-    } catch (err: any) {
-      setMessage({ tone: "error", text: err.message || "Batch ClickUp sync failed." });
+    } catch {
+      setMessage({ tone: "error", text: "Sync failed." });
     } finally {
       setIsWorking(false);
     }
@@ -463,16 +454,19 @@ export default function OperationsPage() {
     }
   };
 
+  const labelCls = "block text-xs font-semibold uppercase tracking-wider text-slate-700";
+  const inputCls = "w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-2xs";
+
   return (
-    <div className="space-y-6 font-sans text-crm-text">
+    <div className="space-y-6 font-sans text-slate-900">
       {/* Header */}
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-2xl">
           <div className="flex items-center gap-2">
-            <WalletCards className="h-5 w-5 text-primary-cyan" />
-            <h1 className="text-2xl font-bold tracking-tight">Sales Operations — Agent Revenue & Commission</h1>
+            <WalletCards className="h-5 w-5 text-blue-600" />
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Sales Operations — Agent Revenue & Commission</h1>
           </div>
-          <p className="mt-1 text-xs font-mono text-crm-text-muted">
+          <p className="mt-1 text-sm font-normal text-slate-600">
             Personal sales tracker, commission realization, and ClickUp work-management layer.
           </p>
         </div>
@@ -481,21 +475,21 @@ export default function OperationsPage() {
           <button
             onClick={exportCsv}
             disabled={!summary.recordCount || isLoading}
-            className="rounded-xl border border-crm-border-strong bg-crm-surface px-3.5 py-2 text-xs font-mono text-crm-text-muted disabled:opacity-40 cursor-pointer"
+            className="rounded-xl border border-crm-border-strong bg-crm-surface px-3.5 py-2 text-xs font-sans text-crm-text-muted disabled:opacity-40 cursor-pointer"
           >
-            <FileSpreadsheet className="mr-1.5 inline h-3.5 w-3.5 text-secondary-pink" />
+            <FileSpreadsheet className="mr-1.5 inline h-3.5 w-3.5 text-blue-600" />
             Export commissions CSV
           </button>
           <button
             onClick={() => openTime()}
-            className="rounded-xl border border-primary-cyan/30 bg-primary-cyan/10 px-3.5 py-2 text-xs font-bold text-primary-cyan cursor-pointer"
+            className="rounded-lg border border-slate-300 bg-white hover:bg-slate-50 px-3.5 py-2 text-sm font-medium text-slate-700 shadow-xs transition-colors cursor-pointer"
           >
-            <Clock3 className="mr-1.5 inline h-3.5 w-3.5" />
+            <Clock3 className="mr-1.5 inline h-4 w-4 text-slate-500" />
             Log time
           </button>
           <button
             onClick={openDeal}
-            className="rounded-xl bg-primary-cyan px-4 py-2 text-xs font-bold text-slate-950 cursor-pointer"
+            className="rounded-lg bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm font-medium text-white shadow-xs transition-colors cursor-pointer"
           >
             <Plus className="mr-1.5 inline h-4 w-4" />
             Add closed deal
@@ -508,10 +502,10 @@ export default function OperationsPage() {
       {message && (
         <p
           role="status"
-          className={`rounded-xl border px-4 py-3 text-xs font-mono ${
+          className={`rounded-lg border px-4 py-3 text-sm font-medium ${
             message.tone === "success"
-              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-              : "border-rose-500/30 bg-rose-500/10 text-rose-300"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+              : "border-red-200 bg-red-50 text-red-700"
           }`}
         >
           {message.text}
@@ -521,26 +515,26 @@ export default function OperationsPage() {
       {/* Top 4 Metric Cards */}
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MultiCrmCard className="group p-5">
-          <p className="text-[10px] font-mono uppercase tracking-wider text-crm-text-muted">Expected payout</p>
+          <p className="text-[10px] font-sans uppercase tracking-wider text-crm-text-muted">Expected payout</p>
           <p className="mt-3 text-xl font-semibold tabular-nums text-crm-text">{currencySummary(summary.currencyTotals, "expectedCents")}</p>
           <p className="mt-2 text-[11px] text-crm-text-muted">Across {summary.closedDeals} closed deals</p>
         </MultiCrmCard>
 
         <MultiCrmCard className="group p-5 border-emerald-500/20">
-          <p className="text-[10px] font-mono uppercase tracking-wider text-crm-text-muted">Received</p>
-          <p className="mt-3 text-xl font-semibold tabular-nums text-emerald-400">{currencySummary(summary.currencyTotals, "receivedCents")}</p>
+          <p className="text-[10px] font-sans uppercase tracking-wider text-crm-text-muted">Received</p>
+          <p className="mt-3 text-xl font-semibold tabular-nums text-emerald-800">{currencySummary(summary.currencyTotals, "receivedCents")}</p>
           <p className="mt-2 text-[11px] text-crm-text-muted">Posted payments</p>
         </MultiCrmCard>
 
         <MultiCrmCard className="group p-5">
-          <p className="text-[10px] font-mono uppercase tracking-wider text-crm-text-muted">Still pending</p>
-          <p className="mt-3 text-xl font-semibold tabular-nums text-secondary-pink">{currencySummary(summary.currencyTotals, "pendingCents")}</p>
+          <p className="text-[10px] font-sans uppercase tracking-wider text-crm-text-muted">Still pending</p>
+          <p className="mt-3 text-xl font-semibold tabular-nums text-blue-600">{currencySummary(summary.currencyTotals, "pendingCents")}</p>
           <p className="mt-2 text-[11px] text-crm-text-muted">Unpaid balance summed per deal</p>
         </MultiCrmCard>
 
         <MultiCrmCard className="group p-5">
-          <p className="text-[10px] font-mono uppercase tracking-wider text-crm-text-muted">Account time</p>
-          <p className="mt-3 text-2xl font-semibold tabular-nums text-primary-cyan">{summary.billableHours}h</p>
+          <p className="text-[10px] font-sans uppercase tracking-wider text-crm-text-muted">Account time</p>
+          <p className="mt-3 text-2xl font-semibold tabular-nums text-blue-600">{summary.billableHours}h</p>
           <p className="mt-2 text-[11px] text-crm-text-muted">{summary.activeMinutes} minutes · automatic and manual logs</p>
         </MultiCrmCard>
       </section>
@@ -549,81 +543,81 @@ export default function OperationsPage() {
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-12">
         {/* Left Column: My Closed Deals */}
         <MultiCrmCard className="space-y-4 xl:col-span-8">
-          <div className="flex items-center justify-between border-b border-crm-border-strong pb-3">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-3">
             <div>
-              <p className="text-sm font-semibold">My Closed Deals</p>
-              <p className="mt-1 text-[10px] font-mono text-crm-text-muted">
+              <p className="text-base font-semibold text-slate-900">My Closed Deals</p>
+              <p className="mt-1 text-xs text-slate-500">
                 Closed deals with snapshotted commission rate, expected revenue, and ClickUp task status.
               </p>
             </div>
-            <Zap className="h-5 w-5 text-primary-cyan" />
+            <Zap className="h-5 w-5 text-blue-600" />
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-left text-xs font-sans">
               <thead>
-                <tr className="border-b border-crm-border text-[10px] font-mono uppercase tracking-wider text-crm-text-muted">
-                  <th className="pb-2.5">Customer</th>
-                  <th className="pb-2.5">Client Account</th>
-                  <th className="pb-2.5">Deal Title</th>
-                  <th className="pb-2.5 text-right">Deal Value</th>
-                  <th className="pb-2.5 text-right">Commission</th>
-                  <th className="pb-2.5 text-right">Expected Revenue</th>
-                  <th className="pb-2.5 text-center">ClickUp Status</th>
-                  <th className="pb-2.5 text-right">Action</th>
+                <tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="py-2.5 px-3">Customer</th>
+                  <th className="py-2.5 px-3">Client Account</th>
+                  <th className="py-2.5 px-3">Deal Title</th>
+                  <th className="py-2.5 px-3 text-right">Deal Value</th>
+                  <th className="py-2.5 px-3 text-right">Commission</th>
+                  <th className="py-2.5 px-3 text-right">Expected Revenue</th>
+                  <th className="py-2.5 px-3 text-center">ClickUp Status</th>
+                  <th className="py-2.5 px-3 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-crm-border/60">
+              <tbody className="divide-y divide-slate-100">
                 {agentSales.map((sale) => (
-                  <tr key={sale.id} className="hover:bg-white/[0.02]">
-                    <td className="py-3 font-medium">
-                      <div>{sale.contact ? `${sale.contact.firstName} ${sale.contact.lastName}` : "Direct Customer"}</div>
+                  <tr key={sale.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="py-3 px-3 font-medium">
+                      <div className="font-semibold text-slate-900">{sale.contact ? `${sale.contact.firstName} ${sale.contact.lastName}` : "Direct Customer"}</div>
                       {sale.contact?.email && (
-                        <div className="text-[10px] font-mono text-crm-text-muted">{sale.contact.email}</div>
+                        <div className="text-xs text-slate-400">{sale.contact.email}</div>
                       )}
                     </td>
-                    <td className="py-3">
+                    <td className="py-3 px-3">
                       <MultiCrmTag variant="cyan">{sale.clientAccount?.name || "Account"}</MultiCrmTag>
                     </td>
-                    <td className="py-3 max-w-[140px] truncate" title={sale.title}>
+                    <td className="py-3 px-3 max-w-[140px] truncate text-slate-800" title={sale.title}>
                       {sale.title}
                     </td>
-                    <td className="py-3 text-right font-mono font-semibold">
+                    <td className="py-3 px-3 text-right font-medium text-slate-900">
                       {money(sale.valueCents, sale.currency)}
                     </td>
-                    <td className="py-3 text-right font-mono text-primary-cyan">
+                    <td className="py-3 px-3 text-right font-semibold text-blue-600">
                       {sale.commissionRate}%
                     </td>
-                    <td className="py-3 text-right font-mono font-semibold text-emerald-400">
+                    <td className="py-3 px-3 text-right font-semibold text-emerald-700">
                       {money(sale.expectedRevenueCents, sale.currency)}
                     </td>
-                    <td className="py-3 text-center">
+                    <td className="py-3 px-3 text-center">
                       {sale.clickUp.status === "COMPLETED" ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-mono text-emerald-400">
-                          <CheckCircle2 className="h-3 w-3" /> Synced
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-semibold text-emerald-800">
+                          <CheckCircle2 className="h-3 w-3 text-emerald-600" /> Synced
                         </span>
                       ) : sale.clickUp.status === "FAILED" ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] font-mono text-rose-400" title={sale.clickUp.lastSyncError || "Failed"}>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-red-50 border border-red-200 px-2 py-0.5 text-xs font-semibold text-red-700" title={sale.clickUp.lastSyncError || "Failed"}>
                           Failed
                         </span>
                       ) : sale.clickUp.status === "PENDING" ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-mono text-amber-400">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-xs font-semibold text-amber-800">
                           Pending
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-500/10 px-2 py-0.5 text-[10px] font-mono text-crm-text-muted">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 border border-slate-200 px-2 py-0.5 text-xs font-medium text-slate-500">
                           Not Connected
                         </span>
                       )}
                     </td>
-                    <td className="py-3 text-right">
+                    <td className="py-3 px-3 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         {sale.clickUp.taskUrl && (
                           <a
                             href={sale.clickUp.taskUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className="rounded p-1 text-crm-text-muted hover:text-crm-text"
+                            className="rounded p-1 text-slate-400 hover:text-slate-600"
                             title="Open ClickUp Task"
                           >
                             <ExternalLink className="h-3.5 w-3.5" />
@@ -632,7 +626,7 @@ export default function OperationsPage() {
                         <button
                           onClick={() => syncSingleDeal(sale.id)}
                           disabled={syncingDealId === sale.id || isWorking}
-                          className="rounded-lg border border-primary-cyan/30 bg-primary-cyan/10 px-2.5 py-1 text-[10px] font-bold text-primary-cyan hover:bg-primary-cyan/20 disabled:opacity-40 cursor-pointer"
+                          className="rounded-md border border-slate-300 bg-white hover:bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700 shadow-2xs transition-colors disabled:opacity-40 cursor-pointer"
                           title="Sync or Retry ClickUp Task"
                         >
                           {syncingDealId === sale.id ? (
@@ -649,7 +643,7 @@ export default function OperationsPage() {
                 ))}
                 {!isLoading && !agentSales.length && (
                   <tr>
-                    <td colSpan={8} className="py-8 text-center text-xs text-crm-text-muted">
+                    <td colSpan={8} className="py-8 text-center text-xs text-slate-500">
                       No closed deals recorded yet. Add a closed deal or win a deal in HubSpot/Unified Leads to populate.
                     </td>
                   </tr>
@@ -662,25 +656,25 @@ export default function OperationsPage() {
         {/* Right Column: Agent CRM / ClickUp Work-Management Card */}
         <aside className="space-y-6 xl:col-span-4">
           <MultiCrmCard className="space-y-4">
-            <div className="flex items-center justify-between border-b border-crm-border-strong pb-3">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <div>
-                <p className="text-sm font-semibold">Agent CRM / ClickUp</p>
-                <p className="mt-1 text-[10px] font-mono text-crm-text-muted">
+                <p className="text-base font-semibold text-slate-900">Agent CRM / ClickUp</p>
+                <p className="mt-1 text-xs text-slate-500">
                   Personal sales tracker & workflow mirror
                 </p>
               </div>
-              <Layers className="h-4 w-4 text-primary-cyan" />
+              <Layers className="h-4 w-4 text-blue-600" />
             </div>
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-crm-text-muted">Connection Status</span>
+                <span className="text-xs text-slate-600">Connection Status</span>
                 {clickUpInfo.isConnected ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-mono text-emerald-400">
-                    <CheckCircle2 className="h-3.5 w-3.5" /> Connected
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> Connected
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2.5 py-0.5 text-xs font-mono text-rose-400">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-red-50 border border-red-200 px-2.5 py-0.5 text-xs font-semibold text-red-700">
                     Disconnected
                   </span>
                 )}
@@ -688,19 +682,19 @@ export default function OperationsPage() {
 
               {clickUpInfo.isConnected && (
                 <>
-                  <div className="rounded-xl border border-crm-border bg-crm-inner p-3 space-y-2 text-xs">
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-2 text-xs">
                     <div className="flex justify-between">
-                      <span className="text-crm-text-muted">Workspace:</span>
-                      <span className="font-semibold">{clickUpInfo.destination?.teamName || "Personal Workspace"}</span>
+                      <span className="text-slate-500">Workspace:</span>
+                      <span className="font-semibold text-slate-900">{clickUpInfo.destination?.teamName || "Personal Workspace"}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-crm-text-muted">Destination List:</span>
-                      <span className="font-semibold text-primary-cyan">{clickUpInfo.destination?.listName || "My Closed Deals"}</span>
+                      <span className="text-slate-500">Destination List:</span>
+                      <span className="font-semibold text-blue-600">{clickUpInfo.destination?.listName || "My Closed Deals"}</span>
                     </div>
                     {clickUpInfo.lastSyncAt && (
-                      <div className="flex justify-between text-[11px]">
-                        <span className="text-crm-text-muted">Last sync:</span>
-                        <span className="font-mono text-crm-text-muted">{dateTime(clickUpInfo.lastSyncAt)}</span>
+                      <div className="flex justify-between text-xs text-slate-400">
+                        <span>Last sync:</span>
+                        <span>{dateTime(clickUpInfo.lastSyncAt)}</span>
                       </div>
                     )}
                   </div>
@@ -709,7 +703,7 @@ export default function OperationsPage() {
                     <button
                       onClick={syncAllClickUp}
                       disabled={isWorking}
-                      className="flex-1 rounded-xl bg-primary-cyan px-3 py-2 text-xs font-bold text-slate-950 hover:bg-primary-cyan/90 disabled:opacity-40 cursor-pointer flex items-center justify-center gap-1.5"
+                      className="flex-1 rounded-lg bg-blue-600 hover:bg-blue-700 px-3 py-2 text-xs font-medium text-white shadow-xs transition-colors disabled:opacity-40 cursor-pointer flex items-center justify-center gap-1.5"
                     >
                       <FolderSync className="h-3.5 w-3.5" />
                       Sync All Deals
@@ -717,14 +711,14 @@ export default function OperationsPage() {
                     <button
                       onClick={openWorkspaceModal}
                       disabled={isWorking}
-                      className="rounded-xl border border-crm-border-strong bg-crm-surface px-3 py-2 text-xs font-mono text-crm-text hover:bg-white/5 cursor-pointer"
+                      className="rounded-lg border border-slate-300 bg-white hover:bg-slate-50 px-3 py-2 text-xs font-medium text-slate-700 shadow-xs transition-colors cursor-pointer"
                     >
                       Change List
                     </button>
                     <button
                       onClick={disconnectClickUpAction}
                       disabled={isWorking}
-                      className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs font-mono text-rose-400 hover:bg-rose-500/20 cursor-pointer"
+                      className="rounded-lg border border-red-200 bg-white hover:bg-red-50 px-3 py-2 text-xs font-medium text-red-600 shadow-xs transition-colors cursor-pointer"
                       title="Disconnect ClickUp"
                     >
                       <Unplug className="h-3.5 w-3.5" />
@@ -735,7 +729,7 @@ export default function OperationsPage() {
 
               {!clickUpInfo.isConnected && (
                 <div className="space-y-3 pt-2">
-                  <p className="text-xs text-crm-text-muted">
+                  <p className="text-xs text-slate-600">
                     Connect your personal ClickUp account to mirror your closed deals into your personal workspace without mixing with client CRMs.
                   </p>
                   <div className="flex flex-col gap-2">
@@ -743,14 +737,14 @@ export default function OperationsPage() {
                       type="button"
                       onClick={connectClickUpOAuth}
                       disabled={isWorking}
-                      className="rounded-xl bg-primary-cyan px-4 py-2.5 text-center text-xs font-bold text-slate-950 hover:bg-primary-cyan/90 cursor-pointer disabled:opacity-50"
+                      className="rounded-lg bg-blue-600 hover:bg-blue-700 px-4 py-2.5 text-center text-sm font-medium text-white shadow-xs transition-colors cursor-pointer disabled:opacity-50"
                     >
                       {isWorking ? "Connecting to ClickUp…" : "Connect ClickUp via OAuth"}
                     </button>
                     <button
                       onClick={connectClickUpDirect}
                       disabled={isWorking}
-                      className="rounded-xl border border-crm-border-strong bg-crm-surface px-3 py-2 text-center text-[11px] font-mono text-crm-text-muted hover:text-crm-text cursor-pointer"
+                      className="rounded-lg border border-slate-300 bg-white hover:bg-slate-50 px-3 py-2 text-center text-xs font-medium text-slate-700 shadow-xs transition-colors cursor-pointer"
                     >
                       Quick Connect (Test/Mock Mode)
                     </button>
@@ -762,12 +756,12 @@ export default function OperationsPage() {
 
           {/* Time Ledger Summary */}
           <MultiCrmCard className="space-y-4">
-            <div className="flex items-center justify-between border-b border-crm-border-strong pb-3">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <div className="flex items-center gap-2">
-                <Clock3 className="h-4 w-4 text-primary-cyan" />
-                <h2 className="text-sm font-semibold">Time ledger</h2>
+                <Clock3 className="h-4 w-4 text-blue-600" />
+                <h2 className="text-base font-semibold text-slate-900">Time ledger</h2>
               </div>
-              <button onClick={() => openTime()} className="text-[10px] font-bold text-primary-cyan cursor-pointer">
+              <button onClick={() => openTime()} className="text-xs font-semibold text-blue-600 hover:underline cursor-pointer">
                 + Add
               </button>
             </div>
@@ -777,20 +771,20 @@ export default function OperationsPage() {
                 <button
                   key={timeLog.id}
                   onClick={() => openTime(timeLog)}
-                  className="block w-full rounded-xl border border-crm-border bg-crm-inner p-3 text-left transition-colors hover:border-primary-cyan/40 cursor-pointer"
+                  className="block w-full rounded-lg border border-slate-200 bg-white p-3 text-left transition-colors hover:border-slate-300 hover:shadow-xs cursor-pointer"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="truncate text-xs font-semibold">{timeLog.description}</span>
-                    <span className="shrink-0 font-mono text-[10px] text-primary-cyan">{formatTrackedTime(effectiveTimeSeconds(timeLog))}</span>
+                    <span className="shrink-0 font-sans text-[10px] text-blue-600">{formatTrackedTime(effectiveTimeSeconds(timeLog))}</span>
                   </div>
                   <p className="mt-1 text-[10px] text-crm-text-muted">{timeLog.source === "AUTO" ? "Automatic" : "Manual"}{timeLog.isManualOverride ? " · Corrected" : ""} · min:sec</p>
-                  <p className="mt-1 text-[10px] font-mono text-crm-text-muted">
+                  <p className="mt-1 text-[10px] font-sans text-crm-text-muted">
                     {contactName(timeLog.contact)} · {dateTime(timeLog.loggedAt)}
                   </p>
                 </button>
               ))}
               {!isLoading && !timeLogs.length && (
-                <p className="py-5 text-center text-xs text-crm-text-muted">No time has been logged for this client.</p>
+                <p className="py-5 text-center text-xs text-slate-500">No time has been logged for this client.</p>
               )}
             </div>
           </MultiCrmCard>
@@ -800,14 +794,14 @@ export default function OperationsPage() {
       {/* Commission Ledger Section */}
       <section className="grid grid-cols-1 gap-6">
         <MultiCrmCard className="space-y-4">
-          <div className="flex items-center justify-between border-b border-crm-border-strong pb-3">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-3">
             <div>
               <p className="text-sm font-semibold">Commission ledger</p>
-              <p className="mt-1 text-[10px] font-mono text-crm-text-muted">
+              <p className="mt-1 text-[10px] font-sans text-crm-text-muted">
                 Showing {commissions.length} of {summary.recordCount} records. Export CSV includes every matching commission.
               </p>
             </div>
-            <HandCoins className="h-5 w-5 text-secondary-pink" />
+            <HandCoins className="h-5 w-5 text-blue-600" />
           </div>
 
           <div className="space-y-3">
@@ -818,11 +812,11 @@ export default function OperationsPage() {
                 : 0;
 
               return (
-                <MultiCrmInnerPanel key={commission.id} className="space-y-3">
+                <div key={commission.id} className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-3">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="truncate text-sm font-semibold">
+                        <p className="truncate text-sm font-semibold text-slate-900">
                           {commission.deal?.title ?? "Manual commission entry"}
                         </p>
                         <MultiCrmTag variant={statusVariant(commission.status)}>
@@ -832,10 +826,10 @@ export default function OperationsPage() {
                           {commission.source === "CRM" ? "CRM CLOSED WON" : "MANUAL"}
                         </MultiCrmTag>
                         {commission.isManualOverride && (
-                          <span className="text-[10px] font-mono text-secondary-pink">MANUALLY CORRECTED</span>
+                          <span className="text-xs font-semibold text-blue-700">MANUALLY CORRECTED</span>
                         )}
                       </div>
-                      <p className="mt-1 text-[11px] font-mono text-crm-text-muted">
+                      <p className="mt-1 text-xs text-slate-500">
                         {contactName(commission.deal?.contact ?? null)} · Deal value{" "}
                         {commission.currency} {money(commission.deal?.valueCents ?? 0, commission.currency)}
                         {commission.deal?.commissionRate != null && ` · Commission ${commission.deal.commissionRate}%`}
@@ -847,59 +841,59 @@ export default function OperationsPage() {
                         setLedgerForm({ type: "PAYMENT", amount: "", note: "" });
                         setModal("ledger");
                       }}
-                      className="shrink-0 rounded-lg border border-primary-cyan/30 bg-primary-cyan/10 px-3 py-2 text-[10px] font-bold text-primary-cyan cursor-pointer"
+                      className="shrink-0 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-2xs transition-colors cursor-pointer"
                     >
-                      <ReceiptText className="mr-1 inline h-3.5 w-3.5" />
+                      <ReceiptText className="mr-1 inline h-3.5 w-3.5 text-slate-500" />
                       Ledger entry
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-3 font-mono text-xs">
+                  <div className="grid grid-cols-3 gap-3 text-xs">
                     <div>
-                      <span className="block text-[10px] text-crm-text-muted">Expected</span>
-                      <span className="font-semibold">{money(commission.expectedCents, commission.currency)}</span>
+                      <span className="block text-xs text-slate-500">Expected</span>
+                      <span className="font-semibold text-slate-900">{money(commission.expectedCents, commission.currency)}</span>
                     </div>
                     <div>
-                      <span className="block text-[10px] text-crm-text-muted">Received</span>
-                      <span className="font-semibold text-emerald-400">
+                      <span className="block text-xs text-slate-500">Received</span>
+                      <span className="font-semibold text-emerald-700">
                         {money(commission.receivedCents, commission.currency)}
                       </span>
                     </div>
                     <div>
-                      <span className="block text-[10px] text-crm-text-muted">Pending</span>
-                      <span className="font-semibold text-secondary-pink">
+                      <span className="block text-xs text-slate-500">Pending</span>
+                      <span className="font-semibold text-slate-700">
                         {money(pending, commission.currency)}
                       </span>
                     </div>
                   </div>
 
-                  <div className="h-1.5 overflow-hidden rounded-full bg-crm-surface">
+                  <div className="h-2 overflow-hidden rounded-full bg-slate-200">
                     <div
-                      className="h-full rounded-full bg-primary-cyan transition-all duration-500"
+                      className="h-full rounded-full bg-blue-600 transition-all duration-500"
                       style={{ width: `${progress}%` }}
                     />
                   </div>
 
-                  <div className="flex flex-wrap gap-2 text-[10px] font-mono text-crm-text-muted">
+                  <div className="flex flex-wrap gap-2 text-xs text-slate-500">
                     {commission.ledgerEntries.slice(0, 3).map((entry) => (
-                      <span key={entry.id} className="rounded bg-crm-surface px-2 py-1">
+                      <span key={entry.id} className="rounded bg-white border border-slate-200 px-2 py-1">
                         {entry.type} {entry.amountCents < 0 ? "−" : "+"}
                         {money(Math.abs(entry.amountCents), commission.currency)} · {entry.note}
                       </span>
                     ))}
                   </div>
-                </MultiCrmInnerPanel>
+                </div>
               );
             })}
 
             {!isLoading && !commissions.length && (
               <div className="rounded-xl border border-dashed border-crm-border-strong px-6 py-14 text-center">
-                <Sparkles className="mx-auto h-5 w-5 text-secondary-pink" />
+                <Sparkles className="mx-auto h-5 w-5 text-blue-600" />
                 <p className="mt-3 text-sm font-semibold">Start with a closed deal</p>
                 <p className="mx-auto mt-1 max-w-sm text-xs text-crm-text-muted">
                   Mark a CRM deal Closed Won to create its commission automatically, or add an off-platform sale manually.
                 </p>
-                <button onClick={openDeal} className="mt-4 text-xs font-bold text-primary-cyan cursor-pointer">
+                <button onClick={openDeal} className="mt-4 text-xs font-semibold text-blue-600 hover:underline cursor-pointer">
                   Add first deal
                 </button>
               </div>
@@ -910,7 +904,7 @@ export default function OperationsPage() {
 
       {/* Modals */}
       {modal && (
-        <div className="dashboard-overlay flex items-start justify-center overflow-y-auto bg-black/75 p-4 sm:items-center">
+        <div className="dashboard-overlay flex items-start justify-center overflow-y-auto bg-slate-900/40 backdrop-blur-xs p-4 sm:items-center z-50">
           <form
             onSubmit={
               modal === "deal"
@@ -921,11 +915,11 @@ export default function OperationsPage() {
                 ? submitTime
                 : (e) => { e.preventDefault(); void saveWorkspaceList(); }
             }
-            className="my-auto w-full max-w-xl space-y-5 rounded-2xl border border-crm-border-strong bg-crm-surface p-6 shadow-2xl"
+            className="my-auto w-full max-w-xl space-y-5 rounded-xl border border-slate-200 bg-white p-6 shadow-2xl"
           >
-            <div className="flex items-center justify-between border-b border-crm-border-strong pb-3">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <div>
-                <h2 className="text-sm font-semibold">
+                <h2 className="text-base font-semibold text-slate-900">
                   {modal === "deal"
                     ? "Add closed deal"
                     : modal === "ledger"
@@ -936,23 +930,23 @@ export default function OperationsPage() {
                     ? "Correct time log"
                     : "Log account time"}
                 </h2>
-                <p className="mt-1 text-[10px] font-mono text-crm-text-muted">
+                <p className="mt-1 text-xs text-slate-500">
                   Manual entries are persisted and audited.
                 </p>
               </div>
-              <button type="button" onClick={() => setModal(null)} className="text-crm-text-muted cursor-pointer">
+              <button type="button" onClick={() => setModal(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             {modal === "workspace" && workspacesData && (
               <div className="space-y-4">
-                <label className="block space-y-1 text-xs font-mono">
-                  <span className="text-[10px] text-crm-text-muted">Select Destination List</span>
+                <label className="block space-y-1">
+                  <span className={labelCls}>Select Destination List</span>
                   <select
                     value={selectedListId}
                     onChange={(e) => setSelectedListId(e.target.value)}
-                    className="w-full rounded-xl border border-crm-border-strong bg-crm-inner p-2.5 text-xs text-crm-text"
+                    className={inputCls}
                   >
                     <option value="">-- Choose a ClickUp list --</option>
                     {workspacesData.teams.map((team) => (
@@ -974,18 +968,18 @@ export default function OperationsPage() {
             {modal === "deal" && (
               <>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <label className="space-y-1 text-xs font-mono sm:col-span-2">
-                    <span className="text-[10px] text-crm-text-muted">Deal title</span>
+                  <label className="space-y-1 sm:col-span-2 block">
+                    <span className={labelCls}>Deal title</span>
                     <input
                       required
                       value={dealForm.dealTitle}
                       onChange={(event) => setDealForm({ ...dealForm, dealTitle: event.target.value })}
                       placeholder="e.g. Northstar annual renewal"
-                      className="w-full rounded-xl border border-crm-border-strong bg-crm-inner p-2 text-crm-text"
+                      className={inputCls}
                     />
                   </label>
-                  <label className="space-y-1 text-xs font-mono">
-                    <span className="text-[10px] text-crm-text-muted">Deal value</span>
+                  <label className="space-y-1 block">
+                    <span className={labelCls}>Deal value</span>
                     <input
                       required
                       type="number"
@@ -993,11 +987,11 @@ export default function OperationsPage() {
                       step="0.01"
                       value={dealForm.dealValue}
                       onChange={(event) => setDealForm({ ...dealForm, dealValue: event.target.value })}
-                      className="w-full rounded-xl border border-crm-border-strong bg-crm-inner p-2 text-crm-text"
+                      className={inputCls}
                     />
                   </label>
-                  <label className="space-y-1 text-xs font-mono">
-                    <span className="text-[10px] text-crm-text-muted">Expected commission</span>
+                  <label className="space-y-1 block">
+                    <span className={labelCls}>Expected commission</span>
                     <input
                       required
                       type="number"
@@ -1005,27 +999,27 @@ export default function OperationsPage() {
                       step="0.01"
                       value={dealForm.expectedCommission}
                       onChange={(event) => setDealForm({ ...dealForm, expectedCommission: event.target.value })}
-                      className="w-full rounded-xl border border-crm-border-strong bg-crm-inner p-2 text-crm-text"
+                      className={inputCls}
                     />
                   </label>
-                  <label className="space-y-1 text-xs font-mono">
-                    <span className="text-[10px] text-crm-text-muted">Already received (optional)</span>
+                  <label className="space-y-1 block">
+                    <span className={labelCls}>Already received (optional)</span>
                     <input
                       type="number"
                       min="0"
                       step="0.01"
                       value={dealForm.receivedCommission}
                       onChange={(event) => setDealForm({ ...dealForm, receivedCommission: event.target.value })}
-                      className="w-full rounded-xl border border-crm-border-strong bg-crm-inner p-2 text-crm-text"
+                      className={inputCls}
                     />
                   </label>
-                  <label className="space-y-1 text-xs font-mono">
-                    <span className="text-[10px] text-crm-text-muted">Currency</span>
+                  <label className="space-y-1 block">
+                    <span className={labelCls}>Currency</span>
                     <input
                       value={dealForm.currency}
                       maxLength={3}
                       onChange={(event) => setDealForm({ ...dealForm, currency: event.target.value.toUpperCase() })}
-                      className="w-full rounded-xl border border-crm-border-strong bg-crm-inner p-2 text-crm-text"
+                      className={inputCls}
                     />
                   </label>
                 </div>
@@ -1034,27 +1028,27 @@ export default function OperationsPage() {
 
             {modal === "ledger" && (
               <>
-                <MultiCrmInnerPanel>
-                  <p className="text-xs font-semibold">{selectedCommission?.deal?.title ?? "Manual commission"}</p>
-                  <p className="mt-1 text-[10px] font-mono text-crm-text-muted">
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                  <p className="text-xs font-semibold text-slate-900">{selectedCommission?.deal?.title ?? "Manual commission"}</p>
+                  <p className="mt-1 text-xs text-slate-500">
                     Expected {selectedCommission && money(selectedCommission.expectedCents, selectedCommission.currency)} · Received{" "}
                     {selectedCommission && money(selectedCommission.receivedCents, selectedCommission.currency)}
                   </p>
-                </MultiCrmInnerPanel>
+                </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <label className="space-y-1 text-xs font-mono">
-                    <span className="text-[10px] text-crm-text-muted">Entry type</span>
+                  <label className="space-y-1 block">
+                    <span className={labelCls}>Entry type</span>
                     <select
                       value={ledgerForm.type}
                       onChange={(event) => setLedgerForm({ ...ledgerForm, type: event.target.value as LedgerType })}
-                      className="w-full rounded-xl border border-crm-border-strong bg-crm-inner p-2 text-crm-text"
+                      className={inputCls}
                     >
                       <option value="PAYMENT">Received payment</option>
                       <option value="ADJUSTMENT">Expected adjustment</option>
                     </select>
                   </label>
-                  <label className="space-y-1 text-xs font-mono">
-                    <span className="text-[10px] text-crm-text-muted">Amount</span>
+                  <label className="space-y-1 block">
+                    <span className={labelCls}>Amount</span>
                     <input
                       required
                       type="number"
@@ -1062,18 +1056,18 @@ export default function OperationsPage() {
                       min={ledgerForm.type === "PAYMENT" ? "0" : undefined}
                       value={ledgerForm.amount}
                       onChange={(event) => setLedgerForm({ ...ledgerForm, amount: event.target.value })}
-                      className="w-full rounded-xl border border-crm-border-strong bg-crm-inner p-2 text-crm-text"
+                      className={inputCls}
                     />
                   </label>
                 </div>
-                <label className="block space-y-1 text-xs font-mono">
-                  <span className="text-[10px] text-crm-text-muted">Reason / reference</span>
+                <label className="block space-y-1">
+                  <span className={labelCls}>Reason / reference</span>
                   <input
                     required
                     value={ledgerForm.note}
                     onChange={(event) => setLedgerForm({ ...ledgerForm, note: event.target.value })}
                     placeholder="Payment reference or adjustment reason"
-                    className="w-full rounded-xl border border-crm-border-strong bg-crm-inner p-2 text-crm-text"
+                    className={inputCls}
                   />
                 </label>
               </>
@@ -1082,19 +1076,19 @@ export default function OperationsPage() {
             {modal === "time" && (
               <>
                 {editingTimeLog?.source === "AUTO" && <p className="text-xs text-crm-text-muted">Measured {formatTrackedTime(editingTimeLog.trackedSeconds)} (min:sec). Your correction sets the report duration; the measured time stays available.</p>}
-                <label className="block space-y-1 text-xs font-mono">
+                <label className="block space-y-1 text-xs font-sans">
                   <span className="text-[10px] text-crm-text-muted">Work description</span>
                   <input
                     required
                     value={timeForm.description}
                     onChange={(event) => setTimeForm({ ...timeForm, description: event.target.value })}
                     placeholder="e.g. Proposal review and client follow-up"
-                    className="w-full rounded-xl border border-crm-border-strong bg-crm-inner p-2 text-crm-text"
+                    className={inputCls}
                   />
                 </label>
                 <div className="grid grid-cols-2 gap-4">
-                  <label className="space-y-1 text-xs font-mono">
-                    <span className="text-[10px] text-crm-text-muted">Minutes</span>
+                  <label className="space-y-1 block">
+                    <span className={labelCls}>Minutes</span>
                     <input
                       required
                       type="number"
@@ -1102,17 +1096,17 @@ export default function OperationsPage() {
                       max="1440"
                       value={timeForm.minutes}
                       onChange={(event) => setTimeForm({ ...timeForm, minutes: event.target.value })}
-                      className="w-full rounded-xl border border-crm-border-strong bg-crm-inner p-2 text-crm-text"
+                      className={inputCls}
                     />
                   </label>
-                  <label className="space-y-1 text-xs font-mono">
-                    <span className="text-[10px] text-crm-text-muted">When</span>
+                  <label className="space-y-1 block">
+                    <span className={labelCls}>When</span>
                     <input
                       required
                       type="datetime-local"
                       value={timeForm.loggedAt}
                       onChange={(event) => setTimeForm({ ...timeForm, loggedAt: event.target.value })}
-                      className="w-full rounded-xl border border-crm-border-strong bg-crm-inner p-2 text-crm-text"
+                      className={inputCls}
                     />
                   </label>
                 </div>
@@ -1122,12 +1116,12 @@ export default function OperationsPage() {
             {(modal === "deal" || modal === "time") && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-mono text-crm-text-muted">Contact (optional)</span>
+                  <span className={labelCls}>Contact (optional)</span>
                   {selectedContact && (
                     <button
                       type="button"
                       onClick={() => (modal === "deal" ? setDealForm({ ...dealForm, contactId: "" }) : setTimeForm({ ...timeForm, contactId: "" }))}
-                      className="text-[10px] font-mono text-secondary-pink cursor-pointer"
+                      className="text-xs text-blue-600 hover:underline cursor-pointer"
                     >
                       Use account only
                     </button>
@@ -1137,19 +1131,19 @@ export default function OperationsPage() {
                   value={contactSearch}
                   onChange={(event) => setContactSearch(event.target.value)}
                   placeholder="Search active-client contacts by name or company"
-                  className="w-full rounded-xl border border-crm-border-strong bg-crm-inner p-2 text-xs text-crm-text"
+                  className={inputCls}
                 />
                 {selectedContact ? (
-                  <MultiCrmInnerPanel className="flex items-center justify-between py-2">
-                    <span className="text-xs">
+                  <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                    <span className="text-xs font-medium text-slate-800">
                       {contactName(selectedContact)}
                       {selectedContact.company ? ` · ${selectedContact.company}` : ""}
                     </span>
-                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                  </MultiCrmInnerPanel>
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                  </div>
                 ) : (
                   contactSearch && (
-                    <div className="max-h-32 space-y-1 overflow-y-auto rounded-xl border border-crm-border-strong bg-crm-inner p-1">
+                    <div className="max-h-32 space-y-1 overflow-y-auto rounded-lg border border-slate-200 bg-white p-1">
                       {filteredContacts.map((contact) => (
                         <button
                           key={contact.id}
@@ -1159,10 +1153,10 @@ export default function OperationsPage() {
                             else setTimeForm({ ...timeForm, contactId: contact.id });
                             setContactSearch("");
                           }}
-                          className="block w-full rounded-lg px-3 py-2 text-left text-xs hover:bg-white/5 cursor-pointer"
+                          className="block w-full rounded-md px-3 py-2 text-left text-xs hover:bg-slate-50 transition-colors cursor-pointer"
                         >
                           {contactName(contact)}
-                          {contact.company && <span className="ml-2 text-crm-text-muted">{contact.company}</span>}
+                          {contact.company && <span className="ml-2 text-slate-500">{contact.company}</span>}
                         </button>
                       ))}
                     </div>
@@ -1172,29 +1166,29 @@ export default function OperationsPage() {
             )}
 
             {modal === "deal" && (
-              <label className="block space-y-1 text-xs font-mono">
-                <span className="text-[10px] text-crm-text-muted">Notes</span>
+              <label className="block space-y-1">
+                <span className={labelCls}>Notes</span>
                 <textarea
                   rows={3}
                   value={dealForm.notes}
                   onChange={(event) => setDealForm({ ...dealForm, notes: event.target.value })}
-                  className="w-full rounded-xl border border-crm-border-strong bg-crm-inner p-2 text-crm-text"
+                  className={inputCls}
                 />
               </label>
             )}
 
-            <div className="flex justify-end gap-3 border-t border-crm-border-strong pt-4">
+            <div className="flex justify-end gap-3 border-t border-slate-200 pt-4">
               <button
                 type="button"
                 onClick={() => setModal(null)}
-                className="rounded-xl border border-crm-border-strong bg-crm-inner px-4 py-2 text-xs text-crm-text-muted cursor-pointer"
+                className="rounded-lg border border-slate-300 bg-white hover:bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 shadow-xs transition-colors cursor-pointer"
               >
                 Close
               </button>
               <button
                 type="submit"
                 disabled={isWorking}
-                className="rounded-xl bg-primary-cyan px-4 py-2 text-xs font-bold text-slate-950 disabled:opacity-50 cursor-pointer"
+                className="rounded-lg bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm font-medium text-white shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
               >
                 {isWorking
                   ? "Saving…"

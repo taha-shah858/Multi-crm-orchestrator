@@ -634,15 +634,15 @@ export default function LeadsPage() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <div className="flex items-center gap-3">
-                <Users className="w-5 h-5 text-primary-cyan" />
-                <h1 className="text-2xl font-bold tracking-tight text-crm-text">
+                <Users className="w-5 h-5 text-blue-600" />
+                <h1 className="text-2xl font-bold tracking-tight text-slate-900">
                   Unified Lead Directory
                 </h1>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-orange-500/10 text-orange-400 border border-orange-500/30">
+                <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-200">
                   Agency Sales Pipeline • HubSpot CRM
                 </span>
               </div>
-              <p className="text-xs text-crm-text-muted font-mono mt-1">
+              <p className="text-sm font-normal text-slate-600 mt-1">
                 Agency-wide unified sales pipeline across all clients and agents. Backed by Agency CRM (HubSpot).
               </p>
             </div>
@@ -652,12 +652,12 @@ export default function LeadsPage() {
               <button
                 onClick={handleManualAgencySync}
                 disabled={isImporting}
-                className="px-4 py-2 rounded-xl bg-orange-500/10 border border-orange-500/30 text-xs font-mono text-orange-400 hover:bg-orange-500/20 hover:border-orange-500/50 transition-all flex items-center gap-2 shadow-inner cursor-pointer disabled:opacity-50"
+                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm shadow-xs transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
                 title="Manually sync contacts from the Agency HubSpot CRM"
               >
                 <RefreshCw
                   className={`w-3.5 h-3.5 ${
-                    isImporting ? "animate-spin text-orange-400" : "text-orange-400"
+                    isImporting ? "animate-spin text-white" : "text-white"
                   }`}
                 />
                 <span>
@@ -665,13 +665,13 @@ export default function LeadsPage() {
                 </span>
               </button>
 
-              <button className="px-4 py-2 rounded-xl bg-crm-surface border border-primary-cyan/30 text-xs font-mono text-crm-text-muted hover:text-crm-text hover:border-primary-cyan/60 transition-all flex items-center gap-2 shadow-inner cursor-pointer">
-                <Download className="w-3.5 h-3.5 text-crm-text-muted" />
+              <button className="px-4 py-2 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-medium text-sm shadow-xs transition-colors flex items-center gap-2 cursor-pointer">
+                <Download className="w-3.5 h-3.5 text-slate-500" />
                 Export CSV
               </button>
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-linear-to-r from-primary-cyan to-secondary-pink text-slate-950 hover:opacity-90 transition-all flex items-center gap-2 cursor-pointer shadow-[0_0_20px_color-mix(in_srgb,var(--color-primary-cyan)_25%,transparent)]"
+                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 Add Detailed Lead
@@ -682,10 +682,10 @@ export default function LeadsPage() {
           {/* User-facing Import Feedback Banner */}
           {importFeedback.type && (
             <div
-              className={`p-3 rounded-xl border text-xs font-mono flex items-center justify-between transition-all ${
+              className={`p-3 rounded-lg border text-sm font-medium flex items-center justify-between transition-all ${
                 importFeedback.type === "success"
-                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
-                  : "bg-rose-500/10 border-rose-500/30 text-rose-300"
+                  ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                  : "bg-red-50 border-red-200 text-red-700"
               }`}
             >
               <div className="flex items-center gap-2">
@@ -694,7 +694,7 @@ export default function LeadsPage() {
               </div>
               <button
                 onClick={() => setImportFeedback({ type: null, message: "" })}
-                className="p-1 text-slate-400 hover:text-white cursor-pointer"
+                className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -703,45 +703,45 @@ export default function LeadsPage() {
 
           {/* SLIDER / DIVERSE SETTINGS & CUSTOMIZATION TOOLBAR */}
           <MultiCrmCard className="p-4 space-y-3">
-            <div className="flex items-center justify-between border-b border-crm-border-strong pb-2.5">
-              <span className="text-xs font-mono font-bold text-crm-text-muted flex items-center gap-2">
-                <Settings2 className="w-4 h-4 text-primary-cyan" /> Lead
+            <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                <Settings2 className="w-4 h-4 text-blue-600" /> Lead
                 Customization & Control Hub
               </span>
-              <span className="text-[10px] text-slate-500 font-mono">
+              <span className="text-xs text-slate-500">
                 Slide right → to explore additional pipeline controls
               </span>
             </div>
 
             {/* Horizontal Scrollable Slider Bar */}
-            <div className="overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-primary-cyan/20">
+            <div className="overflow-x-auto pb-2 scrollbar-thin">
               <div className="flex items-center gap-4 min-w-max">
                 {/* Search Box */}
                 <div className="relative w-64">
-                  <Search className="w-3.5 h-3.5 text-crm-text-muted absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     placeholder="Search leads, companies..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-crm-inner border border-crm-border-strong rounded-xl pl-9 pr-3 py-1.5 text-xs font-mono text-crm-text placeholder-slate-500 focus:outline-none focus:border-primary-cyan/50"
+                    className="w-full bg-white border border-slate-300 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-2xs"
                   />
                 </div>
 
                 {/* CRM Filter Selector */}
-                <div className="flex items-center gap-1.5 bg-crm-inner p-1 rounded-xl border border-crm-border-strong">
-                  <span className="text-[11px] font-mono text-crm-text-muted px-2 flex items-center gap-1">
-                    <Database className="w-3 h-3 text-primary-cyan" /> Source:
+                <div className="flex items-center gap-1.5 bg-slate-50 p-1 rounded-lg border border-slate-200">
+                  <span className="text-xs font-semibold text-slate-500 px-2 flex items-center gap-1 uppercase tracking-wider">
+                    <Database className="w-3.5 h-3.5 text-blue-600" /> Source:
                   </span>
                   {["All", "HubSpot"].map(
                     (crm) => (
                       <button
                         key={crm}
                         onClick={() => setSelectedCrm(crm)}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-mono transition-all cursor-pointer ${
+                        className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer ${
                           selectedCrm === crm
-                            ? "bg-primary-cyan/20 text-primary-cyan border border-primary-cyan/40 font-semibold"
-                            : "text-crm-text-muted hover:text-crm-text"
+                            ? "bg-blue-600 text-white shadow-2xs font-semibold"
+                            : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                         }`}
                       >
                         {crm}
@@ -751,9 +751,9 @@ export default function LeadsPage() {
                 </div>
 
                 {/* Score Slider Control */}
-                <div className="flex items-center gap-3 bg-crm-inner px-3 py-1.5 rounded-xl border border-crm-border-strong">
-                  <span className="text-[11px] font-mono text-crm-text-muted flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 text-secondary-pink" /> Min
+                <div className="flex items-center gap-3 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+                  <span className="text-xs font-semibold text-slate-500 flex items-center gap-1 uppercase tracking-wider">
+                    <Sparkles className="w-3.5 h-3.5 text-blue-600" /> Min
                     Score:
                   </span>
                   <input
@@ -763,25 +763,25 @@ export default function LeadsPage() {
                     step="10"
                     value={scoreFilter}
                     onChange={(e) => setScoreFilter(Number(e.target.value))}
-                    className="w-24 accent-primary-cyan cursor-pointer"
+                    className="w-24 accent-blue-600 cursor-pointer"
                   />
-                  <span className="text-xs font-mono font-bold text-primary-cyan w-6">
+                  <span className="text-xs font-bold text-blue-600 w-6">
                     {scoreFilter}+
                   </span>
                 </div>
 
                 {/* Quick Quick Actions & Display Options */}
                 <div className="flex items-center gap-2">
-                  <button className="px-3 py-1.5 rounded-xl bg-crm-inner border border-crm-border-strong text-xs font-mono text-crm-text-muted hover:text-white hover:border-white/30 flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
-                    <Layers className="w-3.5 h-3.5 text-purple-400" /> Group by
+                  <button className="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-300 text-xs font-medium text-slate-700 shadow-2xs flex items-center gap-1.5 cursor-pointer whitespace-nowrap transition-colors">
+                    <Layers className="w-3.5 h-3.5 text-slate-500" /> Group by
                     Origin
                   </button>
-                  <button className="px-3 py-1.5 rounded-xl bg-crm-inner border border-crm-border-strong text-xs font-mono text-crm-text-muted hover:text-white hover:border-white/30 flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
-                    <RefreshCw className="w-3.5 h-3.5 text-emerald-400" /> Force
+                  <button className="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-300 text-xs font-medium text-slate-700 shadow-2xs flex items-center gap-1.5 cursor-pointer whitespace-nowrap transition-colors">
+                    <RefreshCw className="w-3.5 h-3.5 text-slate-500" /> Force
                     Sync All
                   </button>
-                  <button className="px-3 py-1.5 rounded-xl bg-crm-inner border border-crm-border-strong text-xs font-mono text-crm-text-muted hover:text-white hover:border-white/30 flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
-                    <Eye className="w-3.5 h-3.5 text-amber-400" /> Column
+                  <button className="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-300 text-xs font-medium text-slate-700 shadow-2xs flex items-center gap-1.5 cursor-pointer whitespace-nowrap transition-colors">
+                    <Eye className="w-3.5 h-3.5 text-slate-500" /> Column
                     Visibility
                   </button>
                 </div>
@@ -794,47 +794,47 @@ export default function LeadsPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-crm-border-strong bg-crm-inner/50 text-[11px] font-mono text-crm-text-muted">
+                  <tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
                     <th className="p-3.5">
                       <input
                         type="checkbox"
-                        className="rounded border-white/20 bg-crm-inner"
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-600"
                       />
                     </th>
-                    <th className="py-3.5 px-4 font-medium">LEAD / COMPANY</th>
-                    <th className="py-3.5 px-4 font-medium">
+                    <th className="py-3.5 px-4 font-semibold">LEAD / COMPANY</th>
+                    <th className="py-3.5 px-4 font-semibold">
                       PULLED SOURCE ORIGIN
                     </th>
-                    <th className="py-3.5 px-4 font-medium">SYNC TIMING</th>
-                    <th className="py-3.5 px-4 font-medium">RATING & SCORE</th>
-                    <th className="py-3.5 px-4 font-medium">STATUS</th>
-                    <th className="py-3.5 px-4 font-medium text-right">
+                    <th className="py-3.5 px-4 font-semibold">SYNC TIMING</th>
+                    <th className="py-3.5 px-4 font-semibold">RATING & SCORE</th>
+                    <th className="py-3.5 px-4 font-semibold">STATUS</th>
+                    <th className="py-3.5 px-4 font-semibold text-right">
                       ACTIONS
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/10 text-xs font-mono">
+                <tbody className="divide-y divide-slate-100 text-xs font-sans">
                   {filteredLeads.map((lead) => (
                     <tr
                       key={lead.id}
                       onClick={() => setSelectedLead(lead)}
-                      className="hover:bg-crm-inner/80 transition-colors cursor-pointer group"
+                      className="hover:bg-slate-50 transition-colors cursor-pointer group"
                     >
                       <td className="p-3" onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
-                          className="rounded border-white/20 bg-crm-inner"
+                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-600"
                         />
                       </td>
                       <td className="py-4 px-4">
-                        <div className="font-semibold text-primary-cyan group-hover:underline flex items-center gap-2">
+                        <div className="font-semibold text-blue-600 group-hover:underline flex items-center gap-2">
                           {lead.name}
-                          <span className="text-[10px] text-slate-500 font-normal">
+                          <span className="text-xs text-slate-400 font-normal">
                             {lead.id}
                           </span>
                         </div>
-                        <div className="text-crm-text-muted text-[11px] flex items-center gap-1 mt-0.5">
-                          <Building2 className="w-3 h-3 text-slate-500" />{" "}
+                        <div className="text-slate-500 text-xs flex items-center gap-1 mt-0.5">
+                          <Building2 className="w-3.5 h-3.5 text-slate-400" />{" "}
                           {lead.company} • {lead.title}
                         </div>
                       </td>
@@ -846,7 +846,7 @@ export default function LeadsPage() {
                             {lead.crmSource}
                           </MultiCrmTag>
                           <span
-                            className="text-[10px] text-crm-text-muted truncate max-w-35"
+                            className="text-xs text-slate-500 truncate max-w-35"
                             title={lead.pulledFrom}
                           >
                             {lead.pulledFrom}
@@ -856,14 +856,14 @@ export default function LeadsPage() {
 
                       {/* Sync Timestamp */}
                       <td className="py-4 px-4">
-                        <div className="text-crm-text-muted text-[11px]">
+                        <div className="text-slate-600 text-xs font-medium">
                           {lead.pulledAt}
                         </div>
                         <span
-                          className={`text-[10px] font-semibold ${
+                          className={`text-xs font-semibold ${
                             lead.syncStatus === "Synced"
-                              ? "text-emerald-400"
-                              : "text-amber-400"
+                              ? "text-emerald-700"
+                              : "text-amber-700"
                           }`}
                         >
                           ● {lead.syncStatus}
@@ -873,15 +873,15 @@ export default function LeadsPage() {
                       {/* Rating & Score */}
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-2">
-                          <span className="px-2 py-0.5 rounded bg-white/5 border border-crm-border-strong text-[10px] text-crm-text-muted">
+                          <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-xs font-medium text-slate-700">
                             {lead.rating}
                           </span>
                           {lead.score !== null ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 font-bold">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-bold text-xs">
                               <Sparkles className="w-3 h-3" /> {lead.score}
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-800/60 text-slate-400 border border-slate-700 text-[10px]">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 text-slate-400 border border-slate-200 text-xs">
                               —
                             </span>
                           )}
@@ -890,7 +890,7 @@ export default function LeadsPage() {
 
                       {/* Status */}
                       <td className="py-4 px-4">
-                        <span className="px-2.5 py-1 rounded-full text-[10px] bg-crm-inner text-crm-text-muted border border-crm-border-strong">
+                        <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
                           {lead.status}
                         </span>
                       </td>
@@ -902,10 +902,10 @@ export default function LeadsPage() {
                       >
                         <button
                           onClick={() => setSelectedLead(lead)}
-                          className="p-2 rounded-lg bg-crm-inner hover:bg-crm-surface text-primary-cyan transition-all border border-crm-border-strong cursor-pointer"
+                          className="p-1.5 rounded-lg bg-white hover:bg-slate-50 text-blue-600 hover:text-blue-700 transition-colors border border-slate-300 shadow-2xs cursor-pointer"
                           title="View Full Profile"
                         >
-                          <ExternalLink className="w-3.5 h-3.5" />
+                          <ExternalLink className="w-4 h-4" />
                         </button>
                       </td>
                     </tr>
@@ -914,13 +914,13 @@ export default function LeadsPage() {
               </table>
             </div>
 
-            <div className="p-4 border-t border-crm-border-strong bg-crm-inner/30 flex items-center justify-between text-xs font-mono text-crm-text-muted">
+            <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between text-xs text-slate-600">
               <span>
                 {isLoadingContacts
                   ? `Loading ${activeClientAccount.name} contacts...`
                   : `Showing ${filteredLeads.length} of ${leads.length} records`}
               </span>
-              <span className="text-[11px] text-slate-500">
+              <span className="text-xs text-slate-400">
                 Auto-synchronized with native CRM engines
               </span>
             </div>
@@ -929,26 +929,26 @@ export default function LeadsPage() {
       ) : (
         /* ==================== DETAILED SUB-PAGE VIEW ==================== */
         <div className="space-y-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-crm-surface/80 border border-primary-cyan/20 p-4 rounded-2xl">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-slate-200 p-4 rounded-xl shadow-xs">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setSelectedLead(null)}
-                className="p-2 rounded-xl bg-crm-inner border border-crm-border-strong hover:border-primary-cyan/50 text-crm-text-muted hover:text-primary-cyan transition-all cursor-pointer"
+                className="p-2 rounded-lg bg-white hover:bg-slate-50 border border-slate-300 text-slate-600 hover:text-slate-900 transition-colors cursor-pointer shadow-2xs"
               >
                 <ArrowLeft className="w-4 h-4" />
               </button>
               <div>
                 <div className="flex items-center gap-2">
-                  <h1 className="text-lg font-bold text-crm-text">
+                  <h1 className="text-xl font-bold text-slate-900">
                     {selectedLead.name}
                   </h1>
                   <MultiCrmTag variant={selectedLead.variant}>
                     {selectedLead.crmSource}
                   </MultiCrmTag>
                 </div>
-                <p className="text-[11px] text-crm-text-muted font-mono mt-0.5">
+                <p className="text-xs text-slate-500 mt-0.5">
                   Pulled via{" "}
-                  <strong className="text-crm-text">
+                  <strong className="text-slate-700">
                     {selectedLead.pulledFrom}
                   </strong>{" "}
                   on {selectedLead.pulledAt}
@@ -956,14 +956,14 @@ export default function LeadsPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 font-mono text-xs">
-              <button className="px-3.5 py-1.5 rounded-xl bg-primary-cyan/20 border border-primary-cyan/40 text-primary-cyan flex items-center gap-1.5 cursor-pointer">
+            <div className="flex items-center gap-2 text-xs">
+              <button className="px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs">
                 <Send className="w-3.5 h-3.5" /> Direct Email
               </button>
               <button
                 onClick={openContactEditor}
                 disabled={!selectedLead.isPersisted}
-                className="px-3.5 py-1.5 rounded-xl bg-crm-inner border border-crm-border-strong text-crm-text-muted flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                className="px-3.5 py-2 rounded-lg bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-medium flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                 title={selectedLead.isPersisted ? "Edit canonical contact and sync HubSpot" : "Temporary leads cannot be edited after refresh"}
               >
                 <Edit3 className="w-3.5 h-3.5" /> Edit Record
@@ -974,177 +974,212 @@ export default function LeadsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* Left Panel */}
             <MultiCrmCard className="lg:col-span-4 p-5 space-y-4">
-              <h3 className="text-xs font-mono font-bold text-crm-text-muted uppercase tracking-wider border-b border-crm-border-strong pb-2">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-700 border-b border-slate-200 pb-2">
                 Origin & Pull Details
               </h3>
 
-              <MultiCrmInnerPanel className="space-y-3 p-3 font-mono text-xs">
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-3 text-xs">
                 <div>
-                  <span className="text-slate-500 text-[10px] block">
+                  <span className="text-slate-500 text-xs block">
                     Source CRM Platform
                   </span>
-                  <span className="text-crm-text font-semibold">
+                  <span className="text-slate-900 font-semibold">
                     {selectedLead.crmSource}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-500 text-[10px] block">
+                  <span className="text-slate-500 text-xs block">
                     Integration Endpoint
                   </span>
-                  <span className="text-primary-cyan text-[11px]">
+                  <span className="text-blue-600 font-medium">
                     {selectedLead.pulledFrom}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-500 text-[10px] block">
+                  <span className="text-slate-500 text-xs block">
                     Pulled Timestamp
                   </span>
-                  <span className="text-crm-text">
+                  <span className="text-slate-900">
                     {selectedLead.pulledAt}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-500 text-[10px] block">
+                  <span className="text-slate-500 text-xs block">
                     Sync State
                   </span>
-                  <span className="text-emerald-400 font-semibold">
+                  <span className="text-emerald-700 font-semibold">
                     {selectedLead.syncStatus}
                   </span>
                 </div>
-              </MultiCrmInnerPanel>
+              </div>
 
-              <MultiCrmInnerPanel className="space-y-3 p-3 font-mono text-xs">
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-3 text-xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-crm-text-muted">AI Score</span>
-                  <span className="text-purple-400 font-bold">
+                  <span className="text-slate-600 font-medium">AI Score</span>
+                  <span className="text-blue-600 font-bold">
                     {selectedLead.score !== null ? `${selectedLead.score}/100` : "Unscored (—)"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-crm-text-muted">Lead Rating</span>
-                  <span className="text-amber-400 font-bold">
+                  <span className="text-slate-600 font-medium">Lead Rating</span>
+                  <span className="text-amber-700 font-bold">
                     {selectedLead.rating}
                   </span>
                 </div>
-              </MultiCrmInnerPanel>
-              <MultiCrmInnerPanel className="space-y-3 p-3 font-mono text-xs">
+              </div>
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-3 text-xs">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-crm-text-muted">Assessment context</span>
-                  {selectedLead.analysis && <button onClick={openAssessmentEditor} className="rounded-lg border border-primary-cyan/30 px-2 py-1 text-[10px] text-primary-cyan hover:bg-primary-cyan/10 cursor-pointer">Edit assessment</button>}
+                  <span className="text-slate-700 font-semibold">Assessment context</span>
+                  {selectedLead.analysis && (
+                    <button
+                      onClick={openAssessmentEditor}
+                      className="rounded-md border border-slate-300 bg-white hover:bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700 shadow-2xs transition-colors cursor-pointer"
+                    >
+                      Edit assessment
+                    </button>
+                  )}
                 </div>
-                {selectedLead.analysis ? <>
-                  <div className="grid grid-cols-2 gap-2"><span className="text-slate-500">Probability</span><span className="text-right font-bold text-emerald-400">{selectedLead.analysis.dealProbability}%</span><span className="text-slate-500">Budget</span><span className="text-right text-crm-text">{selectedLead.analysis.budget || "—"}</span><span className="text-slate-500">Timeline</span><span className="text-right text-crm-text">{selectedLead.analysis.timeline || "—"}</span></div>
-                  <p className="border-t border-crm-border-strong pt-3 text-[11px] leading-relaxed text-crm-text-muted">{selectedLead.analysis.summary}</p>
-                  <div className="space-y-1 text-[10px] leading-relaxed text-crm-text-muted"><p><span className="text-slate-500">Intent:</span> {selectedLead.analysis.intent || "—"}</p><p><span className="text-slate-500">Requirements:</span> {selectedLead.analysis.requirements || "—"}</p><p><span className="text-slate-500">Objections:</span> {selectedLead.analysis.objections || "—"}</p></div>
-                  {selectedLead.analysis.isManualOverride && <span className="inline-flex rounded-full border border-secondary-pink/30 bg-secondary-pink/10 px-2 py-0.5 text-[10px] text-secondary-pink">Manual override</span>}
-                </> : <p className="text-[11px] leading-relaxed text-crm-text-muted">No saved assessment. Create one in Copilot to expose qualification context here.</p>}
-              </MultiCrmInnerPanel>
+                {selectedLead.analysis ? (
+                  <>
+                    <div className="grid grid-cols-2 gap-2">
+                      <span className="text-slate-500">Probability</span>
+                      <span className="text-right font-bold text-emerald-700">{selectedLead.analysis.dealProbability}%</span>
+                      <span className="text-slate-500">Budget</span>
+                      <span className="text-right text-slate-900 font-medium">{selectedLead.analysis.budget || "—"}</span>
+                      <span className="text-slate-500">Timeline</span>
+                      <span className="text-right text-slate-900 font-medium">{selectedLead.analysis.timeline || "—"}</span>
+                    </div>
+                    <p className="border-t border-slate-200 pt-3 text-xs leading-relaxed text-slate-600">{selectedLead.analysis.summary}</p>
+                    <div className="space-y-1 text-xs leading-relaxed text-slate-600">
+                      <p><span className="text-slate-500 font-medium">Intent:</span> {selectedLead.analysis.intent || "—"}</p>
+                      <p><span className="text-slate-500 font-medium">Requirements:</span> {selectedLead.analysis.requirements || "—"}</p>
+                      <p><span className="text-slate-500 font-medium">Objections:</span> {selectedLead.analysis.objections || "—"}</p>
+                    </div>
+                    {selectedLead.analysis.isManualOverride && (
+                      <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
+                        Manual override
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-xs leading-relaxed text-slate-500">
+                    No saved assessment. Create one in Copilot to expose qualification context here.
+                  </p>
+                )}
+              </div>
             </MultiCrmCard>
 
             {/* Right Main Details Panel */}
             <MultiCrmCard className="lg:col-span-8 p-6 space-y-6">
-              <div className="flex items-center justify-between border-b border-crm-border-strong pb-3">
-                <h3 className="text-xs font-mono font-bold text-crm-text uppercase tracking-wider">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-700">
                   Complete Lead Profile
                 </h3>
-                <span className="text-xs text-slate-500 font-mono">
+                <span className="text-xs text-slate-500 font-medium">
                   ID: {selectedLead.id}
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6 font-mono text-xs">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6 text-xs font-sans">
                 <div>
-                  <span className="text-slate-500 block text-[10px]">
+                  <span className="text-slate-500 block text-xs font-medium">
                     Full Name
                   </span>
-                  <span className="text-crm-text font-medium">
+                  <span className="text-slate-900 font-semibold text-sm">
                     {selectedLead.name}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[10px]">
+                  <span className="text-slate-500 block text-xs font-medium">
                     Job Title
                   </span>
-                  <span className="text-crm-text">{selectedLead.title}</span>
+                  <span className="text-slate-800 text-sm">{selectedLead.title}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[10px]">Company</span>
-                  <div className="flex items-center gap-2"><span className="text-crm-text">{selectedLead.company}</span>{selectedLead.companyDetails && <button type="button" onClick={openCompanyEditor} className="text-[9px] text-primary-cyan hover:underline">Edit company</button>}</div>
+                  <span className="text-slate-500 block text-xs font-medium">Company</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-900 text-sm font-medium">{selectedLead.company}</span>
+                    {selectedLead.companyDetails && (
+                      <button type="button" onClick={openCompanyEditor} className="text-xs text-blue-600 hover:underline font-medium">
+                        Edit company
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[10px]">
+                  <span className="text-slate-500 block text-xs font-medium">
                     CRM Owner
                   </span>
-                  <span className="text-crm-text">{selectedLead.crmOwner?.displayName || selectedLead.leadOwner}</span>
+                  <span className="text-slate-800 text-sm">{selectedLead.crmOwner?.displayName || selectedLead.leadOwner}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[10px]">
+                  <span className="text-slate-500 block text-xs font-medium">
                     Industry
                   </span>
-                  <span className="text-crm-text">
+                  <span className="text-slate-800 text-sm">
                     {selectedLead.industry}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[10px]">
+                  <span className="text-slate-500 block text-xs font-medium">
                     Email
                   </span>
-                  <span className="text-primary-cyan">
+                  <span className="text-blue-600 font-medium text-sm">
                     {selectedLead.email}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[10px]">
+                  <span className="text-slate-500 block text-xs font-medium">
                     Phone / Mobile
                   </span>
-                  <span className="text-crm-text">
+                  <span className="text-slate-800 text-sm">
                     {selectedLead.phone} / {selectedLead.mobile}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[10px]">
+                  <span className="text-slate-500 block text-xs font-medium">
                     Annual Revenue
                   </span>
-                  <span className="text-crm-text">
+                  <span className="text-slate-800 text-sm">
                     {selectedLead.annualRevenue}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[10px]">
+                  <span className="text-slate-500 block text-xs font-medium">
                     Website
                   </span>
                   <a
                     href={selectedLead.website}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-primary-cyan underline"
+                    className="text-blue-600 hover:underline text-sm font-medium"
                   >
                     {selectedLead.website}
                   </a>
                 </div>
               </div>
 
-              <MultiCrmInnerPanel className="p-4 space-y-3">
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-3">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-crm-text-muted font-mono text-xs font-bold">Associated Deals</span>
-                  <span className="text-[10px] font-mono text-primary-cyan">{selectedLead.deals?.length ?? 0} linked</span>
+                  <span className="text-slate-700 text-xs font-semibold uppercase tracking-wider">Associated Deals</span>
+                  <span className="text-xs font-semibold text-blue-600">{selectedLead.deals?.length ?? 0} linked</span>
                 </div>
                 {selectedLead.deals?.length ? (
                   <div className="grid gap-2 sm:grid-cols-2">
                     {selectedLead.deals.map((deal) => (
-                      <div key={deal.id} className="rounded-xl border border-crm-border-strong bg-crm-surface/60 p-3 font-mono text-[10px]">
+                      <div key={deal.id} className="rounded-lg border border-slate-200 bg-white p-3 text-xs">
                         <div className="flex items-start justify-between gap-3">
-                          <span className="font-semibold text-crm-text">{deal.title}</span>
-                          <span className={deal.status === "CLOSED_WON" ? "text-emerald-400" : deal.status === "CLOSED_LOST" ? "text-rose-300" : "text-amber-300"}>{deal.status.replaceAll("_", " ")}</span>
+                          <span className="font-semibold text-slate-900">{deal.title}</span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${deal.status === "CLOSED_WON" ? "bg-emerald-50 text-emerald-800 border-emerald-200" : deal.status === "CLOSED_LOST" ? "bg-red-50 text-red-700 border-red-200" : "bg-amber-50 text-amber-800 border-amber-200"}`}>{deal.status.replaceAll("_", " ")}</span>
                         </div>
-                        <p className="mt-2 text-sm font-semibold text-primary-cyan">{new Intl.NumberFormat(undefined, { style: "currency", currency: deal.currency }).format(deal.valueCents / 100)}</p>
-                        <p className="mt-1 text-crm-text-muted">{[deal.pipelineLabel, deal.stageLabel].filter(Boolean).join(" · ") || "Pipeline metadata unavailable"}</p>
-                        <p className="mt-1 text-crm-text-muted">Owner: {deal.owner?.displayName || "Unassigned"}</p>
+                        <p className="mt-2 text-sm font-bold text-blue-600">{new Intl.NumberFormat(undefined, { style: "currency", currency: deal.currency }).format(deal.valueCents / 100)}</p>
+                        <p className="mt-1 text-slate-500">{[deal.pipelineLabel, deal.stageLabel].filter(Boolean).join(" · ") || "Pipeline metadata unavailable"}</p>
+                        <p className="mt-1 text-slate-500">Owner: {deal.owner?.displayName || "Unassigned"}</p>
                         <div className="mt-2.5 flex items-center gap-2 flex-wrap">
                           <button
                             type="button"
                             onClick={() => openDealEditor(deal)}
-                            className="text-primary-cyan hover:underline cursor-pointer"
+                            className="text-blue-600 hover:underline font-medium cursor-pointer"
                           >
                             Edit & sync deal
                           </button>
@@ -1152,10 +1187,10 @@ export default function LeadsPage() {
                             <button
                               type="button"
                               onClick={() => openDealEditor(deal, "CLOSED_WON")}
-                              className="px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/35 text-emerald-400 hover:bg-emerald-500/25 transition-all text-[9px] font-semibold flex items-center gap-1 cursor-pointer"
+                              className="px-2.5 py-1 rounded-md bg-emerald-50 border border-emerald-300 text-emerald-800 hover:bg-emerald-100 transition-colors text-xs font-medium flex items-center gap-1 cursor-pointer"
                               title="Mark deal as Closed Won and hand off to Zoho CRM"
                             >
-                              <Sparkles className="w-2.5 h-2.5 text-emerald-400" />
+                              <Sparkles className="w-3 h-3 text-emerald-600" />
                               <span>Close & Handoff to Zoho</span>
                             </button>
                           )}
@@ -1163,73 +1198,80 @@ export default function LeadsPage() {
                       </div>
                     ))}
                   </div>
-                ) : <p className="text-[11px] text-crm-text-muted">No HubSpot deals are associated with this lead.</p>}
-              </MultiCrmInnerPanel>
+                ) : <p className="text-xs text-slate-500">No HubSpot deals are associated with this lead.</p>}
+              </div>
 
-              <MultiCrmInnerPanel className="p-4 space-y-3">
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-3">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-crm-text-muted font-mono text-xs font-bold">Recent CRM Activity</span>
-                  <span className="text-[10px] font-mono text-primary-cyan">HubSpot + manual</span>
+                  <span className="text-slate-700 text-xs font-semibold uppercase tracking-wider">Recent CRM Activity</span>
+                  <span className="text-xs text-slate-500">HubSpot + manual</span>
                 </div>
                 {selectedLead.recentActivities?.length ? selectedLead.recentActivities.slice(0, 5).map((activity) => (
-                  <div key={activity.id} className="flex items-start justify-between gap-4 border-t border-crm-border/70 pt-2 first:border-0 first:pt-0">
-                    <div><p className="text-xs font-medium text-crm-text">{activity.subject || activity.type.replaceAll("_", " ")}</p><p className="mt-1 line-clamp-2 text-[10px] text-crm-text-muted">{activity.body}</p></div>
-                    <div className="shrink-0 text-right font-mono text-[9px] text-crm-text-muted"><p>{activity.type}</p><p>{new Date(activity.occurredAt).toLocaleDateString()}</p></div>
+                  <div key={activity.id} className="flex items-start justify-between gap-4 border-t border-slate-200 pt-2 first:border-0 first:pt-0">
+                    <div><p className="text-xs font-semibold text-slate-900">{activity.subject || activity.type.replaceAll("_", " ")}</p><p className="mt-1 line-clamp-2 text-xs text-slate-600">{activity.body}</p></div>
+                    <div className="shrink-0 text-right text-xs text-slate-400"><p className="font-medium">{activity.type}</p><p>{new Date(activity.occurredAt).toLocaleDateString()}</p></div>
                   </div>
-                )) : <p className="text-[11px] text-crm-text-muted">No recent activity is associated with this lead.</p>}
-              </MultiCrmInnerPanel>
+                )) : <p className="text-xs text-slate-500">No recent activity is associated with this lead.</p>}
+              </div>
 
-              <MultiCrmInnerPanel className="p-4 space-y-2">
-                <span className="text-crm-text-muted font-mono text-xs font-bold block">
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-2">
+                <span className="text-slate-700 text-xs font-semibold uppercase tracking-wider block">
                   Address & Location
                 </span>
-                <p className="text-xs font-mono text-crm-text-muted">
+                <p className="text-xs text-slate-600">
                   {selectedLead.address}
                 </p>
-              </MultiCrmInnerPanel>
+              </div>
 
-              <MultiCrmInnerPanel className="p-4 space-y-2">
-                <span className="text-crm-text-muted font-mono text-xs font-bold block">
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-2">
+                <span className="text-slate-700 text-xs font-semibold uppercase tracking-wider block">
                   Description / Notes
                 </span>
-                <p className="text-xs font-mono text-crm-text-muted">
+                <p className="text-xs text-slate-600">
                   {selectedLead.description}
                 </p>
-              </MultiCrmInnerPanel>
+              </div>
             </MultiCrmCard>
           </div>
           {contactSyncFeedback && (
-            <div className="flex items-center gap-3 rounded-xl border border-primary-cyan/30 bg-primary-cyan/10 px-4 py-3 text-xs font-mono text-crm-text-muted">
+            <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-800 font-medium">
               <span>{contactSyncFeedback}</span>
               {contactSyncFeedback.includes("HubSpot update failed") && (
-                <button onClick={retryHubSpotContactSync} disabled={isSavingContact} className="ml-auto rounded-lg border border-primary-cyan/40 px-2.5 py-1 text-primary-cyan hover:bg-primary-cyan/10 disabled:opacity-50">
+                <button onClick={retryHubSpotContactSync} disabled={isSavingContact} className="ml-auto rounded-lg border border-blue-300 bg-white px-2.5 py-1 text-blue-700 hover:bg-slate-50 disabled:opacity-50">
                   Retry HubSpot
                 </button>
               )}
             </div>
           )}
-          {crmEntityFeedback && <div className="flex items-center gap-3 rounded-xl border border-primary-cyan/30 bg-primary-cyan/10 px-4 py-3 text-xs font-mono text-crm-text-muted"><span>{crmEntityFeedback}</span>{crmRetryTarget && <button type="button" onClick={retrySalesEntitySync} disabled={isSavingCrmEntity} className="ml-auto rounded-lg border border-primary-cyan/40 px-2.5 py-1 text-primary-cyan disabled:opacity-50">Retry HubSpot</button>}</div>}
+          {crmEntityFeedback && (
+            <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-800 font-medium">
+              <span>{crmEntityFeedback}</span>
+              {crmRetryTarget && (
+                <button type="button" onClick={retrySalesEntitySync} disabled={isSavingCrmEntity} className="ml-auto rounded-lg border border-blue-300 bg-white px-2.5 py-1 text-blue-700 disabled:opacity-50">
+                  Retry HubSpot
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
       {/* ==================== EXPANDED CREATE LEAD MODAL ==================== */}
       {showCreateModal && (
-        <div className="dashboard-overlay bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <MultiCrmCard className="w-full max-w-2xl p-6 space-y-6 relative border border-primary-cyan/40 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-crm-border-strong pb-3">
+        <div className="dashboard-overlay bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <MultiCrmCard className="w-full max-w-2xl p-6 space-y-6 relative border border-slate-200 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <div>
-                <h2 className="text-lg font-bold text-crm-text flex items-center gap-2">
-                  <Plus className="w-5 h-5 text-primary-cyan" /> Add New Lead
-                  Record
+                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <Plus className="w-5 h-5 text-blue-600" /> Add New Lead Record
                 </h2>
-                <p className="text-xs text-crm-text-muted font-mono mt-0.5">
-                  Populate complete enterprise fields and map target CRM
-                  destination.
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Populate complete enterprise fields and map target CRM destination.
                 </p>
               </div>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="text-crm-text-muted hover:text-crm-text p-1 cursor-pointer"
+                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1237,16 +1279,16 @@ export default function LeadsPage() {
 
             <form
               onSubmit={handleCreateLead}
-              className="space-y-5 font-mono text-xs"
+              className="space-y-4 text-xs font-sans"
             >
               {/* Basic Info Panel */}
-              <MultiCrmInnerPanel className="p-4 space-y-3">
-                <h3 className="text-[11px] font-bold text-primary-cyan uppercase tracking-wider flex items-center gap-1.5">
-                  <Users className="w-3.5 h-3.5" /> Primary Information
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-blue-600" /> Primary Information
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-crm-text-muted block mb-1">
+                    <label className="text-slate-700 font-medium block mb-1">
                       Full Name *
                     </label>
                     <input
@@ -1257,11 +1299,11 @@ export default function LeadsPage() {
                       onChange={(e) =>
                         setNewLead({ ...newLead, name: e.target.value })
                       }
-                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2 text-crm-text focus:outline-none focus:border-primary-cyan"
+                      className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-2xs"
                     />
                   </div>
                   <div>
-                    <label className="text-crm-text-muted block mb-1">
+                    <label className="text-slate-700 font-medium block mb-1">
                       Job Title
                     </label>
                     <input
@@ -1271,11 +1313,11 @@ export default function LeadsPage() {
                       onChange={(e) =>
                         setNewLead({ ...newLead, title: e.target.value })
                       }
-                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2 text-crm-text focus:outline-none focus:border-primary-cyan"
+                      className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-2xs"
                     />
                   </div>
                   <div>
-                    <label className="text-crm-text-muted block mb-1">
+                    <label className="text-slate-700 font-medium block mb-1">
                       Company Name
                     </label>
                     <input
@@ -1285,11 +1327,11 @@ export default function LeadsPage() {
                       onChange={(e) =>
                         setNewLead({ ...newLead, company: e.target.value })
                       }
-                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2 text-crm-text focus:outline-none focus:border-primary-cyan"
+                      className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-2xs"
                     />
                   </div>
                   <div>
-                    <label className="text-crm-text-muted block mb-1">
+                    <label className="text-slate-700 font-medium block mb-1">
                       Lead Owner
                     </label>
                     <input
@@ -1298,20 +1340,20 @@ export default function LeadsPage() {
                       onChange={(e) =>
                         setNewLead({ ...newLead, leadOwner: e.target.value })
                       }
-                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2 text-crm-text focus:outline-none focus:border-primary-cyan"
+                      className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-2xs"
                     />
                   </div>
                 </div>
-              </MultiCrmInnerPanel>
+              </div>
 
               {/* Contact & Location Panel */}
-              <MultiCrmInnerPanel className="p-4 space-y-3">
-                <h3 className="text-[11px] font-bold text-primary-cyan uppercase tracking-wider flex items-center gap-1.5">
-                  <Phone className="w-3.5 h-3.5" /> Contact Details & Location
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5 text-blue-600" /> Contact Details & Location
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
-                    <label className="text-crm-text-muted block mb-1">Email</label>
+                    <label className="text-slate-700 font-medium block mb-1">Email</label>
                     <input
                       type="email"
                       placeholder="s.jenkins@acme.com"
@@ -1319,11 +1361,11 @@ export default function LeadsPage() {
                       onChange={(e) =>
                         setNewLead({ ...newLead, email: e.target.value })
                       }
-                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2 text-crm-text focus:outline-none focus:border-primary-cyan"
+                      className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-2xs"
                     />
                   </div>
                   <div>
-                    <label className="text-crm-text-muted block mb-1">Phone</label>
+                    <label className="text-slate-700 font-medium block mb-1">Phone</label>
                     <input
                       type="text"
                       placeholder="+1 (555) 000-0000"
@@ -1331,11 +1373,11 @@ export default function LeadsPage() {
                       onChange={(e) =>
                         setNewLead({ ...newLead, phone: e.target.value })
                       }
-                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2 text-crm-text focus:outline-none focus:border-primary-cyan"
+                      className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-2xs"
                     />
                   </div>
                   <div>
-                    <label className="text-crm-text-muted block mb-1">Mobile</label>
+                    <label className="text-slate-700 font-medium block mb-1">Mobile</label>
                     <input
                       type="text"
                       placeholder="+1 (555) 000-0000"
@@ -1343,12 +1385,12 @@ export default function LeadsPage() {
                       onChange={(e) =>
                         setNewLead({ ...newLead, mobile: e.target.value })
                       }
-                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2 text-crm-text focus:outline-none focus:border-primary-cyan"
+                      className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-2xs"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="text-crm-text-muted block mb-1">
+                  <label className="text-slate-700 font-medium block mb-1">
                     Full Address
                   </label>
                   <input
@@ -1358,20 +1400,19 @@ export default function LeadsPage() {
                     onChange={(e) =>
                       setNewLead({ ...newLead, address: e.target.value })
                     }
-                    className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2 text-crm-text focus:outline-none focus:border-primary-cyan"
+                    className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-2xs"
                   />
                 </div>
-              </MultiCrmInnerPanel>
+              </div>
 
               {/* Source Mapping & Financials */}
-              <MultiCrmInnerPanel className="p-4 space-y-3">
-                <h3 className="text-[11px] font-bold text-primary-cyan uppercase tracking-wider flex items-center gap-1.5">
-                  <Database className="w-3.5 h-3.5" /> Target CRM & Financial
-                  Profile
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                  <Database className="w-3.5 h-3.5 text-blue-600" /> Target CRM & Financial Profile
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
-                    <label className="text-crm-text-muted block mb-1">
+                    <label className="text-slate-700 font-medium block mb-1">
                       CRM Platform
                     </label>
                     <select
@@ -1382,7 +1423,7 @@ export default function LeadsPage() {
                           crmSource: e.target.value as Lead["crmSource"],
                         })
                       }
-                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2 text-crm-text focus:outline-none focus:border-primary-cyan"
+                      className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-2xs"
                     >
                       <option value="Salesforce">Salesforce</option>
                       <option value="HubSpot">HubSpot</option>
@@ -1391,7 +1432,7 @@ export default function LeadsPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="text-crm-text-muted block mb-1">
+                    <label className="text-slate-700 font-medium block mb-1">
                       Lead Source
                     </label>
                     <select
@@ -1399,7 +1440,7 @@ export default function LeadsPage() {
                       onChange={(e) =>
                         setNewLead({ ...newLead, leadSource: e.target.value })
                       }
-                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2 text-crm-text focus:outline-none focus:border-primary-cyan"
+                      className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-2xs"
                     >
                       <option value="Cold Call">Cold Call</option>
                       <option value="Advertisement">Advertisement</option>
@@ -1409,7 +1450,7 @@ export default function LeadsPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="text-crm-text-muted block mb-1">Rating</label>
+                    <label className="text-slate-700 font-medium block mb-1">Rating</label>
                     <select
                       value={newLead.rating}
                       onChange={(e) =>
@@ -1418,7 +1459,7 @@ export default function LeadsPage() {
                           rating: e.target.value as Lead["rating"],
                         })
                       }
-                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2 text-crm-text focus:outline-none focus:border-primary-cyan"
+                      className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-2xs"
                     >
                       <option value="Hot">Hot</option>
                       <option value="Warm">Warm</option>
@@ -1429,7 +1470,7 @@ export default function LeadsPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
                   <div>
-                    <label className="text-crm-text-muted block mb-1">
+                    <label className="text-slate-700 font-medium block mb-1">
                       Industry
                     </label>
                     <input
@@ -1439,11 +1480,11 @@ export default function LeadsPage() {
                       onChange={(e) =>
                         setNewLead({ ...newLead, industry: e.target.value })
                       }
-                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2 text-crm-text focus:outline-none focus:border-primary-cyan"
+                      className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-2xs"
                     />
                   </div>
                   <div>
-                    <label className="text-crm-text-muted block mb-1">
+                    <label className="text-slate-700 font-medium block mb-1">
                       Annual Revenue
                     </label>
                     <input
@@ -1456,15 +1497,15 @@ export default function LeadsPage() {
                           annualRevenue: e.target.value,
                         })
                       }
-                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2 text-crm-text focus:outline-none focus:border-primary-cyan"
+                      className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-2xs"
                     />
                   </div>
                 </div>
-              </MultiCrmInnerPanel>
+              </div>
 
               {/* Description */}
               <div>
-                <label className="text-crm-text-muted block mb-1">
+                <label className="text-slate-700 font-medium block mb-1">
                   Notes / Description
                 </label>
                 <textarea
@@ -1474,22 +1515,22 @@ export default function LeadsPage() {
                   onChange={(e) =>
                     setNewLead({ ...newLead, description: e.target.value })
                   }
-                  className="w-full bg-crm-inner border border-crm-border-strong rounded-xl p-2 text-crm-text focus:outline-none focus:border-primary-cyan"
+                  className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-2xs"
                 />
               </div>
 
               {/* Actions */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-crm-border-strong">
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 rounded-xl bg-crm-inner text-crm-text-muted hover:text-crm-text cursor-pointer"
+                  className="px-4 py-2 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-medium text-sm shadow-xs transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-primary-cyan text-slate-950 font-semibold hover:opacity-90 cursor-pointer"
+                  className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm shadow-xs transition-colors cursor-pointer"
                 >
                   Save Lead Record
                 </button>
@@ -1500,55 +1541,61 @@ export default function LeadsPage() {
       )}
 
       {showEditModal && selectedLead && (
-        <div className="dashboard-overlay bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <MultiCrmCard className="w-full max-w-lg p-6 space-y-5 border border-primary-cyan/40 shadow-2xl">
-            <div className="flex items-start justify-between border-b border-crm-border-strong pb-3">
+        <div className="dashboard-overlay bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <MultiCrmCard className="w-full max-w-lg p-6 space-y-5 border border-slate-200 shadow-2xl">
+            <div className="flex items-start justify-between border-b border-slate-200 pb-3">
               <div>
-                <h2 className="text-lg font-bold text-crm-text">Edit canonical contact</h2>
-                <p className="mt-1 text-xs font-mono text-crm-text-muted">Saves locally first, then writes the mapped HubSpot contact.</p>
+                <h2 className="text-base font-bold text-slate-900">Edit canonical contact</h2>
+                <p className="mt-1 text-xs text-slate-500">Saves locally first, then writes the mapped HubSpot contact.</p>
               </div>
-              <button onClick={() => setShowEditModal(false)} className="text-crm-text-muted hover:text-crm-text"><X className="h-5 w-5" /></button>
+              <button onClick={() => setShowEditModal(false)} className="text-slate-400 hover:text-slate-600"><X className="h-5 w-5" /></button>
             </div>
-            <form onSubmit={saveContactEdit} className="space-y-4 font-mono text-xs">
+            <form onSubmit={saveContactEdit} className="space-y-4 text-xs font-sans">
               <div className="grid grid-cols-2 gap-3">
                 {[['firstName', 'First name'], ['lastName', 'Last name']].map(([field, label]) => (
-                  <label key={field} className="space-y-1 text-crm-text-muted"><span>{label}</span><input required value={editContact[field as 'firstName' | 'lastName']} onChange={(event) => setEditContact({ ...editContact, [field]: event.target.value })} className="w-full rounded-xl border border-crm-border-strong bg-crm-inner px-3 py-2 text-crm-text outline-none focus:border-primary-cyan/60" /></label>
+                  <label key={field} className="space-y-1 block text-slate-700 font-medium"><span>{label}</span><input required value={editContact[field as 'firstName' | 'lastName']} onChange={(event) => setEditContact({ ...editContact, [field]: event.target.value })} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-2xs outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" /></label>
                 ))}
               </div>
               {[['email', 'Email'], ['phone', 'Phone'], ['company', 'Company']].map(([field, label]) => (
-                <label key={field} className="block space-y-1 text-crm-text-muted"><span>{label}</span><input type={field === 'email' ? 'email' : 'text'} value={editContact[field as 'email' | 'phone' | 'company']} onChange={(event) => setEditContact({ ...editContact, [field]: event.target.value })} className="w-full rounded-xl border border-crm-border-strong bg-crm-inner px-3 py-2 text-crm-text outline-none focus:border-primary-cyan/60" /></label>
+                <label key={field} className="block space-y-1 text-slate-700 font-medium"><span>{label}</span><input type={field === 'email' ? 'email' : 'text'} value={editContact[field as 'email' | 'phone' | 'company']} onChange={(event) => setEditContact({ ...editContact, [field]: event.target.value })} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-2xs outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" /></label>
               ))}
-              <div className="flex justify-end gap-3 pt-2"><button type="button" onClick={() => setShowEditModal(false)} className="rounded-xl border border-crm-border-strong px-4 py-2 text-crm-text-muted">Cancel</button><button disabled={isSavingContact} className="rounded-xl bg-primary-cyan px-4 py-2 font-semibold text-slate-950 disabled:opacity-50">{isSavingContact ? 'Saving…' : 'Save & Sync HubSpot'}</button></div>
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-200">
+                <button type="button" onClick={() => setShowEditModal(false)} className="rounded-lg border border-slate-300 bg-white hover:bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 shadow-xs transition-colors">Cancel</button>
+                <button disabled={isSavingContact} className="rounded-lg bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm font-medium text-white shadow-xs transition-colors disabled:opacity-50">{isSavingContact ? 'Saving…' : 'Save & Sync HubSpot'}</button>
+              </div>
             </form>
           </MultiCrmCard>
         </div>
       )}
 
       {companyForm && selectedLead?.companyDetails && (
-        <div className="dashboard-overlay bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <MultiCrmCard className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 space-y-5 border border-primary-cyan/40 shadow-2xl">
-            <div className="flex items-start justify-between border-b border-crm-border-strong pb-3"><div><h2 className="text-lg font-bold text-crm-text">Edit canonical company</h2><p className="mt-1 text-xs font-mono text-crm-text-muted">Saves locally first, then updates supported HubSpot company properties.</p></div><button type="button" onClick={() => setCompanyForm(null)} className="text-crm-text-muted hover:text-crm-text"><X className="h-5 w-5" /></button></div>
-            <form onSubmit={saveCompany} className="space-y-4 font-mono text-xs">
+        <div className="dashboard-overlay bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <MultiCrmCard className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 space-y-5 border border-slate-200 shadow-2xl">
+            <div className="flex items-start justify-between border-b border-slate-200 pb-3"><div><h2 className="text-base font-bold text-slate-900">Edit canonical company</h2><p className="mt-1 text-xs text-slate-500">Saves locally first, then updates supported HubSpot company properties.</p></div><button type="button" onClick={() => setCompanyForm(null)} className="text-slate-400 hover:text-slate-600"><X className="h-5 w-5" /></button></div>
+            <form onSubmit={saveCompany} className="space-y-4 text-xs font-sans">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {([['name', 'Company name'], ['domain', 'Domain'], ['website', 'Website'], ['phone', 'Phone'], ['industry', 'Industry'], ['city', 'City'], ['state', 'State'], ['country', 'Country']] as const).map(([field, label]) => <label key={field} className="space-y-1 text-crm-text-muted"><span>{label}</span><input required={field === 'name'} value={companyForm[field]} onChange={(event) => setCompanyForm({ ...companyForm, [field]: event.target.value })} className="w-full rounded-xl border border-crm-border-strong bg-crm-inner px-3 py-2 text-crm-text outline-none focus:border-primary-cyan/60" /></label>)}
+                {([['name', 'Company name'], ['domain', 'Domain'], ['website', 'Website'], ['phone', 'Phone'], ['industry', 'Industry'], ['city', 'City'], ['state', 'State'], ['country', 'Country']] as const).map(([field, label]) => <label key={field} className="space-y-1 block text-slate-700 font-medium"><span>{label}</span><input required={field === 'name'} value={companyForm[field]} onChange={(event) => setCompanyForm({ ...companyForm, [field]: event.target.value })} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-2xs outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" /></label>)}
               </div>
-              <label className="block space-y-1 text-crm-text-muted"><span>Street address</span><input value={companyForm.address} onChange={(event) => setCompanyForm({ ...companyForm, address: event.target.value })} className="w-full rounded-xl border border-crm-border-strong bg-crm-inner px-3 py-2 text-crm-text outline-none focus:border-primary-cyan/60" /></label>
-              <div className="flex justify-end gap-3 border-t border-crm-border-strong pt-4"><button type="button" onClick={() => setCompanyForm(null)} className="rounded-xl border border-crm-border-strong px-4 py-2 text-crm-text-muted">Cancel</button><button disabled={isSavingCrmEntity} className="rounded-xl bg-primary-cyan px-4 py-2 font-semibold text-slate-950 disabled:opacity-50">{isSavingCrmEntity ? "Saving…" : "Save & Sync HubSpot"}</button></div>
+              <label className="block space-y-1 text-slate-700 font-medium"><span>Street address</span><input value={companyForm.address} onChange={(event) => setCompanyForm({ ...companyForm, address: event.target.value })} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-2xs outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" /></label>
+              <div className="flex justify-end gap-3 border-t border-slate-200 pt-4">
+                <button type="button" onClick={() => setCompanyForm(null)} className="rounded-lg border border-slate-300 bg-white hover:bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 shadow-xs transition-colors">Cancel</button>
+                <button disabled={isSavingCrmEntity} className="rounded-lg bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm font-medium text-white shadow-xs transition-colors disabled:opacity-50">{isSavingCrmEntity ? "Saving…" : "Save & Sync HubSpot"}</button>
+              </div>
             </form>
           </MultiCrmCard>
         </div>
       )}
 
       {dealForm && selectedLead && (
-        <div className="dashboard-overlay bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <MultiCrmCard className="w-full max-w-lg p-6 space-y-5 border border-primary-cyan/40 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-start justify-between border-b border-crm-border-strong pb-3">
+        <div className="dashboard-overlay bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <MultiCrmCard className="w-full max-w-lg p-6 space-y-5 border border-slate-200 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-start justify-between border-b border-slate-200 pb-3">
               <div>
-                <h2 className="text-lg font-bold text-crm-text flex items-center gap-2">
-                  <DollarSign className="w-5 h-5 text-primary-cyan" />
+                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <DollarSign className="w-5 h-5 text-blue-600" />
                   {dealForm.status === "CLOSED_WON" ? "Close Deal & Handoff" : "Edit Canonical Deal"}
                 </h2>
-                <p className="mt-1 text-xs font-mono text-crm-text-muted">
+                <p className="mt-1 text-xs text-slate-500">
                   {dealForm.status === "CLOSED_WON"
                     ? "Closing this deal triggers an operational Deal Handoff with notes to Zoho CRM."
                     : "Saves locally and syncs safe sales fields with HubSpot."}
@@ -1557,14 +1604,14 @@ export default function LeadsPage() {
               <button
                 type="button"
                 onClick={() => setDealForm(null)}
-                className="text-crm-text-muted hover:text-crm-text"
+                className="text-slate-400 hover:text-slate-600"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={saveDeal} className="space-y-4 font-mono text-xs">
-              <label className="block space-y-1 text-crm-text-muted">
+            <form onSubmit={saveDeal} className="space-y-4 text-xs font-sans">
+              <label className="block space-y-1 text-slate-700 font-medium">
                 <span>Deal name</span>
                 <input
                   required
@@ -1572,12 +1619,12 @@ export default function LeadsPage() {
                   onChange={(event) =>
                     setDealForm({ ...dealForm, title: event.target.value })
                   }
-                  className="w-full rounded-xl border border-crm-border-strong bg-crm-inner px-3 py-2 text-crm-text"
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-2xs focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
                 />
               </label>
 
               <div className="grid grid-cols-2 gap-3">
-                <label className="space-y-1 text-crm-text-muted">
+                <label className="space-y-1 block text-slate-700 font-medium">
                   <span>Amount ($)</span>
                   <input
                     required
@@ -1588,10 +1635,10 @@ export default function LeadsPage() {
                     onChange={(event) =>
                       setDealForm({ ...dealForm, amount: event.target.value })
                     }
-                    className="w-full rounded-xl border border-crm-border-strong bg-crm-inner px-3 py-2 text-crm-text"
+                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-2xs focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
                   />
                 </label>
-                <label className="space-y-1 text-crm-text-muted">
+                <label className="space-y-1 block text-slate-700 font-medium">
                   <span>Expected close</span>
                   <input
                     type="date"
@@ -1602,13 +1649,13 @@ export default function LeadsPage() {
                         expectedCloseAt: event.target.value,
                       })
                     }
-                    className="w-full rounded-xl border border-crm-border-strong bg-crm-inner px-3 py-2 text-crm-text"
+                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-2xs focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
                   />
                 </label>
               </div>
 
               {/* Deal Status Selection */}
-              <label className="block space-y-1 text-crm-text-muted">
+              <label className="block space-y-1 text-slate-700 font-medium">
                 <span>Deal Status</span>
                 <select
                   value={dealForm.status}
@@ -1618,7 +1665,7 @@ export default function LeadsPage() {
                       status: event.target.value as "OPEN" | "CLOSED_WON" | "CLOSED_LOST",
                     })
                   }
-                  className="w-full rounded-xl border border-crm-border-strong bg-crm-inner px-3 py-2 text-crm-text focus:outline-none focus:border-emerald-500/60"
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-2xs focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
                 >
                   <option value="OPEN">Open (Active in Sales Pipeline)</option>
                   <option value="CLOSED_WON">Closed Won (Win & Trigger Zoho Handoff)</option>
@@ -1628,16 +1675,16 @@ export default function LeadsPage() {
 
               {/* Closed Won Special Handoff Section */}
               {dealForm.status === "CLOSED_WON" && (
-                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 space-y-3">
-                  <div className="flex items-center gap-2 text-emerald-400 font-semibold text-[11px]">
-                    <Sparkles className="w-3.5 h-3.5" />
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3.5 space-y-3">
+                  <div className="flex items-center gap-2 text-emerald-800 font-semibold text-xs">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
                     <span>Client Zoho CRM Handoff Details</span>
                   </div>
-                  <p className="text-[10px] text-crm-text-muted">
+                  <p className="text-xs text-slate-600">
                     This deal and the customer will be dispatched to the client&apos;s Zoho CRM with a Note containing your closing details.
                   </p>
 
-                  <label className="block space-y-1 text-crm-text-muted">
+                  <label className="block space-y-1 text-slate-700 font-medium">
                     <span>Close Outcome / Deal Agreement</span>
                     <input
                       type="text"
@@ -1646,11 +1693,11 @@ export default function LeadsPage() {
                       onChange={(event) =>
                         setDealForm({ ...dealForm, closeOutcome: event.target.value })
                       }
-                      className="w-full rounded-lg border border-crm-border-strong bg-crm-inner px-2.5 py-1.5 text-crm-text text-xs"
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 text-xs shadow-2xs"
                     />
                   </label>
 
-                  <label className="block space-y-1 text-crm-text-muted">
+                  <label className="block space-y-1 text-slate-700 font-medium">
                     <span>What Should The Client Do Next?</span>
                     <input
                       type="text"
@@ -1662,11 +1709,11 @@ export default function LeadsPage() {
                           recommendedNextAction: event.target.value,
                         })
                       }
-                      className="w-full rounded-lg border border-crm-border-strong bg-crm-inner px-2.5 py-1.5 text-crm-text text-xs"
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 text-xs shadow-2xs"
                     />
                   </label>
 
-                  <label className="block space-y-1 text-crm-text-muted">
+                  <label className="block space-y-1 text-slate-700 font-medium">
                     <span>Handoff Notes & Special Instructions</span>
                     <textarea
                       rows={3}
@@ -1675,14 +1722,14 @@ export default function LeadsPage() {
                       onChange={(event) =>
                         setDealForm({ ...dealForm, notes: event.target.value })
                       }
-                      className="w-full rounded-lg border border-crm-border-strong bg-crm-inner px-2.5 py-1.5 text-crm-text text-xs"
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 text-xs shadow-2xs"
                     />
                   </label>
                 </div>
               )}
 
               {dealForm.status !== "CLOSED_WON" && (
-                <label className="block space-y-1 text-crm-text-muted">
+                <label className="block space-y-1 text-slate-700 font-medium">
                   <span>Internal Deal Notes</span>
                   <textarea
                     rows={2}
@@ -1691,47 +1738,47 @@ export default function LeadsPage() {
                     onChange={(event) =>
                       setDealForm({ ...dealForm, notes: event.target.value })
                     }
-                    className="w-full rounded-xl border border-crm-border-strong bg-crm-inner px-3 py-2 text-crm-text text-xs"
+                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 text-xs shadow-2xs"
                   />
                 </label>
               )}
 
-              <div className="grid grid-cols-2 gap-3 rounded-xl border border-crm-border-strong bg-crm-inner p-3">
+              <div className="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
                 <div>
-                  <p className="text-[10px] uppercase tracking-wider text-crm-text-muted">
+                  <p className="text-xs uppercase font-semibold text-slate-500">
                     Pipeline
                   </p>
-                  <p className="mt-1 text-crm-text">{dealForm.pipelineLabel}</p>
+                  <p className="mt-1 text-xs font-medium text-slate-900">{dealForm.pipelineLabel}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase tracking-wider text-crm-text-muted">
+                  <p className="text-xs uppercase font-semibold text-slate-500">
                     Stage
                   </p>
-                  <p className="mt-1 text-crm-text">{dealForm.stageLabel}</p>
+                  <p className="mt-1 text-xs font-medium text-slate-900">{dealForm.stageLabel}</p>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 border-t border-crm-border-strong pt-4">
+              <div className="flex justify-end gap-3 border-t border-slate-200 pt-4">
                 <button
                   type="button"
                   onClick={() => setDealForm(null)}
-                  className="rounded-xl border border-crm-border-strong px-4 py-2 text-crm-text-muted"
+                  className="rounded-lg border border-slate-300 bg-white hover:bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 shadow-xs transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   disabled={isSavingCrmEntity}
-                  className={`rounded-xl px-4 py-2 font-semibold text-slate-950 disabled:opacity-50 transition-all flex items-center gap-1.5 ${
+                  className={`rounded-lg px-4 py-2 font-medium text-sm text-white shadow-xs transition-colors flex items-center gap-1.5 disabled:opacity-50 ${
                     dealForm.status === "CLOSED_WON"
-                      ? "bg-emerald-400 hover:bg-emerald-300"
-                      : "bg-primary-cyan hover:opacity-90"
+                      ? "bg-emerald-600 hover:bg-emerald-700"
+                      : "bg-blue-600 hover:bg-blue-700"
                   }`}
                 >
                   {isSavingCrmEntity ? (
                     "Saving…"
                   ) : dealForm.status === "CLOSED_WON" ? (
                     <>
-                      <Sparkles className="w-3.5 h-3.5" />
+                      <Sparkles className="w-4 h-4" />
                       <span>Close Deal & Handoff to Zoho</span>
                     </>
                   ) : (
@@ -1745,21 +1792,24 @@ export default function LeadsPage() {
       )}
 
       {showAssessmentModal && selectedLead?.analysis && assessmentForm && (
-        <div className="dashboard-overlay bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <MultiCrmCard className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 space-y-5 border border-primary-cyan/40 shadow-2xl">
-            <div className="flex items-start justify-between border-b border-crm-border-strong pb-3">
-              <div><h2 className="text-lg font-bold text-crm-text">Edit AI assessment</h2><p className="mt-1 text-xs font-mono text-crm-text-muted">This is a manual internal override. It does not overwrite CRM contact properties.</p></div>
-              <button type="button" onClick={() => setShowAssessmentModal(false)} className="text-crm-text-muted hover:text-crm-text"><X className="h-5 w-5" /></button>
+        <div className="dashboard-overlay bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <MultiCrmCard className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 space-y-5 border border-slate-200 shadow-2xl">
+            <div className="flex items-start justify-between border-b border-slate-200 pb-3">
+              <div><h2 className="text-base font-bold text-slate-900">Edit AI assessment</h2><p className="mt-1 text-xs text-slate-500">This is a manual internal override. It does not overwrite CRM contact properties.</p></div>
+              <button type="button" onClick={() => setShowAssessmentModal(false)} className="text-slate-400 hover:text-slate-600"><X className="h-5 w-5" /></button>
             </div>
-            <form onSubmit={saveAssessment} className="space-y-4 font-mono text-xs">
+            <form onSubmit={saveAssessment} className="space-y-4 text-xs font-sans">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <label className="space-y-1"><span className="text-[10px] text-crm-text-muted">Lead score</span><input required type="number" min="0" max="100" value={assessmentForm.leadScore} onChange={(event) => setAssessmentForm({ ...assessmentForm, leadScore: Number(event.target.value) })} className="w-full rounded-xl border border-crm-border-strong bg-crm-inner p-2 text-crm-text" /></label>
-                <label className="space-y-1"><span className="text-[10px] text-crm-text-muted">Temperature</span><select value={assessmentForm.temperature} onChange={(event) => setAssessmentForm({ ...assessmentForm, temperature: event.target.value })} className="w-full rounded-xl border border-crm-border-strong bg-crm-inner p-2 text-crm-text"><option>Hot</option><option>Warm</option><option>Cold</option></select></label>
-                <label className="space-y-1"><span className="text-[10px] text-crm-text-muted">Deal probability</span><input required type="number" min="0" max="100" value={assessmentForm.dealProbability} onChange={(event) => setAssessmentForm({ ...assessmentForm, dealProbability: Number(event.target.value) })} className="w-full rounded-xl border border-crm-border-strong bg-crm-inner p-2 text-crm-text" /></label>
+                <label className="space-y-1 block"><span className="text-xs font-semibold text-slate-700">Lead score</span><input required type="number" min="0" max="100" value={assessmentForm.leadScore} onChange={(event) => setAssessmentForm({ ...assessmentForm, leadScore: Number(event.target.value) })} className="w-full rounded-lg border border-slate-300 bg-white p-2 text-sm text-slate-900 shadow-2xs focus:border-blue-600 focus:ring-1 focus:ring-blue-600" /></label>
+                <label className="space-y-1 block"><span className="text-xs font-semibold text-slate-700">Temperature</span><select value={assessmentForm.temperature} onChange={(event) => setAssessmentForm({ ...assessmentForm, temperature: event.target.value })} className="w-full rounded-lg border border-slate-300 bg-white p-2 text-sm text-slate-900 shadow-2xs focus:border-blue-600 focus:ring-1 focus:ring-blue-600"><option>Hot</option><option>Warm</option><option>Cold</option></select></label>
+                <label className="space-y-1 block"><span className="text-xs font-semibold text-slate-700">Deal probability</span><input required type="number" min="0" max="100" value={assessmentForm.dealProbability} onChange={(event) => setAssessmentForm({ ...assessmentForm, dealProbability: Number(event.target.value) })} className="w-full rounded-lg border border-slate-300 bg-white p-2 text-sm text-slate-900 shadow-2xs focus:border-blue-600 focus:ring-1 focus:ring-blue-600" /></label>
               </div>
-              <label className="block space-y-1"><span className="text-[10px] text-crm-text-muted">Assessment summary</span><textarea required rows={3} value={assessmentForm.summary} onChange={(event) => setAssessmentForm({ ...assessmentForm, summary: event.target.value })} className="w-full rounded-xl border border-crm-border-strong bg-crm-inner p-2 text-crm-text" /></label>
-              {[['budget', 'Budget'], ['timeline', 'Timeline'], ['requirements', 'Requirements'], ['intent', 'Intent signals'], ['objections', 'Objections']].map(([field, label]) => <label key={field} className="block space-y-1"><span className="text-[10px] text-crm-text-muted">{label}</span><input value={assessmentForm[field as 'budget' | 'timeline' | 'requirements' | 'intent' | 'objections'] || ""} onChange={(event) => setAssessmentForm({ ...assessmentForm, [field]: event.target.value || null })} className="w-full rounded-xl border border-crm-border-strong bg-crm-inner p-2 text-crm-text" /></label>)}
-              <div className="flex justify-end gap-3 border-t border-crm-border-strong pt-4"><button type="button" onClick={() => setShowAssessmentModal(false)} className="rounded-xl border border-crm-border-strong bg-crm-inner px-4 py-2 text-crm-text-muted">Cancel</button><button disabled={isSavingAssessment} className="rounded-xl bg-primary-cyan px-4 py-2 font-semibold text-slate-950 disabled:opacity-50">{isSavingAssessment ? "Saving…" : "Save manual override"}</button></div>
+              <label className="block space-y-1"><span className="text-xs font-semibold text-slate-700">Assessment summary</span><textarea required rows={3} value={assessmentForm.summary} onChange={(event) => setAssessmentForm({ ...assessmentForm, summary: event.target.value })} className="w-full rounded-lg border border-slate-300 bg-white p-2 text-sm text-slate-900 shadow-2xs focus:border-blue-600 focus:ring-1 focus:ring-blue-600" /></label>
+              {[['budget', 'Budget'], ['timeline', 'Timeline'], ['requirements', 'Requirements'], ['intent', 'Intent signals'], ['objections', 'Objections']].map(([field, label]) => <label key={field} className="block space-y-1"><span className="text-xs font-semibold text-slate-700">{label}</span><input value={assessmentForm[field as 'budget' | 'timeline' | 'requirements' | 'intent' | 'objections'] || ""} onChange={(event) => setAssessmentForm({ ...assessmentForm, [field]: event.target.value || null })} className="w-full rounded-lg border border-slate-300 bg-white p-2 text-sm text-slate-900 shadow-2xs focus:border-blue-600 focus:ring-1 focus:ring-blue-600" /></label>)}
+              <div className="flex justify-end gap-3 border-t border-slate-200 pt-4">
+                <button type="button" onClick={() => setShowAssessmentModal(false)} className="rounded-lg border border-slate-300 bg-white hover:bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 shadow-xs transition-colors">Cancel</button>
+                <button disabled={isSavingAssessment} className="rounded-lg bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm font-medium text-white shadow-xs transition-colors disabled:opacity-50">{isSavingAssessment ? "Saving…" : "Save manual override"}</button>
+              </div>
             </form>
           </MultiCrmCard>
         </div>

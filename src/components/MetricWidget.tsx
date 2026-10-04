@@ -20,22 +20,22 @@ export default function MetricWidget({
   return (
     <GlassCard className="p-5 flex flex-col justify-between">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-crm-text-muted uppercase tracking-wider">
+        <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
           {title}
         </span>
-        <div className="p-2 rounded-xl bg-primary-cyan/10 border border-primary-cyan/20 text-primary-cyan">
+        <div className="p-2 rounded-lg bg-blue-50 border border-blue-200 text-blue-600">
           <Icon className="w-4 h-4" />
         </div>
       </div>
       <div className="mt-4 flex items-baseline justify-between">
-        <h3 className="text-2xl font-bold text-crm-text font-mono tracking-tight">
+        <h3 className="text-3xl font-extrabold text-slate-900 tracking-tight font-sans">
           {value}
         </h3>
         <span
-          className={`text-xs font-mono px-2 py-0.5 rounded-full border ${
+          className={`text-xs font-semibold px-2 py-0.5 rounded-md border font-sans ${
             isPositive
-              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-              : "bg-rose-500/10 text-rose-400 border-rose-500/20"
+              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+              : "bg-rose-50 text-rose-700 border-rose-200"
           }`}
         >
           {change}

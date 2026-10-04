@@ -570,43 +570,45 @@ export default function ClientCrmPage() {
   const providerDisplayName = "Zoho CRM";
 
   return (
-    <div className="space-y-6 text-crm-text font-sans">
+    <div className="space-y-6 text-slate-900 font-sans">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
           <div className="flex items-center gap-3">
-            <Briefcase className="w-5 h-5 text-emerald-400" />
-            <h1 className="text-2xl font-bold tracking-tight text-crm-text">
+            <div className="p-2 rounded-lg bg-blue-50 border border-blue-200 text-blue-600">
+              <Briefcase className="w-5 h-5" />
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
               Client CRM Operations
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+            <span className="px-2.5 py-0.5 rounded-md text-xs font-sans font-semibold bg-blue-50 text-blue-700 border border-blue-200">
               {providerDisplayName} Integration
             </span>
           </div>
-          <p className="text-xs text-crm-text-muted font-mono mt-1">
-            Active Client Account: <span className="text-primary-cyan font-bold">{activeClientAccount.name}</span> • Client CRM: {providerDisplayName}
+          <p className="text-xs text-slate-600 font-sans mt-1.5">
+            Active Client Account: <span className="text-blue-700 font-bold">{activeClientAccount.name}</span> • Client CRM: {providerDisplayName}
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={handleSyncClientCrm}
             disabled={isSyncing}
-            className="px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-mono text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/50 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+            className="px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium font-sans flex items-center gap-2 cursor-pointer shadow-xs transition-colors disabled:opacity-50"
             title={`Sync records with ${providerDisplayName} for this client`}
           >
             <RefreshCw
               className={`w-3.5 h-3.5 ${
-                isSyncing ? "animate-spin text-emerald-400" : "text-emerald-400"
+                isSyncing ? "animate-spin text-white" : "text-white"
               }`}
             />
             <span>{isSyncing ? `Syncing ${providerDisplayName}...` : `Sync ${providerDisplayName}`}</span>
           </button>
           <button
             onClick={() => void fetchRecords()}
-            className="px-3 py-2 rounded-xl bg-crm-surface border border-crm-border-strong text-xs font-mono text-crm-text-muted hover:text-crm-text transition-all flex items-center gap-1.5 cursor-pointer"
+            className="px-3.5 py-2 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-medium font-sans flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
           >
-            <RefreshCw className="w-3 h-3" />
+            <RefreshCw className="w-3.5 h-3.5" />
             <span>Refresh</span>
           </button>
         </div>
@@ -615,10 +617,10 @@ export default function ClientCrmPage() {
       {/* Feedback Banner */}
       {feedback.type && (
         <div
-          className={`p-3 rounded-xl border text-xs font-mono flex items-center justify-between transition-all ${
+          className={`p-3.5 rounded-xl border text-xs font-sans font-medium flex items-center justify-between transition-all ${
             feedback.type === "success"
-              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
-              : "bg-rose-500/10 border-rose-500/30 text-rose-300"
+              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+              : "bg-red-50 border-red-200 text-red-700"
           }`}
         >
           <div className="flex items-center gap-2">
@@ -627,39 +629,39 @@ export default function ClientCrmPage() {
           </div>
           <button
             onClick={() => setFeedback({ type: null, message: "" })}
-            className="p-1 text-slate-400 hover:text-white cursor-pointer"
+            className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer"
           >
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
 
-      {/* Stage 2.7 Architectural Banner */}
-      <MultiCrmCard className="p-4 bg-linear-to-r from-emerald-500/5 via-primary-cyan/5 to-transparent border-emerald-500/20">
+      {/* Architectural Banner */}
+      <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+            <div className="p-2 rounded-lg bg-blue-50 border border-blue-200 text-blue-600">
               <Layers className="w-4 h-4" />
             </div>
             <div>
-              <p className="text-xs font-bold font-mono text-crm-text">
-                Agency Sales $\rightarrow$ Client Operations Architecture
+              <p className="text-sm font-bold text-slate-900 font-sans">
+                Agency Sales → Client Operations Architecture
               </p>
-              <p className="text-[11px] text-crm-text-muted font-mono mt-0.5">
-                Contacts in the Unified Lead Directory matching <span className="text-emerald-400 font-semibold">{activeClientAccount.name}</span> by company appear directly here. Editing them syncs bi-directionally with the Unified Lead Directory and the client&apos;s CRM.
+              <p className="font-sans text-sm font-normal text-slate-700 leading-relaxed mt-0.5">
+                Contacts in the Unified Lead Directory matching <span className="text-blue-700 font-semibold">{activeClientAccount.name}</span> by company appear directly here. Editing them syncs bi-directionally with the Unified Lead Directory and the client&apos;s CRM.
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono px-2 py-1 rounded bg-crm-inner text-crm-text-muted border border-crm-border-strong">
+            <span className="text-xs font-sans px-2.5 py-1 rounded-md bg-white text-slate-600 border border-slate-200 font-medium">
               Client ID: {activeClientAccount.id.slice(0, 8)}...
             </span>
           </div>
         </div>
-      </MultiCrmCard>
+      </div>
 
       {/* Navigation Tabs and Controls */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-crm-border-strong pb-3">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-3">
         <div className="flex items-center gap-2 flex-wrap">
           {[
             { id: "CONTACT", label: "Contacts", icon: Users },
@@ -676,10 +678,10 @@ export default function ClientCrmPage() {
                   setActiveTab(tab.id as TabType);
                   setSearchQuery("");
                 }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-mono transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-sans transition-colors flex items-center gap-1.5 cursor-pointer ${
                   isActive
-                    ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-semibold"
-                    : "text-crm-text-muted hover:text-crm-text bg-crm-surface border border-crm-border-strong"
+                    ? "bg-blue-600 text-white font-semibold shadow-xs"
+                    : "text-slate-700 hover:bg-slate-50 bg-white border border-slate-300 font-medium"
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -694,7 +696,7 @@ export default function ClientCrmPage() {
             <button
               type="button"
               onClick={openCreateDealGeneral}
-              className="px-3 py-1.5 rounded-xl bg-emerald-500 text-slate-950 text-xs font-mono font-bold hover:bg-emerald-400 transition-all flex items-center gap-1.5 cursor-pointer shadow-md shrink-0"
+              className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium font-sans flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors shrink-0"
               title="Create a new deal for this client account"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -704,13 +706,13 @@ export default function ClientCrmPage() {
 
           {/* Search */}
           <div className="relative w-full sm:w-64">
-            <Search className="w-3.5 h-3.5 text-crm-text-muted absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder={`Search ${activeTab.toLowerCase()}...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-crm-inner border border-crm-border-strong rounded-xl pl-9 pr-3 py-1.5 text-xs font-mono text-crm-text placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
+              className="w-full bg-white border border-slate-300 rounded-lg pl-9 pr-3.5 py-1.5 text-xs font-sans text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-2xs"
             />
           </div>
         </div>
@@ -718,27 +720,27 @@ export default function ClientCrmPage() {
 
       {/* Main Content Area */}
       {isLoading ? (
-        <div className="p-12 text-center text-xs font-mono text-crm-text-muted flex items-center justify-center gap-2">
-          <RefreshCw className="w-4 h-4 animate-spin text-emerald-400" />
+        <div className="p-12 text-center text-xs font-sans text-slate-500 flex items-center justify-center gap-2">
+          <RefreshCw className="w-4 h-4 animate-spin text-blue-600" />
           Loading records from {activeClientAccount.name}&apos;s {providerDisplayName}...
         </div>
       ) : activeTab === "HANDOFFS" ? (
         // Deal Handoffs View
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-linear-to-r from-emerald-500/10 via-primary-cyan/5 to-transparent border border-emerald-500/25">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200 shadow-xs">
             <div>
-              <h3 className="text-xs font-bold font-mono text-crm-text flex items-center gap-2">
-                <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+              <h3 className="text-sm font-bold font-sans text-slate-900 flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-blue-600" />
                 <span>{providerDisplayName} Deal Handoff Pipeline</span>
               </h3>
-              <p className="text-[11px] font-mono text-crm-text-muted mt-0.5">
+              <p className="text-xs font-medium text-slate-700 font-sans mt-0.5">
                 Close agency sales deals and automatically dispatch the deal, customer contact, and closing notes into {activeClientAccount.name}&apos;s {providerDisplayName}.
               </p>
             </div>
             <button
               type="button"
               onClick={openGeneralHandoff}
-              className="px-3.5 py-2 rounded-xl bg-emerald-500 text-slate-950 text-xs font-mono font-bold hover:bg-emerald-400 transition-all flex items-center gap-1.5 cursor-pointer shadow-md shrink-0"
+              className="px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium font-sans flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors shrink-0"
             >
               <Sparkles className="w-3.5 h-3.5" />
               <span>+ Close & Handoff Deal</span>
@@ -750,14 +752,14 @@ export default function ClientCrmPage() {
               <Sparkles className="w-8 h-8 text-crm-text-muted mx-auto opacity-50" />
               <div>
                 <p className="text-sm font-semibold text-crm-text">No Deal Handoffs Found</p>
-                <p className="text-xs text-crm-text-muted font-mono mt-1">
+                <p className="text-xs text-crm-text-muted font-sans mt-1">
                   When an Agency Deal is set to CLOSED_WON for {activeClientAccount.name}, it will appear here and sync to {providerDisplayName}.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={openGeneralHandoff}
-                className="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 text-xs font-mono font-bold hover:bg-emerald-400 transition-all inline-flex items-center gap-2 cursor-pointer shadow-md"
+                className="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 text-xs font-sans font-bold hover:bg-emerald-400 transition-all inline-flex items-center gap-2 cursor-pointer shadow-md"
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Close & Handoff a Deal Now</span>
@@ -768,9 +770,9 @@ export default function ClientCrmPage() {
               {filteredHandoffs.map((handoff) => {
                 const statusColor =
                   handoff.status === "SYNCED"
-                    ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/30"
+                    ? "text-emerald-800 bg-emerald-50 border-emerald-200"
                     : handoff.status === "FAILED"
-                    ? "text-rose-400 bg-rose-500/10 border-rose-500/30"
+                    ? "text-rose-400 bg-red-50 border-red-200"
                     : handoff.status === "SYNCING"
                     ? "text-cyan-400 bg-cyan-500/10 border-cyan-500/30 animate-pulse"
                     : "text-amber-400 bg-amber-500/10 border-amber-500/30";
@@ -779,15 +781,15 @@ export default function ClientCrmPage() {
                   <MultiCrmCard key={handoff.id} className="p-4 space-y-3">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-crm-border-strong pb-3">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono text-crm-text-muted">Handoff #{handoff.id.slice(0, 8)}</span>
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold border ${statusColor}`}>
+                        <span className="text-xs font-sans text-crm-text-muted">Handoff #{handoff.id.slice(0, 8)}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-sans font-semibold border ${statusColor}`}>
                           {handoff.status}
                         </span>
-                        <span className="text-[10px] font-mono text-crm-text-muted">
+                        <span className="text-[10px] font-sans text-crm-text-muted">
                           Provider: {handoff.clientCrmProvider}
                         </span>
                         {handoff.clientCrmRecordId && (
-                          <span className="text-[10px] font-mono text-emerald-400">
+                          <span className="text-[10px] font-sans text-emerald-800">
                             Ext ID: #{handoff.clientCrmRecordId}
                           </span>
                         )}
@@ -798,26 +800,26 @@ export default function ClientCrmPage() {
                           <button
                             onClick={() => handleRetryHandoff(handoff.id)}
                             disabled={retryingHandoffId === handoff.id}
-                            className="px-3 py-1 rounded-lg bg-rose-500/20 text-rose-300 border border-rose-500/40 text-xs font-mono hover:bg-rose-500/30 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                            className="px-3 py-1 rounded-lg bg-rose-500/20 text-red-700 border border-rose-500/40 text-xs font-sans hover:bg-rose-500/30 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
                           >
                             <RefreshCw className={`w-3 h-3 ${retryingHandoffId === handoff.id ? "animate-spin" : ""}`} />
                             Retry Handoff
                           </button>
                         )}
-                        <span className="text-[10px] font-mono text-crm-text-muted">
+                        <span className="text-[10px] font-sans text-crm-text-muted">
                           {new Date(handoff.createdAt).toLocaleString()}
                         </span>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-sans">
                       <div>
                         <span className="text-crm-text-muted text-[10px] block">Agency Deal Title:</span>
                         <span className="text-crm-text font-bold">
                           {handoff.dealName || handoff.agencyDeal?.title || "Untitled Deal"}
                         </span>
                         {handoff.dealAmountCents != null && (
-                          <span className="text-emerald-400 block text-[11px]">
+                          <span className="text-emerald-800 block text-[11px]">
                             ${(handoff.dealAmountCents / 100).toFixed(2)} {handoff.currency || "USD"}
                           </span>
                         )}
@@ -848,7 +850,7 @@ export default function ClientCrmPage() {
                             : "Pending Dispatch"}
                         </span>
                         {handoff.lastError && (
-                          <span className="text-rose-400 text-[10px] block font-mono">
+                          <span className="text-rose-400 text-[10px] block font-sans">
                             Error: {handoff.lastError}
                           </span>
                         )}
@@ -868,7 +870,7 @@ export default function ClientCrmPage() {
             <p className="text-sm font-semibold text-crm-text">
               No {activeTab.toLowerCase()} records found for {activeClientAccount.name}
             </p>
-            <p className="text-xs text-crm-text-muted font-mono mt-1">
+            <p className="text-xs text-crm-text-muted font-sans mt-1">
               {activeTab === "DEAL"
                 ? "Create a deal directly for one of this client's contacts or wait for inbound sync."
                 : `Click "Sync Client CRM" to import records from ${providerDisplayName} or wait for deal handoffs.`}
@@ -877,7 +879,7 @@ export default function ClientCrmPage() {
               <button
                 type="button"
                 onClick={openCreateDealGeneral}
-                className="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 text-xs font-mono font-bold hover:bg-emerald-400 transition-all inline-flex items-center gap-2 cursor-pointer shadow-md"
+                className="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 text-xs font-sans font-bold hover:bg-emerald-400 transition-all inline-flex items-center gap-2 cursor-pointer shadow-md"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>+ Create First Deal</span>
@@ -900,43 +902,43 @@ export default function ClientCrmPage() {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-mono font-bold text-crm-text">
+                        <span className="text-xs font-sans font-bold text-crm-text">
                           {record.recordType === "CONTACT"
                             ? record.name || record.email || "Unnamed Contact"
                             : record.recordType === "DEAL"
                             ? record.name || "Untitled Deal"
                             : record.name || "Untitled Note"}
                         </span>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-sans bg-emerald-50 text-emerald-800 border border-emerald-200">
                           {record.provider || "ZOHO"}
                         </span>
                         {record.customFields?.source === "UNIFIED_DIRECTORY" && (
                           <span
-                            className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-cyan-500/15 text-cyan-300 border border-cyan-500/35 flex items-center gap-1"
+                            className="px-2 py-0.5 rounded-full text-[10px] font-sans bg-cyan-500/15 text-cyan-300 border border-cyan-500/35 flex items-center gap-1"
                             title={String(record.customFields?.matchedBy || "Matched from Unified Directory")}
                           >
                             <Users className="w-2.5 h-2.5 text-cyan-400" />
                             <span>Unified Directory</span>
                           </span>
                         )}
-                        <span className="text-[10px] font-mono text-crm-text-muted">
+                        <span className="text-[10px] font-sans text-crm-text-muted">
                           Ext ID: #{record.externalId || "local"}
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-4 text-xs font-mono text-crm-text-muted flex-wrap">
+                      <div className="flex items-center gap-4 text-xs font-sans text-crm-text-muted flex-wrap">
                         {record.recordType === "CONTACT" && (
                           <>
                             {record.email && <span>Email: {record.email}</span>}
                             {record.phone && <span>Phone: {record.phone}</span>}
                             {record.companyName && <span>Company: {record.companyName}</span>}
                             {record.status && (
-                              <span className="px-1.5 py-0.5 rounded bg-crm-inner text-emerald-400 border border-crm-border-strong text-[10px]">
+                              <span className="px-1.5 py-0.5 rounded bg-crm-inner text-emerald-800 border border-crm-border-strong text-[10px]">
                                 {record.status}
                               </span>
                             )}
                             {record.customFields?.matchedBy && (
-                              <span className="text-[10px] font-mono text-cyan-400/90 italic">
+                              <span className="text-[10px] font-sans text-cyan-400/90 italic">
                                 ({String(record.customFields.matchedBy)})
                               </span>
                             )}
@@ -947,12 +949,12 @@ export default function ClientCrmPage() {
                             {record.amount && <span>Amount: ${record.amount}</span>}
                             {record.stage && <span>Stage: {record.stage}</span>}
                             {record.status && (
-                              <span className="px-1.5 py-0.5 rounded bg-crm-inner text-emerald-400 border border-crm-border-strong text-[10px]">
+                              <span className="px-1.5 py-0.5 rounded bg-crm-inner text-emerald-800 border border-crm-border-strong text-[10px]">
                                 {record.status}
                               </span>
                             )}
                             {record.customFields?.contactName && (
-                              <span className="text-[10px] font-mono text-cyan-400">
+                              <span className="text-[10px] font-sans text-cyan-400">
                                 Contact: {String(record.customFields.contactName)}
                               </span>
                             )}
@@ -970,19 +972,19 @@ export default function ClientCrmPage() {
                         <button
                           type="button"
                           onClick={() => openCreateDealForContact(record)}
-                          className="px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-xs font-mono text-emerald-400 hover:bg-emerald-500/30 transition-all flex items-center gap-1.5 cursor-pointer font-semibold shadow-sm"
+                          className="px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-xs font-sans text-emerald-800 hover:bg-emerald-500/30 transition-all flex items-center gap-1.5 cursor-pointer font-semibold shadow-sm"
                           title={`Create a new deal for ${record.name || record.email || "this contact"}`}
                         >
-                          <Plus className="w-3.5 h-3.5 text-emerald-400" />
+                          <Plus className="w-3.5 h-3.5 text-emerald-800" />
                           <span>+ Create Deal</span>
                         </button>
                       )}
 
                       <button
                         onClick={() => openEditor(record)}
-                        className="px-3 py-1.5 rounded-lg bg-crm-inner border border-crm-border-strong text-xs font-mono text-crm-text hover:text-emerald-400 hover:border-emerald-500/50 transition-all flex items-center gap-1.5 cursor-pointer"
+                        className="px-3 py-1.5 rounded-lg bg-crm-inner border border-crm-border-strong text-xs font-sans text-crm-text hover:text-emerald-800 hover:border-emerald-500/50 transition-all flex items-center gap-1.5 cursor-pointer"
                       >
-                        <Edit3 className="w-3 h-3 text-emerald-400" />
+                        <Edit3 className="w-3 h-3 text-emerald-800" />
                         <span>Edit & Sync</span>
                       </button>
 
@@ -991,10 +993,10 @@ export default function ClientCrmPage() {
                           <button
                             type="button"
                             onClick={() => openHandoffForDeal(record)}
-                            className="px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/50 text-xs font-mono text-emerald-400 hover:bg-emerald-500/30 transition-all flex items-center gap-1.5 cursor-pointer font-semibold shadow-sm"
+                            className="px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/50 text-xs font-sans text-emerald-800 hover:bg-emerald-500/30 transition-all flex items-center gap-1.5 cursor-pointer font-semibold shadow-sm"
                             title={`Mark deal as Closed Won and hand off to ${providerDisplayName}`}
                           >
-                            <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                            <Sparkles className="w-3.5 h-3.5 text-emerald-800" />
                             <span>Close & Handoff to {providerDisplayName}</span>
                           </button>
                         ) : (
@@ -1004,10 +1006,10 @@ export default function ClientCrmPage() {
                               setActiveTab("HANDOFFS");
                               setSearchQuery(record.name || "");
                             }}
-                            className="px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs font-mono text-emerald-400 hover:bg-emerald-500/20 transition-all flex items-center gap-1 cursor-pointer"
+                            className="px-2.5 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-sans text-emerald-800 hover:bg-emerald-500/20 transition-all flex items-center gap-1 cursor-pointer"
                             title="View deal handoff details in Deal Handoffs tab"
                           >
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-800" />
                             <span>Won (View Handoff)</span>
                           </button>
                         )
@@ -1019,25 +1021,25 @@ export default function ClientCrmPage() {
                   {record.recordType === "CONTACT" && (
                     <div className="pt-2.5 border-t border-crm-border-strong/70 flex items-center justify-between gap-2 flex-wrap">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] font-mono text-crm-text-muted flex items-center gap-1">
-                          <DollarSign className="w-3 h-3 text-emerald-400" /> Associated Deals:
+                        <span className="text-[10px] font-sans text-crm-text-muted flex items-center gap-1">
+                          <DollarSign className="w-3 h-3 text-emerald-800" /> Associated Deals:
                         </span>
                         {contactDeals.length === 0 ? (
-                          <span className="text-[11px] font-mono text-crm-text-muted italic">
+                          <span className="text-[11px] font-sans text-crm-text-muted italic">
                             No deals linked yet
                           </span>
                         ) : (
                           contactDeals.map((deal) => (
                             <div
                               key={deal.id}
-                              className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-crm-inner border border-crm-border-strong text-[11px] font-mono"
+                              className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-crm-inner border border-crm-border-strong text-[11px] font-sans"
                             >
                               <span className="font-semibold text-crm-text">{deal.title}</span>
-                              <span className="text-emerald-400 font-bold">${deal.amount}</span>
+                              <span className="text-emerald-800 font-bold">${deal.amount}</span>
                               <span
                                 className={`text-[10px] px-1.5 py-0.2 rounded border ${
                                   deal.status === "CLOSED_WON"
-                                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                                    ? "bg-emerald-50 text-emerald-800 border-emerald-200"
                                     : "bg-amber-500/10 text-amber-300 border-amber-500/30"
                                 }`}
                               >
@@ -1047,10 +1049,10 @@ export default function ClientCrmPage() {
                                 <button
                                   type="button"
                                   onClick={() => openHandoffForContactDeal(deal, record.name)}
-                                  className="ml-1 px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/30 text-[10px] font-semibold flex items-center gap-1 cursor-pointer transition-all"
+                                  className="ml-1 px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-800 hover:bg-emerald-500/30 text-[10px] font-semibold flex items-center gap-1 cursor-pointer transition-all"
                                   title={`Close and hand off ${deal.title} to ${providerDisplayName}`}
                                 >
-                                  <Sparkles className="w-2.5 h-2.5 text-emerald-400" />
+                                  <Sparkles className="w-2.5 h-2.5 text-emerald-800" />
                                   <span>Close & Handoff to {providerDisplayName}</span>
                                 </button>
                               )}
@@ -1061,7 +1063,7 @@ export default function ClientCrmPage() {
                       <button
                         type="button"
                         onClick={() => openCreateDealForContact(record)}
-                        className="px-2 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 text-[10px] font-mono font-semibold flex items-center gap-1 cursor-pointer transition-all"
+                        className="px-2 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-500/20 text-[10px] font-sans font-semibold flex items-center gap-1 cursor-pointer transition-all"
                         title={`Create a deal for ${record.name || "this contact"}`}
                       >
                         <Plus className="w-2.5 h-2.5" />
@@ -1079,11 +1081,11 @@ export default function ClientCrmPage() {
       {/* Edit Record Modal */}
       {editingRecord && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-crm-surface border border-emerald-500/30 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl">
+          <div className="bg-crm-surface border border-emerald-200 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl">
             <div className="flex items-center justify-between border-b border-crm-border-strong pb-3">
               <div className="flex items-center gap-2">
-                <Edit3 className="w-4 h-4 text-emerald-400" />
-                <h3 className="text-sm font-bold font-mono text-crm-text">
+                <Edit3 className="w-4 h-4 text-emerald-800" />
+                <h3 className="text-sm font-bold font-sans text-crm-text">
                   Edit {editingRecord.recordType} in {providerDisplayName}
                 </h3>
               </div>
@@ -1096,7 +1098,7 @@ export default function ClientCrmPage() {
             </div>
 
             <form onSubmit={handleSaveRecord} className="space-y-4">
-              <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/25 text-[11px] font-mono text-cyan-300 flex items-center gap-2">
+              <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/25 text-[11px] font-sans text-cyan-300 flex items-center gap-2">
                 <Users className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
                 <span>
                   Edits save directly to this Client&apos;s CRM and keep the agency Unified Lead Directory synchronized.
@@ -1106,7 +1108,7 @@ export default function ClientCrmPage() {
               <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
                 {/* Name Field */}
                 <div className="space-y-1">
-                  <label className="text-[11px] font-mono text-crm-text-muted capitalize">
+                  <label className="text-[11px] font-sans text-crm-text-muted capitalize">
                     {editingRecord.recordType === "CONTACT"
                       ? "Full Name"
                       : editingRecord.recordType === "DEAL"
@@ -1120,7 +1122,7 @@ export default function ClientCrmPage() {
                     onChange={(e) =>
                       setEditFormData((prev) => ({ ...prev, name: e.target.value }))
                     }
-                    className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-mono text-crm-text focus:outline-none focus:border-emerald-500/50"
+                    className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-sans text-crm-text focus:outline-none focus:border-emerald-500/50"
                   />
                 </div>
 
@@ -1128,40 +1130,40 @@ export default function ClientCrmPage() {
                 {editingRecord.recordType === "CONTACT" && (
                   <>
                     <div className="space-y-1">
-                      <label className="text-[11px] font-mono text-crm-text-muted">Email</label>
+                      <label className="text-[11px] font-sans text-crm-text-muted">Email</label>
                       <input
                         type="email"
                         value={editFormData.email}
                         onChange={(e) =>
                           setEditFormData((prev) => ({ ...prev, email: e.target.value }))
                         }
-                        className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-mono text-crm-text focus:outline-none focus:border-emerald-500/50"
+                        className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-sans text-crm-text focus:outline-none focus:border-emerald-500/50"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[11px] font-mono text-crm-text-muted">Phone</label>
+                      <label className="text-[11px] font-sans text-crm-text-muted">Phone</label>
                       <input
                         type="text"
                         value={editFormData.phone}
                         onChange={(e) =>
                           setEditFormData((prev) => ({ ...prev, phone: e.target.value }))
                         }
-                        className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-mono text-crm-text focus:outline-none focus:border-emerald-500/50"
+                        className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-sans text-crm-text focus:outline-none focus:border-emerald-500/50"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[11px] font-mono text-crm-text-muted">Company Name</label>
+                      <label className="text-[11px] font-sans text-crm-text-muted">Company Name</label>
                       <input
                         type="text"
                         value={editFormData.companyName}
                         onChange={(e) =>
                           setEditFormData((prev) => ({ ...prev, companyName: e.target.value }))
                         }
-                        className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-mono text-crm-text focus:outline-none focus:border-emerald-500/50"
+                        className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-sans text-crm-text focus:outline-none focus:border-emerald-500/50"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[11px] font-mono text-crm-text-muted">Status</label>
+                      <label className="text-[11px] font-sans text-crm-text-muted">Status</label>
                       <input
                         type="text"
                         value={editFormData.status}
@@ -1169,7 +1171,7 @@ export default function ClientCrmPage() {
                           setEditFormData((prev) => ({ ...prev, status: e.target.value }))
                         }
                         placeholder="e.g. Active Customer, Lead"
-                        className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-mono text-crm-text focus:outline-none focus:border-emerald-500/50"
+                        className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-sans text-crm-text focus:outline-none focus:border-emerald-500/50"
                       />
                     </div>
                   </>
@@ -1179,7 +1181,7 @@ export default function ClientCrmPage() {
                 {editingRecord.recordType === "DEAL" && (
                   <>
                     <div className="space-y-1">
-                      <label className="text-[11px] font-mono text-crm-text-muted">Amount ($)</label>
+                      <label className="text-[11px] font-sans text-crm-text-muted">Amount ($)</label>
                       <input
                         type="text"
                         value={editFormData.amount}
@@ -1187,11 +1189,11 @@ export default function ClientCrmPage() {
                           setEditFormData((prev) => ({ ...prev, amount: e.target.value }))
                         }
                         placeholder="15000.00"
-                        className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-mono text-crm-text focus:outline-none focus:border-emerald-500/50"
+                        className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-sans text-crm-text focus:outline-none focus:border-emerald-500/50"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[11px] font-mono text-crm-text-muted">Stage</label>
+                      <label className="text-[11px] font-sans text-crm-text-muted">Stage</label>
                       <input
                         type="text"
                         value={editFormData.stage}
@@ -1199,11 +1201,11 @@ export default function ClientCrmPage() {
                           setEditFormData((prev) => ({ ...prev, stage: e.target.value }))
                         }
                         placeholder="e.g. Onboarding, Closed Won"
-                        className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-mono text-crm-text focus:outline-none focus:border-emerald-500/50"
+                        className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-sans text-crm-text focus:outline-none focus:border-emerald-500/50"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[11px] font-mono text-crm-text-muted">Status</label>
+                      <label className="text-[11px] font-sans text-crm-text-muted">Status</label>
                       <input
                         type="text"
                         value={editFormData.status}
@@ -1211,7 +1213,7 @@ export default function ClientCrmPage() {
                           setEditFormData((prev) => ({ ...prev, status: e.target.value }))
                         }
                         placeholder="Won, Lost, Open"
-                        className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-mono text-crm-text focus:outline-none focus:border-emerald-500/50"
+                        className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-sans text-crm-text focus:outline-none focus:border-emerald-500/50"
                       />
                     </div>
                   </>
@@ -1220,14 +1222,14 @@ export default function ClientCrmPage() {
                 {/* Note specific fields */}
                 {editingRecord.recordType === "NOTE" && (
                   <div className="space-y-1">
-                    <label className="text-[11px] font-mono text-crm-text-muted">Content / Details</label>
+                    <label className="text-[11px] font-sans text-crm-text-muted">Content / Details</label>
                     <textarea
                       rows={4}
                       value={editFormData.details}
                       onChange={(e) =>
                         setEditFormData((prev) => ({ ...prev, details: e.target.value }))
                       }
-                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-mono text-crm-text focus:outline-none focus:border-emerald-500/50"
+                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-sans text-crm-text focus:outline-none focus:border-emerald-500/50"
                     />
                   </div>
                 )}
@@ -1237,14 +1239,14 @@ export default function ClientCrmPage() {
                 <button
                   type="button"
                   onClick={() => setEditingRecord(null)}
-                  className="px-4 py-2 rounded-xl bg-crm-inner text-xs font-mono text-crm-text-muted hover:text-white cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-crm-inner text-xs font-sans text-crm-text-muted hover:text-white cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 text-xs font-mono font-semibold hover:bg-emerald-400 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  className="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 text-xs font-sans font-semibold hover:bg-emerald-400 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
                   {isSaving ? `Pushing to ${providerDisplayName}...` : `Save & Sync ${providerDisplayName}`}
                 </button>
@@ -1262,18 +1264,18 @@ export default function ClientCrmPage() {
             <div className="flex items-start justify-between border-b border-crm-border-strong pb-3">
               <div className="space-y-1">
                 <div className="flex items-center gap-2.5">
-                  <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-800 border border-emerald-200">
                     <Sparkles className="w-4 h-4" />
                   </div>
-                  <h3 className="text-base font-bold font-mono text-crm-text">
+                  <h3 className="text-base font-bold font-sans text-crm-text">
                     Close Deal & Handoff to {providerDisplayName}
                   </h3>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-sans bg-emerald-50 text-emerald-800 border border-emerald-200">
                     {providerDisplayName}
                   </span>
                 </div>
-                <p className="text-xs text-crm-text-muted font-mono">
-                  Client: <span className="text-emerald-400 font-semibold">{activeClientAccount.name}</span> • Dispatches winning deal, customer details, and notes into client CRM.
+                <p className="text-xs text-crm-text-muted font-sans">
+                  Client: <span className="text-emerald-800 font-semibold">{activeClientAccount.name}</span> • Dispatches winning deal, customer details, and notes into client CRM.
                 </p>
               </div>
               <button
@@ -1290,7 +1292,7 @@ export default function ClientCrmPage() {
             <form onSubmit={handleSubmitHandoff} className="space-y-4">
               {/* Target Deal Selection / Display */}
               <div className="space-y-1.5">
-                <label className="text-[11px] font-mono text-crm-text-muted uppercase tracking-wider block">
+                <label className="text-[11px] font-sans text-crm-text-muted uppercase tracking-wider block">
                   Target Agency Deal
                 </label>
                 {availableDeals.length > 1 ? (
@@ -1302,7 +1304,7 @@ export default function ClientCrmPage() {
                       const found = availableDeals.find((d) => d.id === dealId);
                       if (found) setHandoffModalDeal(found);
                     }}
-                    className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-mono text-crm-text focus:outline-none focus:border-emerald-500/60"
+                    className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-sans text-crm-text focus:outline-none focus:border-emerald-500/60"
                   >
                     {availableDeals.map((d) => (
                       <option key={d.id} value={d.id}>
@@ -1311,38 +1313,38 @@ export default function ClientCrmPage() {
                     ))}
                   </select>
                 ) : (
-                  <div className="p-3 rounded-xl bg-crm-inner border border-crm-border-strong flex items-center justify-between text-xs font-mono">
+                  <div className="p-3 rounded-xl bg-crm-inner border border-crm-border-strong flex items-center justify-between text-xs font-sans">
                     <div>
                       <span className="font-bold text-crm-text block">{handoffModalDeal?.title || "Selected Deal"}</span>
                       {handoffModalDeal?.contactName && (
                         <span className="text-[10px] text-crm-text-muted">Contact: {handoffModalDeal.contactName}</span>
                       )}
                     </div>
-                    <span className="text-emerald-400 font-semibold text-sm">${handoffModalDeal?.amount || "0.00"}</span>
+                    <span className="text-emerald-800 font-semibold text-sm">${handoffModalDeal?.amount || "0.00"}</span>
                   </div>
                 )}
               </div>
 
               {/* Deal Status Selection */}
               <div className="space-y-1">
-                <label className="text-[11px] font-mono text-crm-text-muted block">
+                <label className="text-[11px] font-sans text-crm-text-muted block">
                   Deal Status
                 </label>
                 <select
                   value={handoffForm.status}
                   onChange={(e) => setHandoffForm((prev) => ({ ...prev, status: e.target.value }))}
-                  className="w-full bg-crm-inner border border-emerald-500/40 rounded-xl px-3 py-2 text-xs font-mono text-emerald-300 focus:outline-none focus:border-emerald-400"
+                  className="w-full bg-crm-inner border border-emerald-500/40 rounded-xl px-3 py-2 text-xs font-sans text-emerald-300 focus:outline-none focus:border-emerald-400"
                 >
                   <option value="CLOSED_WON">Closed Won (Win & Trigger {providerDisplayName} Handoff)</option>
                 </select>
-                <p className="text-[10px] text-crm-text-muted font-mono">
+                <p className="text-[10px] text-crm-text-muted font-sans">
                   Marks the agency sales pipeline deal as won and dispatches full handoff payload.
                 </p>
               </div>
 
               {/* Close Outcome */}
               <div className="space-y-1">
-                <label className="text-[11px] font-mono text-crm-text-muted block">
+                <label className="text-[11px] font-sans text-crm-text-muted block">
                   Close Outcome
                 </label>
                 <input
@@ -1351,16 +1353,16 @@ export default function ClientCrmPage() {
                   value={handoffForm.closeOutcome}
                   onChange={(e) => setHandoffForm((prev) => ({ ...prev, closeOutcome: e.target.value }))}
                   placeholder='e.g., "Client accepted enterprise proposal"'
-                  className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-mono text-crm-text focus:outline-none focus:border-emerald-500/50"
+                  className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-sans text-crm-text focus:outline-none focus:border-emerald-500/50"
                 />
-                <p className="text-[10px] text-crm-text-muted font-mono">
+                <p className="text-[10px] text-crm-text-muted font-sans">
                   Summary agreement or reason the client signed.
                 </p>
               </div>
 
               {/* What Should The Client Do Next */}
               <div className="space-y-1">
-                <label className="text-[11px] font-mono text-crm-text-muted block">
+                <label className="text-[11px] font-sans text-crm-text-muted block">
                   What Should The Client Do Next?
                 </label>
                 <input
@@ -1369,16 +1371,16 @@ export default function ClientCrmPage() {
                   value={handoffForm.recommendedNextAction}
                   onChange={(e) => setHandoffForm((prev) => ({ ...prev, recommendedNextAction: e.target.value }))}
                   placeholder='e.g., "Schedule onboarding kick-off call for Tuesday"'
-                  className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-mono text-crm-text focus:outline-none focus:border-emerald-500/50"
+                  className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-sans text-crm-text focus:outline-none focus:border-emerald-500/50"
                 />
-                <p className="text-[10px] text-crm-text-muted font-mono">
+                <p className="text-[10px] text-crm-text-muted font-sans">
                   Actionable next steps recommended for the client team.
                 </p>
               </div>
 
               {/* Handoff Notes & Special Instructions */}
               <div className="space-y-1">
-                <label className="text-[11px] font-mono text-crm-text-muted block">
+                <label className="text-[11px] font-sans text-crm-text-muted block">
                   Handoff Notes & Special Instructions
                 </label>
                 <textarea
@@ -1386,17 +1388,17 @@ export default function ClientCrmPage() {
                   value={handoffForm.notes}
                   onChange={(e) => setHandoffForm((prev) => ({ ...prev, notes: e.target.value }))}
                   placeholder='e.g., "Client preferred WhatsApp contact; requested invoice sent to accounting@company.com"'
-                  className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-mono text-crm-text focus:outline-none focus:border-emerald-500/50"
+                  className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-sans text-crm-text focus:outline-none focus:border-emerald-500/50"
                 />
-                <p className="text-[10px] text-crm-text-muted font-mono">
+                <p className="text-[10px] text-crm-text-muted font-sans">
                   Attached automatically as a Note in {providerDisplayName} under the created Deal.
                 </p>
               </div>
 
               {/* Zoho CRM Handoff Callout Box */}
-              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-[11px] font-mono text-emerald-300 space-y-1">
+              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-500/25 text-[11px] font-sans text-emerald-300 space-y-1">
                 <div className="flex items-center gap-1.5 font-bold">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-800" />
                   <span>{providerDisplayName} Handoff Contents:</span>
                 </div>
                 <p className="text-[10px] text-crm-text-muted pl-5">
@@ -1416,14 +1418,14 @@ export default function ClientCrmPage() {
                     setIsHandoffModalOpen(false);
                     setHandoffModalDeal(null);
                   }}
-                  className="px-4 py-2 rounded-xl bg-crm-inner text-xs font-mono text-crm-text-muted hover:text-white cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-crm-inner text-xs font-sans text-crm-text-muted hover:text-white cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingHandoff || !selectedAgencyDealId}
-                  className="px-5 py-2 rounded-xl bg-emerald-500 text-slate-950 text-xs font-mono font-bold hover:bg-emerald-400 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 shadow-md"
+                  className="px-5 py-2 rounded-xl bg-emerald-500 text-slate-950 text-xs font-sans font-bold hover:bg-emerald-400 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 shadow-md"
                 >
                   {isSubmittingHandoff ? (
                     <>
@@ -1451,18 +1453,18 @@ export default function ClientCrmPage() {
             <div className="flex items-start justify-between border-b border-crm-border-strong pb-3">
               <div className="space-y-1">
                 <div className="flex items-center gap-2.5">
-                  <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-800 border border-emerald-200">
                     <DollarSign className="w-4 h-4" />
                   </div>
-                  <h3 className="text-base font-bold font-mono text-crm-text">
+                  <h3 className="text-base font-bold font-sans text-crm-text">
                     Create New Deal
                   </h3>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-sans bg-emerald-50 text-emerald-800 border border-emerald-200">
                     {providerDisplayName}
                   </span>
                 </div>
-                <p className="text-xs text-crm-text-muted font-mono">
-                  Client Account: <span className="text-emerald-400 font-semibold">{activeClientAccount.name}</span> • Create and assign directly to a contact in this account.
+                <p className="text-xs text-crm-text-muted font-sans">
+                  Client Account: <span className="text-emerald-800 font-semibold">{activeClientAccount.name}</span> • Create and assign directly to a contact in this account.
                 </p>
               </div>
               <button
@@ -1479,7 +1481,7 @@ export default function ClientCrmPage() {
             <form onSubmit={handleCreateDealSubmit} className="space-y-4">
               {/* Target Contact Selector */}
               <div className="space-y-1.5">
-                <label className="text-[11px] font-mono text-crm-text-muted uppercase tracking-wider block">
+                <label className="text-[11px] font-sans text-crm-text-muted uppercase tracking-wider block">
                   Assign To Contact *
                 </label>
                 {clientContacts.length > 0 ? (
@@ -1498,7 +1500,7 @@ export default function ClientCrmPage() {
                       }
                     }}
                     required
-                    className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-mono text-crm-text focus:outline-none focus:border-emerald-500/60"
+                    className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-sans text-crm-text focus:outline-none focus:border-emerald-500/60"
                   >
                     {dealContactTarget && !clientContacts.some((c) => c.id === dealContactTarget.id) && (
                       <option value={dealContactTarget.id}>
@@ -1512,14 +1514,14 @@ export default function ClientCrmPage() {
                     ))}
                   </select>
                 ) : dealContactTarget ? (
-                  <div className="p-2.5 rounded-xl bg-crm-inner border border-crm-border-strong text-xs font-mono text-crm-text">
+                  <div className="p-2.5 rounded-xl bg-crm-inner border border-crm-border-strong text-xs font-sans text-crm-text">
                     <span className="font-bold">{dealContactTarget.name}</span>
                     {dealContactTarget.companyName && (
                       <span className="text-crm-text-muted ml-2">({dealContactTarget.companyName})</span>
                     )}
                   </div>
                 ) : (
-                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-mono">
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-sans">
                     No contacts found for {activeClientAccount.name}. Please ensure contacts matching this client exist before creating a deal.
                   </div>
                 )}
@@ -1527,7 +1529,7 @@ export default function ClientCrmPage() {
 
               {/* Deal Title */}
               <div className="space-y-1">
-                <label className="text-[11px] font-mono text-crm-text-muted block">
+                <label className="text-[11px] font-sans text-crm-text-muted block">
                   Deal Title *
                 </label>
                 <input
@@ -1536,7 +1538,7 @@ export default function ClientCrmPage() {
                   value={createDealForm.title}
                   onChange={(e) => setCreateDealForm((prev) => ({ ...prev, title: e.target.value }))}
                   placeholder='e.g., "Enterprise Platform Modernization"'
-                  className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-mono text-crm-text focus:outline-none focus:border-emerald-500/50"
+                  className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-sans text-crm-text focus:outline-none focus:border-emerald-500/50"
                 />
               </div>
 
@@ -1544,7 +1546,7 @@ export default function ClientCrmPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Amount */}
                 <div className="space-y-1">
-                  <label className="text-[11px] font-mono text-crm-text-muted block">
+                  <label className="text-[11px] font-sans text-crm-text-muted block">
                     Amount ($ USD) *
                   </label>
                   <input
@@ -1555,13 +1557,13 @@ export default function ClientCrmPage() {
                     value={createDealForm.amount}
                     onChange={(e) => setCreateDealForm((prev) => ({ ...prev, amount: e.target.value }))}
                     placeholder="10000.00"
-                    className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-mono text-crm-text focus:outline-none focus:border-emerald-500/50"
+                    className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-sans text-crm-text focus:outline-none focus:border-emerald-500/50"
                   />
                 </div>
 
                 {/* Pipeline Stage / Status */}
                 <div className="space-y-1">
-                  <label className="text-[11px] font-mono text-crm-text-muted block">
+                  <label className="text-[11px] font-sans text-crm-text-muted block">
                     Pipeline Stage & Status
                   </label>
                   <select
@@ -1570,7 +1572,7 @@ export default function ClientCrmPage() {
                       const [status, stage] = e.target.value.split("::");
                       setCreateDealForm((prev) => ({ ...prev, status, stage }));
                     }}
-                    className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-mono text-crm-text focus:outline-none focus:border-emerald-500/50"
+                    className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-sans text-crm-text focus:outline-none focus:border-emerald-500/50"
                   >
                     <option value="OPEN::Initial Contact">Initial Contact (Open)</option>
                     <option value="OPEN::Needs Analysis">Needs Analysis (Open)</option>
@@ -1584,20 +1586,20 @@ export default function ClientCrmPage() {
 
               {/* Expected Close Date */}
               <div className="space-y-1">
-                <label className="text-[11px] font-mono text-crm-text-muted block">
+                <label className="text-[11px] font-sans text-crm-text-muted block">
                   Expected Close Date (Optional)
                 </label>
                 <input
                   type="date"
                   value={createDealForm.expectedCloseAt}
                   onChange={(e) => setCreateDealForm((prev) => ({ ...prev, expectedCloseAt: e.target.value }))}
-                  className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-mono text-crm-text focus:outline-none focus:border-emerald-500/50"
+                  className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-sans text-crm-text focus:outline-none focus:border-emerald-500/50"
                 />
               </div>
 
               {/* Deal Notes */}
               <div className="space-y-1">
-                <label className="text-[11px] font-mono text-crm-text-muted block">
+                <label className="text-[11px] font-sans text-crm-text-muted block">
                   Deal Notes & Requirements
                 </label>
                 <textarea
@@ -1605,21 +1607,21 @@ export default function ClientCrmPage() {
                   value={createDealForm.notes}
                   onChange={(e) => setCreateDealForm((prev) => ({ ...prev, notes: e.target.value }))}
                   placeholder="Client requirements, payment terms, or sales context..."
-                  className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-mono text-crm-text focus:outline-none focus:border-emerald-500/50"
+                  className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-sans text-crm-text focus:outline-none focus:border-emerald-500/50"
                 />
               </div>
 
               {/* If Closed Won: show Handoff Details */}
               {createDealForm.status === "CLOSED_WON" && (
-                <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-3 animate-in fade-in duration-150">
+                <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 space-y-3 animate-in fade-in duration-150">
                   <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-emerald-400" />
-                    <span className="text-xs font-bold font-mono text-emerald-300">
+                    <Sparkles className="w-4 h-4 text-emerald-800" />
+                    <span className="text-xs font-bold font-sans text-emerald-300">
                       Automatic {providerDisplayName} Handoff Configuration
                     </span>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-mono text-crm-text-muted block">
+                    <label className="text-[10px] font-sans text-crm-text-muted block">
                       Close Outcome
                     </label>
                     <input
@@ -1628,11 +1630,11 @@ export default function ClientCrmPage() {
                       value={createDealForm.closeOutcome}
                       onChange={(e) => setCreateDealForm((prev) => ({ ...prev, closeOutcome: e.target.value }))}
                       placeholder='e.g., "Client accepted enterprise proposal"'
-                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-1.5 text-xs font-mono text-crm-text focus:outline-none focus:border-emerald-500/50"
+                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-1.5 text-xs font-sans text-crm-text focus:outline-none focus:border-emerald-500/50"
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-mono text-crm-text-muted block">
+                    <label className="text-[10px] font-sans text-crm-text-muted block">
                       What Should The Client Do Next?
                     </label>
                     <input
@@ -1641,10 +1643,10 @@ export default function ClientCrmPage() {
                       value={createDealForm.recommendedNextAction}
                       onChange={(e) => setCreateDealForm((prev) => ({ ...prev, recommendedNextAction: e.target.value }))}
                       placeholder='e.g., "Schedule onboarding kick-off call for Tuesday"'
-                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-1.5 text-xs font-mono text-crm-text focus:outline-none focus:border-emerald-500/50"
+                      className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-1.5 text-xs font-sans text-crm-text focus:outline-none focus:border-emerald-500/50"
                     />
                   </div>
-                  <p className="text-[10px] font-mono text-emerald-400/80">
+                  <p className="text-[10px] font-sans text-emerald-800/80">
                     • Creates winning Deal in {providerDisplayName} with Stage: Closed Won
                     <br />
                     • Connects Contact & creates attached Handoff Note
@@ -1660,14 +1662,14 @@ export default function ClientCrmPage() {
                     setIsCreateDealModalOpen(false);
                     setDealContactTarget(null);
                   }}
-                  className="px-4 py-2 rounded-xl bg-crm-inner text-xs font-mono text-crm-text-muted hover:text-white cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-crm-inner text-xs font-sans text-crm-text-muted hover:text-white cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingNewDeal || !dealContactTarget?.id}
-                  className="px-5 py-2 rounded-xl bg-emerald-500 text-slate-950 text-xs font-mono font-bold hover:bg-emerald-400 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 shadow-md"
+                  className="px-5 py-2 rounded-xl bg-emerald-500 text-slate-950 text-xs font-sans font-bold hover:bg-emerald-400 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 shadow-md"
                 >
                   {isSubmittingNewDeal ? (
                     <>

@@ -2,6 +2,10 @@
 
 Audited 2026-10-01 against [PROJECT_REQUIREMENTS.md](PROJECT_REQUIREMENTS.md).
 
+## UI and AI integration, 2026-10-04
+
+`codex/ui-ai-backend-integration` combines the release branch's UI/Gemini work with `codex/consolidated-modules`; see [integration notes](docs/ui-ai-backend-integration.md). PostgreSQL/Prisma, CRM ownership, commissions/reconciliation, active tracking, live calendar services and Twilio callbacks are retained. Gemini lead analysis now records its actual provider; unavailable or invalid generation falls back to clearly labeled rule-based analysis. A migration adds the Gemini provider enum without replacing data. Live provider verification remains separate from controlled automated checks.
+
 ## Implementation progress: first safety batch
 
 Implemented on `codex/crm-boundary-safety`, created from `twilio+calendly` at `e4ad0b4`. The user-protected `new` branch remains at `e4ad0b4`; `email-setup` remains separate at `e90634c`. No merge, auth implementation, schema change, migration, or live CRM write was performed.

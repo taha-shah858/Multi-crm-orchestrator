@@ -200,6 +200,7 @@ enum LeadAnalysisSource {
 
 enum LeadAnalysisProvider {
   RULES_ENGINE
+  GEMINI
 }
 
 enum CommunicationProvider {

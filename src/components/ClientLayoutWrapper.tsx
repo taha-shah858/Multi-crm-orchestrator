@@ -12,39 +12,35 @@ export default function ClientLayoutWrapper({
 }) {
   return (
     <div
-          className="flex h-dvh w-full bg-transparent"
-          style={{ "--dashboard-header-height": "4rem" } as CSSProperties}
-        >
-          {/* Fully transparent Sidebar wrapper */}
-          <div className="bg-transparent backdrop-blur-xl border-r border-crm-border-strong shrink-0">
-            <Sidebar />
+      className="flex h-dvh w-full bg-slate-50"
+      style={{ "--dashboard-header-height": "3.5rem" } as CSSProperties}
+    >
+      {/* Sidebar */}
+      <Sidebar />
+
+      <div className="flex-1 flex min-w-0 min-h-0 flex-col bg-slate-50">
+
+        {/* ── Top App Header ── */}
+        <header className="h-[var(--dashboard-header-height)] shrink-0 bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-[60] shadow-sm">
+          {/* Workspace identity */}
+          <div className="flex items-center gap-2">
+            <span className="bg-blue-50 text-blue-800 border border-blue-200 font-semibold text-xs px-3 py-1 rounded-full">
+              Sales workspace
+            </span>
           </div>
 
-          <div className="flex-1 flex min-w-0 min-h-0 flex-col bg-transparent">
-            {/* Header: glass-panel removed and replaced with true 100% transparent glass */}
-            <header className="h-[var(--dashboard-header-height)] shrink-0 bg-transparent backdrop-blur-xl border-b border-crm-border-strong px-8 flex items-center justify-between sticky top-0 z-[60]">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                <span className="text-xs font-mono text-crm-text-muted">
-                  SYNC ENGINE:{" "}
-                  <strong className="text-emerald-400">ACTIVE</strong>
-                </span>
-              </div>
-
-              <div className="flex items-center gap-4 text-xs font-mono text-crm-text-muted">
-                <ActiveTimeTracker />
-                <ClientAccountSwitcher />
-                <span className="bg-white/5 backdrop-blur-md px-3 py-1.5 rounded-xl border border-crm-border-strong shadow-inner">
-                  Active Pipeline:{" "}
-                  <strong className="text-accent-cyan">$142,500</strong>
-                </span>
-              </div>
-            </header>
-
-            <main className="flex-1 min-h-0 overflow-y-auto p-8 relative z-0 bg-transparent">
-              {children}
-            </main>
+          {/* Active work and client selection */}
+          <div className="flex items-center gap-3">
+            <ActiveTimeTracker />
+            <ClientAccountSwitcher />
           </div>
+        </header>
+
+        {/* ── Main Content ── */}
+        <main className="flex-1 min-h-0 overflow-y-auto p-6 bg-slate-50">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }
