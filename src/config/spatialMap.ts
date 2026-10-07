@@ -22,17 +22,6 @@ export const ROUTE_SPATIAL_MAP: Record<string, SpatialCoordinates> = {
   // Main Hub: Balanced, smooth return to center
   "/": DEFAULT_COORDINATES,
 
-  // Multi-CRM Suite: Custom cinematic framing & heavy warp punch for the 3D text morph
-  "/multi-crm": {
-    x: 0,
-    y: 0,
-    z: 2,
-    rotX: 0,
-    rotY: 0,
-    warpIntensity: 3.2,
-    springStiffness: 0.04,
-  },
-
   // Integrations Hub: Sharp, aggressive banking turn
   "/integrations": {
     x: -8,

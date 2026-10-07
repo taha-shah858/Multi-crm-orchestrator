@@ -13,7 +13,6 @@ import {
   Bot,
   WalletCards,
   Calendar,
-  Sparkles,
   FileText,
   PanelLeftClose,
   PanelLeftOpen,
@@ -38,7 +37,6 @@ const workspaceNavigation = [
   { name: "Sales Operations",     href: "/operations",   icon: WalletCards},
   { name: "Time Audit",           href: "/time-audit",   icon: Clock3},
   { name: "Documents & Proposals",href: "/documents",    icon: FileText   },
-  { name: "Multi-CRM Suite",      href: "/multi-crm",    icon: Sparkles   },
 ];
 
 export default function Sidebar() {

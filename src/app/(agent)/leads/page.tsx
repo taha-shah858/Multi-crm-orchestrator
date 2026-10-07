@@ -189,7 +189,7 @@ export default function LeadsPage() {
       pulledAt: new Date(contact.updatedAt).toLocaleString(),
       syncStatus: "Synced",
       leadOwner: contact.crmOwner?.displayName ?? "Agency HubSpot Integration",
-      status: "Active Lead",
+      status: contact.deals.some(deal => deal.status === "CLOSED_WON") ? "Closed Lead" : "Active Lead",
       rating: analysis?.temperature === "Hot" || analysis?.temperature === "Warm" || analysis?.temperature === "Cold" ? analysis.temperature : "Unrated",
       score: analysis?.leadScore ?? null,
       industry: contact.companyDetails?.industry || "General",
@@ -890,7 +890,7 @@ export default function LeadsPage() {
 
                       {/* Status */}
                       <td className="py-4 px-4">
-                        <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${lead.status === "Closed Lead" ? "bg-emerald-50 text-emerald-800 border-emerald-200" : "bg-slate-100 text-slate-700 border-slate-200"}`}>
                           {lead.status}
                         </span>
                       </td>

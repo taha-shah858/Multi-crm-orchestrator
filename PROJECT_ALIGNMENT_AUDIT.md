@@ -2,6 +2,14 @@
 
 Audited 2026-10-01 against [PROJECT_REQUIREMENTS.md](PROJECT_REQUIREMENTS.md).
 
+## Agent home and ClickUp reporting, 2026-10-07
+
+Implemented on `codex/auth-validation-integration` following the live [persistence audit](docs/database-persistence-audit.md). Agent home now uses an authenticated, read-only PostgreSQL overview for company-owned HubSpot directory counts, the agent's recorded outbound calls today (UTC), saved analyses and closed deals, assigned-client CRM connections, personal calendar connections/upcoming appointments and recent personal interactions. Metrics/activity span currently assigned clients; agency directory totals remain shared across client switching. A pending agent gets an assignment waiting state. Credentials are excluded; refresh does not trigger provider sync. Preview CRM creation/sync controls are replaced with real module navigation. The user explicitly excluded Multi-CRM's Sync Clusters; it remains unchanged.
+
+Sales Operations now uses the existing single/batch ClickUp endpoints, recognizes persisted `SYNCED` status, and displays actual batch success/failure counts. A post-sync refresh error no longer overwrites the confirmed sync result. Server sync verifies active agent, deal ownership, tenant, closed-won status and client assignment before writes. Acknowledged provider success followed by a local confirmation failure retains the returned task ID in recovery state where that write succeeds, distinguishes this from provider failure, and subsequent retry updates the mapped task. Batch processing retains earlier success results if a later deal throws. This does not solve every network-ambiguity/concurrent-worker duplicate scenario; no live ClickUp sync was triggered to certify provider behavior.
+
+Validation: `node scripts/dashboard-clickup-test.cjs` covers PostgreSQL dashboard totals/scope, pending account, endpoints, status contract, batch counts, forbidden deals, repeat updates and provider-success/local-write-failure recovery with intercepted provider calls. The nine commission reconciliation checks, TypeScript, targeted lint for the new dashboard/API files and production build passed. Browser review with disposable fixtures verified live home counts and the Synced task link; fixtures were removed afterward. No schema migration was required.
+
 ## UI and AI integration, 2026-10-04
 
 `codex/ui-ai-backend-integration` combines the release branch's UI/Gemini work with `codex/consolidated-modules`; see [integration notes](docs/ui-ai-backend-integration.md). PostgreSQL/Prisma, CRM ownership, commissions/reconciliation, active tracking, live calendar services and Twilio callbacks are retained. Gemini lead analysis now records its actual provider; unavailable or invalid generation falls back to clearly labeled rule-based analysis. A migration adds the Gemini provider enum without replacing data. Live provider verification remains separate from controlled automated checks.

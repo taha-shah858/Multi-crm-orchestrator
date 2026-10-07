@@ -462,7 +462,7 @@ export default function SignupPage() {
                     <input
                       type="text"
                       required
-                      placeholder="e.g. John Doe (letters only)"
+                      placeholder="Taha"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       className={inputCls}

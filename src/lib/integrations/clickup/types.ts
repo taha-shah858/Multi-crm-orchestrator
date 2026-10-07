@@ -144,6 +144,6 @@ export interface ClickUpSyncResult {
   taskId?: string;
   taskUrl?: string;
   listId?: string;
-  action: "CREATED" | "UPDATED" | "SKIPPED";
+  action: "CREATED" | "UPDATED" | "SKIPPED" | "REVIEW_REQUIRED";
   error?: string;
 }

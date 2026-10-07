@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowUpRight, Building2, CheckCircle2, Clock3, DatabaseZap, LockKeyhole, RefreshCw, ShieldCheck, Unplug, Briefcase } from "lucide-react";
+import { ArrowUpRight, Building2, DatabaseZap, LockKeyhole, RefreshCw, Unplug, Briefcase } from "lucide-react";
 import { useClientAccount } from "@/context/ClientAccountContext";
 import { readApiJson } from "@/lib/http/client-api";
 import type { IntegrationConnectionSummary } from "@/lib/models/canonical";
@@ -336,31 +336,6 @@ export default function IntegrationsAppCenter() {
         </MultiCrmCard>
       </div>
 
-      {/* Security and Other Providers */}
-      <div className="grid gap-6 xl:grid-cols-12">
-        <MultiCrmCard className="space-y-4 xl:col-span-8">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-emerald-600" />
-            <h2 className="text-base font-semibold text-slate-900">Architecture & Security Guarantees</h2>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 text-xs text-slate-600">
-            <SecurityLine text="HubSpot is the Agency CRM and sole source of truth for Unified Leads" />
-            <SecurityLine text="Client selection NEVER alters the Unified Lead Directory" />
-            <SecurityLine text="Zoho CRM credentials are encrypted server-side per client account" />
-            <SecurityLine text="Agents inherit access automatically without performing Zoho OAuth" />
-            <SecurityLine text="Closed deals trigger idempotent handoffs without duplicating records" />
-            <SecurityLine text="Downstream client CRM errors never reverse agency sales status" />
-          </div>
-        </MultiCrmCard>
-
-        <MultiCrmCard className="space-y-3 xl:col-span-4">
-          <h2 className="text-base font-semibold text-slate-900">Future Operational Integrations</h2>
-          <div className="space-y-2">
-            <FutureCard name="Twilio (Client Voice / SMS)" />
-            <FutureCard name="Calendar (Client Scheduling)" />
-          </div>
-        </MultiCrmCard>
-      </div>
     </div>
   );
 }
@@ -372,30 +347,6 @@ function Metric({ label, value }: { label: string; value: string }) {
       <p className="mt-1 truncate text-xs font-medium text-slate-900" title={value}>
         {value}
       </p>
-    </div>
-  );
-}
-
-function SecurityLine({ text }: { text: string }) {
-  return (
-    <div className="flex items-center gap-2">
-      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-      <span>{text}</span>
-    </div>
-  );
-}
-
-function FutureCard({ name }: { name: string }) {
-  return (
-    <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-      <div className="flex items-center gap-2">
-        <Unplug className="h-4 w-4 text-slate-400" />
-        <span className="text-xs font-medium text-slate-700">{name}</span>
-      </div>
-      <span className="flex items-center gap-1 text-xs font-semibold text-slate-400">
-        <Clock3 className="h-3.5 w-3.5" />
-        STAGE 3
-      </span>
     </div>
   );
 }

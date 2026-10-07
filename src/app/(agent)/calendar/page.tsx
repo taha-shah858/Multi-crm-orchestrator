@@ -167,7 +167,7 @@ export default function CalendarPage() {
 
       <MultiCrmCard className="p-5 space-y-3">
         <h2 className="text-base font-semibold">Analyze a conversation</h2>
-        <p className="text-sm text-slate-500">Paste a prospect conversation. AI finds meeting agreement and proposed dates; you confirm the slot before anything is booked. Text is sent to Gemini for analysis.</p>
+        <p className="text-sm text-slate-500">Paste a prospect conversation. AI finds meeting agreement and proposed dates; you confirm the slot before anything is booked.</p>
         <label className="block text-sm">Prospect (optional)<select disabled={analyzing || isLoading} aria-label="Script prospect" value={scriptContact} onChange={e => setScriptContact(e.target.value)} className="ml-3 rounded border p-2"><option value="">Account-level meeting</option>{contacts.map(c => <option key={c.id} value={c.id}>{contactName(c)}</option>)}</select></label>
         <textarea disabled={analyzing || isLoading} aria-label="Conversation script" value={script} onChange={e => setScript(e.target.value)} maxLength={12000} rows={5} className="w-full rounded-lg border border-slate-200 p-3 text-sm" placeholder="Agent: Would you like to meet? Prospect: Yes, October 15 at 2pm works for me…" />
         <button disabled={analyzing || !script.trim() || !isClientAccountReady || isLoading} onClick={analyzeScript} className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-50">{analyzing ? "Analyzing…" : "Generate scheduling signal"}</button>

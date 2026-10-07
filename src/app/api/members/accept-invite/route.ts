@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { acceptMemberInvite, getInvitationDetails } from "@/lib/members/member-service";
-import { sessionCookieOptions } from "@/lib/auth/auth-service";
+import { deleteSession } from "@/lib/auth/auth-service";
 import { ACTIVE_CLIENT_ACCOUNT_COOKIE, SESSION_COOKIE } from "@/lib/auth/request-context";
 import { withApiErrorHandling } from "@/lib/http/api-response";
 
@@ -24,10 +24,10 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
 
-    response.cookies.set(SESSION_COOKIE, result.session.token, sessionCookieOptions);
-    if (result.defaultClientAccountId) {
-      response.cookies.set(ACTIVE_CLIENT_ACCOUNT_COOKIE, result.defaultClientAccountId, sessionCookieOptions);
-    }
+    // Clear a previous browser account so the invitation recipient signs in explicitly.
+    await deleteSession(request.cookies.get(SESSION_COOKIE)?.value);
+    response.cookies.delete(SESSION_COOKIE);
+    response.cookies.delete(ACTIVE_CLIENT_ACCOUNT_COOKIE);
 
     return response;
   });

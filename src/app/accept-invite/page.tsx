@@ -3,11 +3,11 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, CheckCircle2, ShieldCheck, UserCheck, AlertTriangle } from "lucide-react";
+import { CheckCircle2, ShieldCheck, AlertTriangle } from "lucide-react";
 import { PASSWORD_REQUIREMENTS } from "@/lib/auth/credential-policy";
 import BrandIcon from "@/components/ui/BrandIcon";
 import { PasswordInput } from "@/components/ui/password-input";
-import { workspaceHomeForRole } from "@/lib/auth/roles";
+import { workspaceRoleForUserRole } from "@/lib/auth/roles";
 import type { AuthenticatedUser } from "@/lib/models/canonical";
 
 export default function AcceptInvitePage() {
@@ -30,9 +30,9 @@ function AcceptInviteContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token") || "";
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(token));
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(token ? null : "No invitation token provided in the link.");
 
   const [invitationInfo, setInvitationInfo] = useState<{
     email: string;
@@ -46,8 +46,6 @@ function AcceptInviteContent() {
 
   useEffect(() => {
     if (!token) {
-      setError("No invitation token provided in the link.");
-      setLoading(false);
       return;
     }
 
@@ -96,7 +94,7 @@ function AcceptInviteContent() {
         throw new Error(payload?.error?.message ?? "Failed to accept invitation.");
       }
 
-      router.replace(workspaceHomeForRole(payload.user.role));
+      router.replace(`/login?role=${workspaceRoleForUserRole(payload.user.role)}&invited=true`);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred.");
@@ -172,6 +170,7 @@ function AcceptInviteContent() {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              <p className="text-xs text-slate-600">After accepting, sign in with your invited email and new password. Your administrator will assign your client accounts.</p>
               <div>
                 <label className={labelCls}>Your Full Name</label>
                 <input

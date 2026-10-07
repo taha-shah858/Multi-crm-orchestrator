@@ -63,8 +63,20 @@ async function main() {
     const client = await prisma.clientAccount.create({ data: { organizationId: admin.organizationId, name: marker + ' client', brandName: marker } });
     const agentEmail = marker + '-agent@example.test'; emails.push(agentEmail);
     await inviteMember(admin, { email: agentEmail, role: 'AGENT' });
-    const invited = await acceptMemberInvite({ token: invitationFor(agentEmail), name: 'Invited Agent', password: 'Abcd1!x' });
+    const { POST: acceptInviteRoute } = require('../src/app/api/members/accept-invite/route.ts');
+    const { NextRequest } = require('next/server');
+    const invitationResponse = await acceptInviteRoute(new NextRequest('http://localhost:3000/api/members/accept-invite', {
+      method: 'POST', headers: { 'content-type': 'application/json', cookie: 'multi_crm_session=' + session.session.token + '; multi_crm_active_client=' + client.id },
+      body: JSON.stringify({ token: invitationFor(agentEmail), name: 'Invited Agent', password: 'Abcd1!x' }),
+    }));
+    assert.equal(invitationResponse.status, 201);
+    const invited = await invitationResponse.json();
+    assert.equal(invitationResponse.cookies.get('multi_crm_session').value, '');
+    assert.equal(invitationResponse.cookies.get('multi_crm_active_client').value, '');
+    assert.equal(await findAuthenticatedUser(session.session.token), null);
     assert.equal(invited.user.organizationId, admin.organizationId);
+    assert.equal(await prisma.authSession.count({ where: { userId: invited.user.id } }), 0);
+    const invitedLogin = await signIn({ email: agentEmail, password: 'Abcd1!x', workspaceRole: 'AGENT' });
     assert.equal(await prisma.clientAssignment.count({ where: { userId: invited.user.id } }), 0);
     await assert.rejects(acceptMemberInvite({ token: invitationFor(agentEmail), name: 'Invited Agent', password: 'Abcd1!x' }));
     await prisma.clientAssignment.create({ data: { userId: invited.user.id, clientAccountId: client.id, hourlyRateCents: 4500 } });
@@ -76,7 +88,7 @@ async function main() {
     const log = await prisma.timeLog.create({ data: { organizationId: admin.organizationId, clientAccountId: client.id, userId: invited.user.id, minutes: 10, description: 'Preserve fixture history', loggedAt: new Date() } });
     await revokeMember(admin, invited.user.id);
     assert.equal((await prisma.user.findUnique({ where: { id: invited.user.id } })).status, 'SUSPENDED');
-    assert.equal(await findAuthenticatedUser(invited.session.token), null);
+    assert.equal(await findAuthenticatedUser(invitedLogin.session.token), null);
     assert.ok(await prisma.timeLog.findUnique({ where: { id: log.id } }));
 
     failedDelivery = true;

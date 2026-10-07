@@ -40,7 +40,9 @@ function LoginContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [verifiedNotice] = useState<string | null>(
-    isVerified ? "Account verified successfully! Please enter your password to sign in and start working." : null
+    searchParams.get("invited") === "true"
+      ? "Invitation accepted. Sign in with your invited email and new password. Your administrator will assign your client accounts."
+      : isVerified ? "Account verified successfully! Please enter your password to sign in and start working." : null
   );
 
 

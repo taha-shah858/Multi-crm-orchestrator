@@ -48,7 +48,7 @@ interface AgentSale {
   clientAccount: { id: string; name: string } | null;
   contact: Contact | null;
   clickUp: {
-    status: "COMPLETED" | "PENDING" | "FAILED" | "NOT_CONNECTED";
+    status: "SYNCED" | "SYNCING" | "RETRYING" | "PENDING" | "FAILED" | "NOT_CONNECTED";
     taskId: string | null;
     taskUrl: string | null;
     lastSyncedAt: string | null;
@@ -123,7 +123,8 @@ export default function OperationsPage() {
   const currentClientId = useRef(activeClientAccount.id);
   currentClientId.current = activeClientAccount.id;
 
-  const loadAll = async (controller?: AbortController) => {
+  const loadAll = async (controller?: AbortController, reportErrors = true) => {
+    const clientId = currentClientId.current;
     try {
       const signal = controller?.signal;
       const [commissionsRes, contactsRes, salesRes] = await Promise.all([
@@ -138,11 +139,11 @@ export default function OperationsPage() {
         salesRes.json(),
       ]);
 
-      if (signal?.aborted) return;
+      if (signal?.aborted || clientId !== currentClientId.current) return;
       if (commData.success) {
         setCommissions(commData.commissions);
         setSummary(commData.summary);
-      } else {
+      } else if (reportErrors) {
         setMessage({ tone: "error", text: commData.error?.message ?? "Commission data could not be loaded." });
       }
       if (contactsPayload.success) {
@@ -242,7 +243,7 @@ export default function OperationsPage() {
     setSyncingDealId(saleId);
     setMessage(null);
     try {
-      const res = await fetch("/api/agent-sales/sync", {
+      const res = await fetch(`/api/agent-sales/${encodeURIComponent(saleId)}/sync`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dealId: saleId }),
@@ -250,7 +251,7 @@ export default function OperationsPage() {
       const data = await res.json();
       if (data.success) {
         setMessage({ tone: "success", text: "Deal successfully synced to ClickUp!" });
-        await loadAll();
+        await loadAll(undefined, false);
       } else {
         setMessage({ tone: "error", text: data?.error?.message || "Failed to sync deal to ClickUp." });
       }
@@ -265,15 +266,15 @@ export default function OperationsPage() {
     setIsWorking(true);
     setMessage(null);
     try {
-      const res = await fetch("/api/agent-sales/sync", {
+      const res = await fetch("/api/agent-sales", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ syncAll: true }),
       });
       const data = await res.json();
       if (data.success) {
-        setMessage({ tone: "success", text: `Sync complete! Synced: ${data.syncedCount}, Failed: ${data.failedCount}.` });
-        await loadAll();
+        setMessage({ tone: data.failedCount ? "error" : "success", text: `Sync finished. Synced: ${data.syncedCount}. Needs attention: ${data.failedCount}.` });
+        await loadAll(undefined, false);
       } else {
         setMessage({ tone: "error", text: data?.error?.message || "Sync failed." });
       }
@@ -407,7 +408,7 @@ export default function OperationsPage() {
         <div className="max-w-2xl">
           <div className="flex items-center gap-2">
             <WalletCards className="h-5 w-5 text-blue-600" />
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Sales Operations — Agent Revenue & Commission</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Agent Revenue & Commission</h1>
           </div>
           <p className="mt-1 text-sm font-normal text-slate-600">
             Personal sales tracker, commission realization, and ClickUp work-management layer.
@@ -530,15 +531,15 @@ export default function OperationsPage() {
                       {money(sale.expectedRevenueCents, sale.currency)}
                     </td>
                     <td className="py-3 px-3 text-center">
-                      {sale.clickUp.status === "COMPLETED" ? (
+                      {sale.clickUp.status === "SYNCED" ? (
                         <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-semibold text-emerald-800">
                           <CheckCircle2 className="h-3 w-3 text-emerald-600" /> Synced
                         </span>
                       ) : sale.clickUp.status === "FAILED" ? (
                         <span className="inline-flex items-center gap-1 rounded-full bg-red-50 border border-red-200 px-2 py-0.5 text-xs font-semibold text-red-700" title={sale.clickUp.lastSyncError || "Failed"}>
-                          Failed
+                          {sale.clickUp.taskId ? "Update failed" : "Failed"}
                         </span>
-                      ) : sale.clickUp.status === "PENDING" ? (
+                      ) : ["PENDING", "SYNCING", "RETRYING"].includes(sale.clickUp.status) ? (
                         <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-xs font-semibold text-amber-800">
                           Pending
                         </span>
@@ -569,7 +570,7 @@ export default function OperationsPage() {
                         >
                           {syncingDealId === sale.id ? (
                             <RefreshCw className="h-3 w-3 animate-spin inline" />
-                          ) : sale.clickUp.status === "COMPLETED" ? (
+                          ) : sale.clickUp.status === "SYNCED" ? (
                             "Re-sync"
                           ) : (
                             "Sync"

@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import {
   Briefcase,
   Users,
@@ -669,17 +668,12 @@ export default function ClientCrmPage() {
             </div>
             <div>
               <p className="text-sm font-bold text-slate-900 font-sans">
-                Agency Sales → Client Operations Architecture
+                Contacts for {activeClientAccount.name}
               </p>
-              <p className="font-sans text-sm font-normal text-slate-700 leading-relaxed mt-0.5">
-                Contacts in the Unified Lead Directory matching <span className="text-blue-700 font-semibold">{activeClientAccount.name}</span> by company or brand appear directly here. Refresh reads the directory. Contacts are sent to Zoho only through a deal handoff; edit their details in the Unified Lead Directory.
+              <p className="font-sans text-xs text-slate-500 leading-relaxed mt-1">
+                Company and brand matches from the Unified Lead Directory. Refresh updates this list; closing and handing off a deal sends it to Zoho.
               </p>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-sans px-2.5 py-1 rounded-md bg-white text-slate-600 border border-slate-200 font-medium">
-              Client ID: {activeClientAccount.id.slice(0, 8)}...
-            </span>
           </div>
         </div>
       </div>
@@ -724,7 +718,7 @@ export default function ClientCrmPage() {
               title="Create a new deal for this client account"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>+ Create Deal</span>
+              <span>Create Deal</span>
             </button>
           )}
 
@@ -911,7 +905,7 @@ export default function ClientCrmPage() {
             )}
           </MultiCrmCard>
         ) : (
-          <div className="grid grid-cols-1 gap-3">
+          <div className="grid grid-cols-1 gap-4">
             {filteredRecords.map((record) => {
               const contactDeals =
                 record.recordType === "CONTACT" && Array.isArray(record.customFields?.deals)
@@ -919,9 +913,9 @@ export default function ClientCrmPage() {
                   : [];
 
               return (
-                <MultiCrmCard
+                <div
                   key={record.id}
-                  className="p-4 hover:border-emerald-500/40 transition-all space-y-3"
+                  className="rounded-lg border border-slate-200 bg-white px-5 py-4 space-y-3"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="space-y-1">
@@ -933,20 +927,8 @@ export default function ClientCrmPage() {
                             ? record.name || "Untitled Deal"
                             : record.name || "Untitled Note"}
                         </span>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-sans bg-emerald-50 text-emerald-800 border border-emerald-200">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-sans bg-slate-100 text-slate-600 border border-slate-200">
                           {record.provider || "ZOHO"}
-                        </span>
-                        {record.customFields?.source === "UNIFIED_DIRECTORY" && (
-                          <span
-                            className="px-2 py-0.5 rounded-full text-[10px] font-sans bg-cyan-500/15 text-cyan-300 border border-cyan-500/35 flex items-center gap-1"
-                            title={String(record.customFields?.matchedBy || "Matched from Unified Directory")}
-                          >
-                            <Users className="w-2.5 h-2.5 text-cyan-400" />
-                            <span>Unified Directory</span>
-                          </span>
-                        )}
-                        <span className="text-[10px] font-sans text-crm-text-muted">
-                          Ext ID: #{record.externalId || "local"}
                         </span>
                         {record.customFields?.source === "LOCAL_AGENCY_DEAL" && <span className="text-[10px] text-slate-500">Agency deal · Local record</span>}
                       </div>
@@ -962,11 +944,6 @@ export default function ClientCrmPage() {
                                 {record.status}
                               </span>
                             )}
-                            {record.customFields?.matchedBy && (
-                              <span className="text-[10px] font-sans text-cyan-400/90 italic">
-                                ({String(record.customFields.matchedBy)})
-                              </span>
-                            )}
                           </>
                         )}
                         {record.recordType === "DEAL" && (
@@ -979,7 +956,7 @@ export default function ClientCrmPage() {
                               </span>
                             )}
                             {record.customFields?.contactName && (
-                              <span className="text-[10px] font-sans text-cyan-400">
+                              <span className="text-[10px] font-sans text-slate-500">
                                 Contact: {String(record.customFields.contactName)}
                               </span>
                             )}
@@ -997,19 +974,19 @@ export default function ClientCrmPage() {
                         <button
                           type="button"
                           onClick={() => openCreateDealForContact(record)}
-                          className="px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-xs font-sans text-emerald-800 hover:bg-emerald-500/30 transition-all flex items-center gap-1.5 cursor-pointer font-semibold shadow-sm"
+                          className="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-sans text-slate-800 hover:bg-slate-50 transition-colors flex items-center gap-1.5 cursor-pointer font-semibold"
                           title={`Create a new deal for ${record.name || record.email || "this contact"}`}
                         >
-                          <Plus className="w-3.5 h-3.5 text-emerald-800" />
-                          <span>+ Create Deal</span>
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Create Deal</span>
                         </button>
                       )}
 
-                      {record.recordType === "CONTACT" && record.customFields?.source === "UNIFIED_DIRECTORY" ? <Link href="/leads" className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs text-blue-700 hover:bg-blue-50">Edit in Unified Lead Directory</Link> : <button
+                      {!(record.recordType === "CONTACT" && record.customFields?.source === "UNIFIED_DIRECTORY") && <button
                         onClick={() => openEditor(record)}
                         className="px-3 py-1.5 rounded-lg bg-crm-inner border border-crm-border-strong text-xs font-sans text-crm-text hover:text-emerald-800 hover:border-emerald-500/50 transition-all flex items-center gap-1.5 cursor-pointer"
                       >
-                        <Edit3 className="w-3 h-3 text-emerald-800" />
+                        <Edit3 className="w-3 h-3 text-slate-400" />
                         <span>Edit & Sync</span>
                       </button>}
 
@@ -1021,7 +998,7 @@ export default function ClientCrmPage() {
                             className="px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/50 text-xs font-sans text-emerald-800 hover:bg-emerald-500/30 transition-all flex items-center gap-1.5 cursor-pointer font-semibold shadow-sm"
                             title={`Mark deal as Closed Won and hand off to ${providerDisplayName}`}
                           >
-                            <Sparkles className="w-3.5 h-3.5 text-emerald-800" />
+                            <Sparkles className="w-3.5 h-3.5" />
                             <span>Close & Handoff to {providerDisplayName}</span>
                           </button>
                         ) : (
@@ -1034,7 +1011,7 @@ export default function ClientCrmPage() {
                             className="px-2.5 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-sans text-emerald-800 hover:bg-emerald-500/20 transition-all flex items-center gap-1 cursor-pointer"
                             title="View deal handoff details in Deal Handoffs tab"
                           >
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-800" />
+                            <CheckCircle2 className="w-3.5 h-3.5" />
                             <span>Won (View Handoff)</span>
                           </button>
                         )
@@ -1047,7 +1024,7 @@ export default function ClientCrmPage() {
                     <div className="pt-2.5 border-t border-crm-border-strong/70 flex items-center justify-between gap-2 flex-wrap">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-[10px] font-sans text-crm-text-muted flex items-center gap-1">
-                          <DollarSign className="w-3 h-3 text-emerald-800" /> Associated Deals:
+                          <DollarSign className="w-3 h-3 text-slate-400" /> Associated Deals:
                         </span>
                         {contactDeals.length === 0 ? (
                           <span className="text-[11px] font-sans text-crm-text-muted italic">
@@ -1057,15 +1034,15 @@ export default function ClientCrmPage() {
                           contactDeals.map((deal) => (
                             <div
                               key={deal.id}
-                              className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-crm-inner border border-crm-border-strong text-[11px] font-sans"
+                              className="flex items-center gap-2 py-1 text-xs font-sans flex-wrap"
                             >
                               <span className="font-semibold text-crm-text">{deal.title}</span>
-                              <span className="text-emerald-800 font-bold">${deal.amount}</span>
+                              <span className="text-slate-700 font-semibold tabular-nums">${deal.amount}</span>
                               <span
                                 className={`text-[10px] px-1.5 py-0.2 rounded border ${
                                   deal.status === "CLOSED_WON"
-                                    ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                                    : "bg-amber-500/10 text-amber-300 border-amber-500/30"
+                                    ? "bg-slate-100 text-slate-700 border-slate-200"
+                                    : "bg-slate-50 text-slate-600 border-slate-200"
                                 }`}
                               >
                                 {deal.status === "CLOSED_WON" ? "Won" : deal.status || "Open"}
@@ -1074,10 +1051,10 @@ export default function ClientCrmPage() {
                                 <button
                                   type="button"
                                   onClick={() => openHandoffForContactDeal(deal, record.name)}
-                                  className="ml-1 px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-800 hover:bg-emerald-500/30 text-[10px] font-semibold flex items-center gap-1 cursor-pointer transition-all"
+                                  className="ml-1 px-2 py-1 rounded border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-medium flex items-center gap-1 cursor-pointer transition-colors"
                                   title={`Close and hand off ${deal.title} to ${providerDisplayName}`}
                                 >
-                                  <Sparkles className="w-2.5 h-2.5 text-emerald-800" />
+                                  <Sparkles className="w-2.5 h-2.5 text-slate-500" />
                                   <span>Close & Handoff to {providerDisplayName}</span>
                                 </button>
                               )}
@@ -1085,18 +1062,9 @@ export default function ClientCrmPage() {
                           ))
                         )}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => openCreateDealForContact(record)}
-                        className="px-2 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-500/20 text-[10px] font-sans font-semibold flex items-center gap-1 cursor-pointer transition-all"
-                        title={`Create a deal for ${record.name || "this contact"}`}
-                      >
-                        <Plus className="w-2.5 h-2.5" />
-                        <span>+ Add Deal</span>
-                      </button>
                     </div>
                   )}
-                </MultiCrmCard>
+                </div>
               );
             })}
           </div>

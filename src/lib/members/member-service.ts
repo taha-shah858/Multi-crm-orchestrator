@@ -2,7 +2,7 @@ import "server-only";
 
 import { prisma } from "@/lib/db/prisma";
 import { AppError } from "@/lib/errors/app-error";
-import { createSession, hashPassword, toAuthenticatedUser } from "@/lib/auth/auth-service";
+import { hashPassword, toAuthenticatedUser } from "@/lib/auth/auth-service";
 import { generateCryptoToken, hashSha256, sendInviteEmail } from "@/lib/email/email-service";
 import { acceptInviteSchema, inviteMemberSchema, formatZodError } from "@/lib/auth/validations";
 import type { AuthenticatedUser } from "@/lib/models/canonical";
@@ -240,10 +240,8 @@ export async function acceptMemberInvite(input: Record<string, unknown>) {
     return { user, defaultClientId: undefined };
   });
 
-  const session = await createSession(result.user.id);
   return {
     user: toAuthenticatedUser(result.user),
-    session,
     defaultClientAccountId: result.defaultClientId,
   };
 }

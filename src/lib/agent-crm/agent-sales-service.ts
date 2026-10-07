@@ -19,7 +19,9 @@ import {
 import type {
   ClickUpDealTaskPayload,
   ClickUpSyncResult,
+  ClickUpTaskResponse,
 } from "@/lib/integrations/clickup/types";
+import { assertClientAccess } from "@/lib/auth/auth-service";
 import type { AuthenticatedUser } from "@/lib/models/canonical";
 
 export const DEFAULT_AGENCY_COMMISSION_RATE = 10.0;
@@ -97,6 +99,10 @@ export async function syncDealToClickUp(
   agentId: string,
   options?: { throwOnError?: boolean },
 ): Promise<ClickUpSyncResult> {
+  const agent = await prisma.user.findUnique({ where: { id: agentId } });
+  if (!agent || agent.status !== "ACTIVE" || agent.role !== "AGENT") {
+    throw new AppError("FORBIDDEN", 403, "Agent access required.", "Only the assigned sales agent can sync this deal.");
+  }
   const deal = await prisma.deal.findUnique({
     where: { id: dealId },
     include: {
@@ -118,6 +124,12 @@ export async function syncDealToClickUp(
     if (options?.throwOnError) throw new AppError("DEAL_NOT_FOUND", 404, "Deal not found.", "Select a valid deal.");
     return { success: false, action: "SKIPPED", error: "Deal not found" };
   }
+
+  if (deal.organizationId !== agent.organizationId || deal.status !== "CLOSED_WON" ||
+    (deal.userId !== agentId && !(deal.userId === null && deal.handoffs.some(handoff => handoff.agentId === agentId)))) {
+    throw new AppError("FORBIDDEN", 403, "Deal is outside agent access.", "Only sync your own closed deals.");
+  }
+  await assertClientAccess({ ...agent, role: "AGENT" }, deal.clientAccountId);
 
   // Ensure commission snapshot is present
   const commissionRate = deal.commissionRate ?? calculateEffectiveCommissionRate({
@@ -194,6 +206,8 @@ export async function syncDealToClickUp(
     },
   }).catch(() => null);
 
+  let confirmedTask: ClickUpTaskResponse | undefined;
+  let destinationListId: string | undefined;
   try {
     const auth = await resolveClickUpCredentials(connection);
 
@@ -216,9 +230,8 @@ export async function syncDealToClickUp(
       }
     }
 
-    if (!listId) {
-      listId = "default-list";
-    }
+    if (!listId) throw new AppError("CLICKUP_SYNC_FAILED", 422, "No ClickUp destination list.", "Choose a ClickUp destination list in Sales Operations.");
+    destinationListId = listId;
 
     const latestHandoff = deal.handoffs[0];
     const customerName = deal.contact
@@ -271,6 +284,7 @@ export async function syncDealToClickUp(
       // Update existing task (Idempotency guarantee)
       const updateInput = buildClickUpTaskUpdateInput(payload);
       taskResponse = await updateClickUpTask(auth, existingRecord.clickUpTaskId, updateInput);
+      confirmedTask = taskResponse;
       action = "UPDATED";
 
       await prisma.agentClickUpRecord.update({
@@ -288,6 +302,7 @@ export async function syncDealToClickUp(
       // Create new task
       const createInput = buildClickUpTaskCreateInput(payload);
       taskResponse = await createClickUpTask(auth, listId, createInput);
+      confirmedTask = taskResponse;
       action = "CREATED";
 
       await prisma.agentClickUpRecord.upsert({
@@ -352,7 +367,9 @@ export async function syncDealToClickUp(
       action,
     };
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : "ClickUp sync failed";
+    const errorMsg = confirmedTask
+      ? "ClickUp saved the task, but its local sync confirmation could not be saved. Check the task before retrying."
+      : error instanceof AppError ? error.safeMessage : "ClickUp could not confirm this sync. Check the task before retrying.";
     console.error("[ClickUp Sync] Error:", errorMsg);
 
     // Record failure in AgentClickUpRecord (fault isolation)
@@ -361,13 +378,16 @@ export async function syncDealToClickUp(
       update: {
         status: "FAILED",
         lastSyncError: errorMsg,
+        ...(confirmedTask ? { clickUpTaskId: confirmedTask.id, taskUrl: confirmedTask.url, clickUpListId: destinationListId } : {}),
       },
       create: {
         organizationId: deal.organizationId,
         agentId,
         dealId,
         clientAccountId: deal.clientAccountId,
-        clickUpTaskId: "",
+        clickUpTaskId: confirmedTask?.id ?? "",
+        taskUrl: confirmedTask?.url,
+        clickUpListId: destinationListId,
         status: "FAILED",
         commissionCents: expectedRevenueCents,
         commissionRate,
@@ -394,13 +414,15 @@ export async function syncDealToClickUp(
         "CLICKUP_SYNC_FAILED",
         500,
         `ClickUp synchronization failed: ${errorMsg}`,
-        "ClickUp sync failed. You can retry it from Sales Operations.",
+        errorMsg,
       );
     }
 
     return {
       success: false,
-      action: "SKIPPED",
+      action: confirmedTask ? "REVIEW_REQUIRED" : "SKIPPED",
+      taskId: confirmedTask?.id,
+      taskUrl: confirmedTask?.url,
       error: errorMsg,
     };
   }
