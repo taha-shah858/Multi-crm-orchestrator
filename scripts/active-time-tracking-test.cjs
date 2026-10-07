@@ -92,6 +92,17 @@ async function databaseChecks() {
   assert.equal((await track(1, randomUUID(), 600)).clientTotalSeconds, 39);
   passed("Each client's cumulative timer resumes from 19 seconds after switching and survives reloads without charging away time");
 
+  await reset(); tab = randomUUID(); await track(1, tab, 0);
+  const stopped = await track(2, tab, 19, "PAUSE", ids.client, { reason: "STOP" });
+  assert.equal(stopped.clientTotalSeconds, 19); assert.equal(stopped.isRunning, false);
+  const restarted = await track(3, tab, 19);
+  assert.equal(restarted.trackedSeconds, 0); assert.equal(restarted.clientTotalSeconds, 19);
+  const nextSession = await track(4, tab, 29);
+  assert.equal(nextSession.trackedSeconds, 10); assert.equal(nextSession.clientTotalSeconds, 29);
+  assert.notEqual(nextSession.timeLogId, stopped.timeLogId);
+  assert.equal(await prisma.timeLog.count({ where: { organizationId: ids.org } }), 2);
+  passed("Stop saves the exact partial session, starts a new session from zero, and preserves the client total");
+
   await reset(); tab = randomUUID();
   await Promise.all(Array.from({ length: 12 }, () => track(1, tab, 0)));
   await Promise.all(Array.from({ length: 12 }, () => track(2, tab, 20)));
@@ -276,6 +287,18 @@ async function browserChecks() {
   restoreNow = 5000; assert.equal(restored.getState().seconds, 24);
   const paused = browserFixture(true); paused.controller.restoreTotal(19); await paused.controller.tick(); assert.equal(paused.controller.getState().seconds, 19);
   passed("Browser display uses cumulative client total plus current seconds, including restored manually paused timers");
+  let stopNow = 0; let cumulative = 19;
+  const stopInputs = [];
+  const stoppingController = new ActiveTimeController({ clientAccountId: "client", tabId: randomUUID(), now: () => stopNow, available: () => "ACTIVE", onChange: () => {}, onSaved: () => {},
+    send: async input => { stopInputs.push(input); if (input.action === "PAUSE") cumulative += 5; return { clientAccountId: "client", trackedSeconds: input.action === "PAUSE" ? 5 : 0, clientTotalSeconds: cumulative, isRunning: input.action === "HEARTBEAT", timeLogId: null, ignored: false }; },
+  });
+  await stoppingController.tick(); stopNow = 5000; await stoppingController.stopAndRestart();
+  assert.deepEqual(stopInputs.map(input => input.action), ["HEARTBEAT", "PAUSE", "HEARTBEAT"]);
+  assert.equal(stopInputs[1].reason, "STOP"); assert.equal(stoppingController.getState().seconds, 24);
+  assert.equal(stoppingController.getState().sessionSeconds, 0);
+  const failure = new ActiveTimeController({ clientAccountId: "client", tabId: randomUUID(), now: () => 0, available: () => "ACTIVE", onChange: () => {}, onSaved: () => {}, send: async () => { throw new Error("Could not save"); } });
+  await failure.stopAndRestart(); assert.equal(failure.getState().status, "ERROR");
+  passed("Stop queues saving before restarting; a failed save cannot report a successful restart");
   let f = browserFixture(); await f.controller.tick();
   assert.equal(f.controller.getState().status, "RUNNING");
   f.now = 20000; await f.controller.tick(); f.now = 120000; await f.controller.tick();

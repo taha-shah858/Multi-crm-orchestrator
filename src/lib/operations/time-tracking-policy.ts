@@ -2,7 +2,7 @@ export const TIME_HEARTBEAT_MS = 20_000;
 export const TIME_IDLE_MS = 120_000;
 export const TIME_MAX_GAP_MS = 60_000;
 
-export type TrackingReason = "IDLE" | "HIDDEN" | "MANUAL" | "SWITCH" | "LEAVING" | "OFFLINE";
+export type TrackingReason = "IDLE" | "HIDDEN" | "MANUAL" | "SWITCH" | "LEAVING" | "OFFLINE" | "STOP";
 export interface TimeTrackingInput {
   action: "HEARTBEAT" | "PAUSE";
   clientAccountId: string;

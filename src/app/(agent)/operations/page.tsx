@@ -27,15 +27,12 @@ import { MultiCrmCard, MultiCrmInnerPanel, MultiCrmTag } from "@/components/ui/M
 import { useClientAccount } from "@/context/ClientAccountContext";
 import type { CurrencyTotals } from "@/lib/operations/reconciliation";
 import { ReconciliationControls, currencySummary, downloadCommissionReport, reportQuery, type ReportDates } from "@/components/operations/ReconciliationControls";
-import { TIME_LOG_UPDATED_EVENT } from "@/components/operations/ActiveTimeTracker";
-import { effectiveTimeSeconds, formatTrackedTime } from "@/lib/operations/time-tracking-policy";
 
 type CommissionStatus = "PENDING" | "PARTIALLY_PAID" | "PAID";
 type LedgerType = "PAYMENT" | "ADJUSTMENT";
 interface Contact { id: string; firstName: string; lastName: string; company: string | null; email?: string | null; }
 interface LedgerEntry { id: string; type: "EXPECTED" | LedgerType; amountCents: number; note: string; occurredAt: string; }
 interface Commission { id: string; expectedCents: number; receivedCents: number; currency: string; status: CommissionStatus; source: "MANUAL" | "CRM"; notes: string | null; isManualOverride: boolean; deal: { id: string; title: string; valueCents: number; commissionRate: number | null; status: string; contact: Contact | null } | null; ledgerEntries: LedgerEntry[]; }
-interface TimeLog { id: string; minutes: number; trackedSeconds: number; source: "AUTO" | "MANUAL"; description: string; loggedAt: string; isManualOverride: boolean; contact: Contact | null; }
 interface Summary { currencyTotals: CurrencyTotals[]; recordCount: number; expectedCents: number; receivedCents: number; pendingCents: number; dealValueCents: number; closedDeals: number; activeSeconds: number; activeMinutes: number; billableHours: number; }
 
 interface AgentSale {
@@ -77,12 +74,6 @@ const money = (cents: number, currency = "USD") =>
 const dateTime = (value: string) =>
   new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 
-const localDateTimeInput = (value: string | Date) => {
-  const date = new Date(value);
-  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
-  return date.toISOString().slice(0, 16);
-};
-
 const contactName = (contact: Contact | null) =>
   contact ? `${contact.firstName} ${contact.lastName}` : "Off-platform / account-level";
 
@@ -93,7 +84,6 @@ export default function OperationsPage() {
   const { activeClientAccount, isClientAccountReady } = useClientAccount();
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [reportDates, setReportDates] = useState<ReportDates>({ from: "", to: "" });
-  const [timeLogs, setTimeLogs] = useState<TimeLog[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [agentSales, setAgentSales] = useState<AgentSale[]>([]);
   const [clickUpInfo, setClickUpInfo] = useState<ClickUpConnectionInfo>({
@@ -118,16 +108,14 @@ export default function OperationsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isWorking, setIsWorking] = useState(false);
   const [syncingDealId, setSyncingDealId] = useState<string | null>(null);
-  const [modal, setModal] = useState<"deal" | "ledger" | "time" | "workspace" | null>(null);
+  const [modal, setModal] = useState<"deal" | "ledger" | "workspace" | null>(null);
   const [selectedCommission, setSelectedCommission] = useState<Commission | null>(null);
-  const [editingTimeLog, setEditingTimeLog] = useState<TimeLog | null>(null);
   const [contactSearch, setContactSearch] = useState("");
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
 
   // Forms
   const [dealForm, setDealForm] = useState({ dealTitle: "", dealValue: "", expectedCommission: "", receivedCommission: "", currency: "USD", contactId: "", notes: "" });
   const [ledgerForm, setLedgerForm] = useState({ type: "PAYMENT" as LedgerType, amount: "", note: "" });
-  const [timeForm, setTimeForm] = useState({ description: "", minutes: "", loggedAt: "", contactId: "" });
   const [workspacesData, setWorkspacesData] = useState<{ teams: any[]; currentDestination: any } | null>(null);
   const [selectedListId, setSelectedListId] = useState("");
 
@@ -153,7 +141,6 @@ export default function OperationsPage() {
       if (signal?.aborted) return;
       if (commData.success) {
         setCommissions(commData.commissions);
-        setTimeLogs(commData.timeLogs);
         setSummary(commData.summary);
       } else {
         setMessage({ tone: "error", text: commData.error?.message ?? "Commission data could not be loaded." });
@@ -191,27 +178,7 @@ export default function OperationsPage() {
     return () => controller.abort();
   }, [activeClientAccount.id, isClientAccountReady, reportDates.from, reportDates.to]);
 
-  useEffect(() => {
-    if (!isClientAccountReady) return;
-    let request: AbortController | undefined;
-    const refreshTime = async (event: Event) => {
-      if ((event as CustomEvent<{ clientAccountId: string }>).detail.clientAccountId !== activeClientAccount.id) return;
-      request?.abort();
-      const controller = new AbortController();
-      request = controller;
-      try {
-        const response = await fetch(`/api/time-logs?${reportQuery({ from: reportDates.from, to: reportDates.to })}`, { cache: "no-store", signal: controller.signal });
-        const payload = await response.json();
-        if (controller.signal.aborted || !payload.success) return;
-        setTimeLogs(payload.timeLogs);
-        setSummary(previous => ({ ...previous, activeSeconds: payload.summary.activeSeconds, activeMinutes: payload.summary.activeMinutes, billableHours: payload.summary.billableHours }));
-      } catch { /* The next saved heartbeat or page refresh retries the ledger. */ }
-    };
-    window.addEventListener(TIME_LOG_UPDATED_EVENT, refreshTime);
-    return () => { request?.abort(); window.removeEventListener(TIME_LOG_UPDATED_EVENT, refreshTime); };
-  }, [activeClientAccount.id, isClientAccountReady, reportDates.from, reportDates.to]);
-
-  const selectedContact = contacts.find((contact) => contact.id === (modal === "deal" ? dealForm.contactId : timeForm.contactId)) ?? null;
+  const selectedContact = contacts.find((contact) => contact.id === dealForm.contactId) ?? null;
   const filteredContacts = useMemo(
     () => contacts.filter((contact) => `${contact.firstName} ${contact.lastName} ${contact.company ?? ""}`.toLowerCase().includes(contactSearch.toLowerCase())).slice(0, 6),
     [contacts, contactSearch]
@@ -221,17 +188,6 @@ export default function OperationsPage() {
     setDealForm({ dealTitle: "", dealValue: "", expectedCommission: "", receivedCommission: "", currency: "USD", contactId: "", notes: "" });
     setContactSearch("");
     setModal("deal");
-  };
-
-  const openTime = (timeLog?: TimeLog) => {
-    setEditingTimeLog(timeLog ?? null);
-    setTimeForm(
-      timeLog
-        ? { description: timeLog.description, minutes: String(timeLog.minutes), loggedAt: localDateTimeInput(timeLog.loggedAt), contactId: timeLog.contact?.id ?? "" }
-        : { description: "", minutes: "", loggedAt: localDateTimeInput(new Date()), contactId: "" }
-    );
-    setContactSearch("");
-    setModal("time");
   };
 
   const openWorkspaceModal = async () => {
@@ -433,19 +389,6 @@ export default function OperationsPage() {
     await loadAll();
   };
 
-  const submitTime = async (event: FormEvent) => {
-    event.preventDefault();
-    const data = await request(
-      editingTimeLog ? `/api/time-logs/${editingTimeLog.id}` : "/api/time-logs",
-      editingTimeLog ? "PATCH" : "POST",
-      { ...timeForm, contactId: timeForm.contactId || undefined, loggedAt: new Date(timeForm.loggedAt).toISOString() }
-    );
-    if (!data) return;
-    setModal(null);
-    setMessage({ tone: "success", text: editingTimeLog ? "Time log corrected." : "Manual time log saved." });
-    await loadAll();
-  };
-
   const exportCsv = async () => {
     try {
       await downloadCommissionReport(`/api/commissions/export?${reportQuery(reportDates)}`);
@@ -480,13 +423,13 @@ export default function OperationsPage() {
             <FileSpreadsheet className="mr-1.5 inline h-3.5 w-3.5 text-blue-600" />
             Export commissions CSV
           </button>
-          <button
-            onClick={() => openTime()}
+          <a
+            href="/time-audit"
             className="rounded-lg border border-slate-300 bg-white hover:bg-slate-50 px-3.5 py-2 text-sm font-medium text-slate-700 shadow-xs transition-colors cursor-pointer"
           >
             <Clock3 className="mr-1.5 inline h-4 w-4 text-slate-500" />
-            Log time
-          </button>
+            Time Audit
+          </a>
           <button
             onClick={openDeal}
             className="rounded-lg bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm font-medium text-white shadow-xs transition-colors cursor-pointer"
@@ -513,7 +456,7 @@ export default function OperationsPage() {
       )}
 
       {/* Top 4 Metric Cards */}
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <MultiCrmCard className="group p-5">
           <p className="text-[10px] font-sans uppercase tracking-wider text-crm-text-muted">Expected payout</p>
           <p className="mt-3 text-xl font-semibold tabular-nums text-crm-text">{currencySummary(summary.currencyTotals, "expectedCents")}</p>
@@ -532,11 +475,6 @@ export default function OperationsPage() {
           <p className="mt-2 text-[11px] text-crm-text-muted">Unpaid balance summed per deal</p>
         </MultiCrmCard>
 
-        <MultiCrmCard className="group p-5">
-          <p className="text-[10px] font-sans uppercase tracking-wider text-crm-text-muted">Account time</p>
-          <p className="mt-3 text-2xl font-semibold tabular-nums text-blue-600">{summary.billableHours}h</p>
-          <p className="mt-2 text-[11px] text-crm-text-muted">{summary.activeMinutes} minutes · automatic and manual logs</p>
-        </MultiCrmCard>
       </section>
 
       {/* Main Section: My Closed Deals Table & ClickUp Integration Card */}
@@ -754,40 +692,6 @@ export default function OperationsPage() {
             </div>
           </MultiCrmCard>
 
-          {/* Time Ledger Summary */}
-          <MultiCrmCard className="space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-              <div className="flex items-center gap-2">
-                <Clock3 className="h-4 w-4 text-blue-600" />
-                <h2 className="text-base font-semibold text-slate-900">Time ledger</h2>
-              </div>
-              <button onClick={() => openTime()} className="text-xs font-semibold text-blue-600 hover:underline cursor-pointer">
-                + Add
-              </button>
-            </div>
-            <p className="text-[10px] text-crm-text-muted">Focused work is tracked automatically. Pauses after two minutes of inactivity. Click an entry to correct it.</p>
-            <div className="max-h-96 space-y-2 overflow-y-auto">
-              {timeLogs.map((timeLog) => (
-                <button
-                  key={timeLog.id}
-                  onClick={() => openTime(timeLog)}
-                  className="block w-full rounded-lg border border-slate-200 bg-white p-3 text-left transition-colors hover:border-slate-300 hover:shadow-xs cursor-pointer"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="truncate text-xs font-semibold">{timeLog.description}</span>
-                    <span className="shrink-0 font-sans text-[10px] text-blue-600">{formatTrackedTime(effectiveTimeSeconds(timeLog))}</span>
-                  </div>
-                  <p className="mt-1 text-[10px] text-crm-text-muted">{timeLog.source === "AUTO" ? "Automatic" : "Manual"}{timeLog.isManualOverride ? " · Corrected" : ""} · min:sec</p>
-                  <p className="mt-1 text-[10px] font-sans text-crm-text-muted">
-                    {contactName(timeLog.contact)} · {dateTime(timeLog.loggedAt)}
-                  </p>
-                </button>
-              ))}
-              {!isLoading && !timeLogs.length && (
-                <p className="py-5 text-center text-xs text-slate-500">No time has been logged for this client.</p>
-              )}
-            </div>
-          </MultiCrmCard>
         </aside>
       </section>
 
@@ -911,8 +815,6 @@ export default function OperationsPage() {
                 ? submitDeal
                 : modal === "ledger"
                 ? submitLedger
-                : modal === "time"
-                ? submitTime
                 : (e) => { e.preventDefault(); void saveWorkspaceList(); }
             }
             className="my-auto w-full max-w-xl space-y-5 rounded-xl border border-slate-200 bg-white p-6 shadow-2xl"
@@ -926,9 +828,7 @@ export default function OperationsPage() {
                     ? "Post commission ledger entry"
                     : modal === "workspace"
                     ? "Select ClickUp Destination List"
-                    : editingTimeLog
-                    ? "Correct time log"
-                    : "Log account time"}
+                    : "Select ClickUp Destination List"}
                 </h2>
                 <p className="mt-1 text-xs text-slate-500">
                   Manual entries are persisted and audited.
@@ -1073,54 +973,14 @@ export default function OperationsPage() {
               </>
             )}
 
-            {modal === "time" && (
-              <>
-                {editingTimeLog?.source === "AUTO" && <p className="text-xs text-crm-text-muted">Measured {formatTrackedTime(editingTimeLog.trackedSeconds)} (min:sec). Your correction sets the report duration; the measured time stays available.</p>}
-                <label className="block space-y-1 text-xs font-sans">
-                  <span className="text-[10px] text-crm-text-muted">Work description</span>
-                  <input
-                    required
-                    value={timeForm.description}
-                    onChange={(event) => setTimeForm({ ...timeForm, description: event.target.value })}
-                    placeholder="e.g. Proposal review and client follow-up"
-                    className={inputCls}
-                  />
-                </label>
-                <div className="grid grid-cols-2 gap-4">
-                  <label className="space-y-1 block">
-                    <span className={labelCls}>Minutes</span>
-                    <input
-                      required
-                      type="number"
-                      min={editingTimeLog?.source === "AUTO" ? 0 : 1}
-                      max="1440"
-                      value={timeForm.minutes}
-                      onChange={(event) => setTimeForm({ ...timeForm, minutes: event.target.value })}
-                      className={inputCls}
-                    />
-                  </label>
-                  <label className="space-y-1 block">
-                    <span className={labelCls}>When</span>
-                    <input
-                      required
-                      type="datetime-local"
-                      value={timeForm.loggedAt}
-                      onChange={(event) => setTimeForm({ ...timeForm, loggedAt: event.target.value })}
-                      className={inputCls}
-                    />
-                  </label>
-                </div>
-              </>
-            )}
-
-            {(modal === "deal" || modal === "time") && (
+            {modal === "deal" && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className={labelCls}>Contact (optional)</span>
                   {selectedContact && (
                     <button
                       type="button"
-                      onClick={() => (modal === "deal" ? setDealForm({ ...dealForm, contactId: "" }) : setTimeForm({ ...timeForm, contactId: "" }))}
+                      onClick={() => setDealForm({ ...dealForm, contactId: "" })}
                       className="text-xs text-blue-600 hover:underline cursor-pointer"
                     >
                       Use account only
@@ -1149,8 +1009,7 @@ export default function OperationsPage() {
                           key={contact.id}
                           type="button"
                           onClick={() => {
-                            if (modal === "deal") setDealForm({ ...dealForm, contactId: contact.id });
-                            else setTimeForm({ ...timeForm, contactId: contact.id });
+                            setDealForm({ ...dealForm, contactId: contact.id });
                             setContactSearch("");
                           }}
                           className="block w-full rounded-md px-3 py-2 text-left text-xs hover:bg-slate-50 transition-colors cursor-pointer"
@@ -1196,11 +1055,7 @@ export default function OperationsPage() {
                   ? "Save deal"
                   : modal === "ledger"
                   ? "Post entry"
-                  : modal === "workspace"
-                  ? "Save destination"
-                  : editingTimeLog
-                  ? "Save correction"
-                  : "Save time log"}
+                  : "Save destination"}
               </button>
             </div>
           </form>

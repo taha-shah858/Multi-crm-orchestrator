@@ -1,17 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import Link from "next/link";
+import TimeLedgerEditor from "@/components/operations/TimeLedgerEditor";
 import { Clock3, Download, RefreshCw } from "lucide-react";
 import { useClientAccount } from "@/context/ClientAccountContext";
 import { TIME_LOG_UPDATED_EVENT } from "@/components/operations/ActiveTimeTracker";
 import { formatTrackedTime } from "@/lib/operations/time-tracking-policy";
 
-interface TimeReport {
+export interface TimeReport {
   hourlyRateCents: number | null; hourlyRateCurrency: string;
   clients: { id: string; name: string }[];
   summaries: { id: string; name: string; seconds: number; expectedPayCents: number | null; logCount: number }[];
-  logs: { id: string; clientAccountId: string; clientName: string; seconds: number; description: string; loggedAt: string; source: string; isManualOverride: boolean }[];
+  logs: { id: string; clientAccountId: string; clientName: string; seconds: number; minutes: number; trackedSeconds: number; contactId: string | null; description: string; loggedAt: string; source: string; isManualOverride: boolean }[];
   page: number; pageSize: number; logCount: number; totalSeconds: number; totalExpectedPayCents: number | null;
 }
 const field = "rounded-lg border border-crm-border bg-crm-bg px-3 py-2 text-sm text-crm-text";
@@ -27,6 +27,8 @@ export default function TimeAuditPage() {
   const [error, setError] = useState(""); const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false); const [saving, setSaving] = useState(false);
   const [hourlyRate, setHourlyRate] = useState(""); const [currency, setCurrency] = useState("USD");
+  const [editingLog, setEditingLog] = useState<TimeReport["logs"][number] | null>(null);
+  const [ledgerOpen, setLedgerOpen] = useState(false);
   const generation = useRef(0); const rateLoaded = useRef(false);
   const query = useCallback((wholeAgency = false) => {
     const params = new URLSearchParams();
@@ -40,7 +42,7 @@ export default function TimeAuditPage() {
     const current = ++generation.current;
     if (!silent) setLoading(true);
     try {
-      const response = await fetch(`/api/time-audit?${query()}`, { cache: "no-store" });
+      const response = await fetch(`/api/time-audit?${query()}`, { cache: "no-store", signal: AbortSignal.timeout(15000) });
       const payload = await response.json();
       if (!response.ok || !payload.success) throw new Error(payload.error?.message || "Time audit could not be loaded.");
       if (current !== generation.current) return;
@@ -73,6 +75,7 @@ export default function TimeAuditPage() {
   const visibleReport = loading || (!allClients && report?.summaries.some(client => client.id !== activeClientAccount.id)) ? null : report;
   const scope = allClients ? "All assigned clients" : activeClientAccount.name;
   const exportParams = query(true); exportParams.set("format", "csv"); exportParams.delete("page");
+  const unavailable = loading || !isClientAccountReady ? "Loading…" : error ? "Unavailable" : "No data";
   return <div className="space-y-6 p-6 md:p-8 text-crm-text">
     <header className="flex flex-wrap items-start justify-between gap-4">
       <div><h1 className="flex items-center gap-2 text-2xl font-semibold"><Clock3 className="h-6 w-6" />Time Audit</h1><p className="mt-2 text-sm text-crm-text-muted">Work time and expected hourly pay, separate from commissions.</p></div>
@@ -96,7 +99,7 @@ export default function TimeAuditPage() {
       <span className="pb-2 text-xs text-crm-text-muted">Leave dates empty for all time. CSV includes every assigned client and every matching log.</span>
     </section>
     <div className="grid gap-4 md:grid-cols-3">
-      {[ ["Client view", scope], ["Time spent", visibleReport ? formatTrackedTime(visibleReport.totalSeconds) : "Loading…"], ["Expected pay", visibleReport ? money(visibleReport.totalExpectedPayCents, visibleReport.hourlyRateCurrency) : "Loading…"] ].map(([label, value]) => <div key={label} className="rounded-xl border border-crm-border bg-crm-card p-5"><p className="text-sm text-crm-text-muted">{label}</p><p className="mt-2 text-xl font-semibold">{value}</p></div>)}
+      {[ ["Client view", scope], ["Time spent", visibleReport ? formatTrackedTime(visibleReport.totalSeconds) : unavailable], ["Expected pay", visibleReport ? money(visibleReport.totalExpectedPayCents, visibleReport.hourlyRateCurrency) : unavailable] ].map(([label, value]) => <div key={label} className="rounded-xl border border-crm-border bg-crm-card p-5"><p className="text-sm text-crm-text-muted">{label}</p><p className="mt-2 text-xl font-semibold">{value}</p></div>)}
     </div>
     <section className="overflow-x-auto rounded-xl border border-crm-border bg-crm-card p-5">
       <h2 className="mb-3 font-semibold">Time per client</h2>
@@ -104,10 +107,11 @@ export default function TimeAuditPage() {
       <p className="mt-3 text-xs text-crm-text-muted">Saved seconds, including manual logs and corrections. The top timer shows the current client&apos;s all-time total and pauses while you work on another client. Active seconds are saved at each heartbeat or pause.</p>
     </section>
     <section className="overflow-x-auto rounded-xl border border-crm-border bg-crm-card p-5">
-      <div className="mb-3 flex items-center justify-between gap-3"><h2 className="font-semibold">Time ledger · {visibleReport?.logCount ?? 0} logs</h2><Link href="/operations" className="text-sm text-primary-cyan">Add or correct a manual time log</Link></div>
-      <table className="w-full text-left text-sm"><thead className="text-crm-text-muted"><tr><th className="p-2">Client</th><th className="p-2">Logged at (UTC)</th><th className="p-2">Description</th><th className="p-2">Source</th><th className="p-2">Time</th></tr></thead><tbody>{visibleReport?.logs.map(log => <tr key={log.id} className="border-t border-crm-border"><td className="p-2">{log.clientName}</td><td className="p-2 whitespace-nowrap">{log.loggedAt.slice(0, 19).replace("T", " ")}</td><td className="p-2">{log.description}</td><td className="p-2">{log.source === "AUTO" ? "Automatic" : "Manual"}{log.isManualOverride ? " · corrected" : ""}</td><td className="p-2 font-mono">{formatTrackedTime(log.seconds)}</td></tr>)}</tbody></table>
+      <div className="mb-3 flex items-center justify-between gap-3"><h2 className="font-semibold">Time ledger · {visibleReport?.logCount ?? 0} logs</h2><button type="button" className={button} disabled={!isClientAccountReady} onClick={() => { setEditingLog(null); setLedgerOpen(true); }}>Add manual time log</button></div>
+      <table className="w-full text-left text-sm"><thead className="text-crm-text-muted"><tr><th className="p-2">Client</th><th className="p-2">Logged at (UTC)</th><th className="p-2">Description</th><th className="p-2">Source</th><th className="p-2">Time</th><th className="p-2">Correction</th></tr></thead><tbody>{visibleReport?.logs.map(log => <tr key={log.id} className="border-t border-crm-border"><td className="p-2">{log.clientName}</td><td className="p-2 whitespace-nowrap">{log.loggedAt.slice(0, 19).replace("T", " ")}</td><td className="p-2">{log.description}</td><td className="p-2">{log.source === "AUTO" ? "Automatic" : "Manual"}{log.isManualOverride ? " · corrected" : ""}</td><td className="p-2 font-mono">{formatTrackedTime(log.seconds)}</td><td className="p-2"><button className={button} onClick={() => { setEditingLog(log); setLedgerOpen(true); }}>Correct</button></td></tr>)}</tbody></table>
       {visibleReport?.logCount === 0 && <p className="py-5 text-sm text-crm-text-muted">No work logs in this period.</p>}
       <div className="mt-4 flex items-center gap-3"><button className={button} disabled={page === 1 || loading} onClick={() => setPage(value => value - 1)}>Previous</button><span className="text-sm">Page {page}</span><button className={button} disabled={!visibleReport || page * visibleReport.pageSize >= visibleReport.logCount} onClick={() => setPage(value => value + 1)}>Next</button></div>
     </section>
+    {ledgerOpen && <TimeLedgerEditor log={editingLog} onClose={() => setLedgerOpen(false)} onSaved={() => { setLedgerOpen(false); window.dispatchEvent(new Event("crm:time-ledger-changed")); window.dispatchEvent(new Event(TIME_LOG_UPDATED_EVENT)); }} />}
   </div>;
 }

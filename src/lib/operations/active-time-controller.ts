@@ -1,6 +1,6 @@
 import { TIME_IDLE_MS, type TimeTrackingInput, type TimeTrackingSnapshot, type TrackingReason } from "@/lib/operations/time-tracking-policy";
 
-export interface ActiveTimeState { status: "RUNNING" | "PAUSED" | "IDLE" | "HIDDEN" | "OFFLINE" | "ERROR" | "STARTING"; seconds: number; message?: string; }
+export interface ActiveTimeState { status: "RUNNING" | "PAUSED" | "IDLE" | "HIDDEN" | "OFFLINE" | "ERROR" | "STARTING"; seconds: number; sessionSeconds?: number; message?: string; }
 interface ControllerOptions {
   clientAccountId: string;
   tabId: string;
@@ -23,6 +23,8 @@ export class ActiveTimeController {
   private state: ActiveTimeState = { status: "STARTING", seconds: 0 };
   private confirmedAt: number;
   private confirmedSeconds = 0;
+  private confirmedSessionSeconds = 0;
+  private restarting = false;
   private queue: Promise<void> = Promise.resolve();
   private pendingHeartbeat = false;
   private resetNextHeartbeat = false;
@@ -35,12 +37,24 @@ export class ActiveTimeController {
   activity() { this.lastActivity = this.options.now(); }
   restoreTotal(seconds: number) { if (!this.active && !this.disposed) { this.confirmedSeconds = seconds; this.publish(this.state); } }
   setPaused(paused: boolean) { this.manuallyPaused = paused; this.activity(); return this.tick(); }
+  async stopAndRestart() {
+    if (this.disposed || this.restarting) return;
+    this.restarting = true;
+    try {
+      await this.pause("STOP");
+      if (this.state.status === "ERROR" || this.disposed) return;
+      this.manuallyPaused = false;
+      this.activity();
+      this.restarting = false;
+      await this.tick();
+    } finally { this.restarting = false; }
+  }
   getState(): ActiveTimeState {
     const extra = this.state.status === "RUNNING" ? Math.floor(Math.max(0, Math.min(this.options.now() - this.confirmedAt, this.lastActivity + TIME_IDLE_MS - this.confirmedAt)) / 1000) : 0;
-    return { ...this.state, seconds: this.confirmedSeconds + extra };
+    return { ...this.state, seconds: this.confirmedSeconds + extra, sessionSeconds: this.confirmedSessionSeconds + extra };
   }
   tick() {
-    if (this.disposed) return this.queue;
+    if (this.disposed || this.restarting) return this.queue;
     const availability = this.options.available();
     const status = this.manuallyPaused ? "PAUSED" : availability === "OFFLINE" ? "OFFLINE" : availability === "HIDDEN" ? "HIDDEN" : this.options.now() - this.lastActivity >= TIME_IDLE_MS ? "IDLE" : "RUNNING";
     if (status !== "RUNNING") {
@@ -79,6 +93,7 @@ export class ActiveTimeController {
         if (this.disposed) return;
         if (result.clientAccountId && result.clientAccountId !== this.options.clientAccountId) return;
         this.confirmedSeconds = result.clientTotalSeconds ?? result.trackedSeconds;
+        this.confirmedSessionSeconds = result.trackedSeconds;
         this.confirmedAt = this.options.now();
         if (!result.ignored) this.options.onSaved();
         if (action === "HEARTBEAT" && this.active) this.publish({ status: "RUNNING", seconds: result.trackedSeconds });

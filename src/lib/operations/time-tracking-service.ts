@@ -7,7 +7,7 @@ import type { AuthenticatedUser } from "@/lib/models/canonical";
 import { summarizeTime, TIME_MAX_GAP_MS, type TimeTrackingInput, type TimeTrackingSnapshot } from "@/lib/operations/time-tracking-policy";
 
 export function parseTrackingInput(input: Record<string, unknown>): TimeTrackingInput {
-  const reasons = ["IDLE", "HIDDEN", "MANUAL", "SWITCH", "LEAVING", "OFFLINE"];
+  const reasons = ["IDLE", "HIDDEN", "MANUAL", "SWITCH", "LEAVING", "OFFLINE", "STOP"];
   if (!input || typeof input !== "object" || Array.isArray(input) || (input.action !== "HEARTBEAT" && input.action !== "PAUSE")
     || typeof input.clientAccountId !== "string" || !input.clientAccountId || input.clientAccountId.length > 128
     || typeof input.tabId !== "string" || !/^[a-f0-9-]{36}$/i.test(input.tabId)

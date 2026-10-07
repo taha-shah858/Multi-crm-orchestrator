@@ -34,7 +34,7 @@ export async function getTimeAudit(user: AuthenticatedUser, filters: Reconciliat
     const where = { organizationId: user.organizationId, userId: user.id, clientAccountId: { in: clients.filter(client => !clientId || client.id === clientId).map(client => client.id) }, loggedAt: dateRange };
     const [groups, logs, count] = await Promise.all([
       tx.timeLog.groupBy({ by: ["clientAccountId", "source", "isManualOverride"], where, _sum: { minutes: true, trackedSeconds: true }, _count: { _all: true } }),
-      tx.timeLog.findMany({ where, orderBy: [{ loggedAt: "desc" }, { id: "desc" }], ...(exportAll ? {} : { take: 50, skip: (page - 1) * 50 }), select: { id: true, clientAccountId: true, source: true, isManualOverride: true, minutes: true, trackedSeconds: true, description: true, loggedAt: true } }),
+      tx.timeLog.findMany({ where, orderBy: [{ loggedAt: "desc" }, { id: "desc" }], ...(exportAll ? {} : { take: 50, skip: (page - 1) * 50 }), select: { id: true, clientAccountId: true, contactId: true, source: true, isManualOverride: true, minutes: true, trackedSeconds: true, description: true, loggedAt: true } }),
       tx.timeLog.count({ where }),
     ]);
     const summaries = clients.filter(client => !clientId || client.id === clientId).map(client => {
