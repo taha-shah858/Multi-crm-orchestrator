@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
-import { requireAuthenticatedUser } from "@/lib/auth/request-context";
+import { requireAuthenticatedUser, requireRequestContext } from "@/lib/auth/request-context";
+import { AppError } from "@/lib/errors/app-error";
 import { withApiErrorHandling, success } from "@/lib/http/api-response";
 import { readReconciliationFilters } from "@/lib/operations/reconciliation";
 import { getTimeAudit, saveHourlyRate, timeAuditCsv } from "@/lib/operations/time-audit-service";
@@ -13,5 +14,10 @@ export async function GET(request: NextRequest) {
   });
 }
 export async function PATCH(request: NextRequest) {
-  return withApiErrorHandling(request, async requestId => success({ rate: await saveHourlyRate(await requireAuthenticatedUser(request), await request.json()) }, requestId));
+  return withApiErrorHandling(request, async requestId => {
+    const context = await requireRequestContext(request);
+    const input = await request.json();
+    if (!input || input.clientAccountId !== context.activeClientAccountId) throw new AppError("CLIENT_CONTEXT_REQUIRED", 409, "Selected client changed.", "Reload the selected client's rate before saving.");
+    return success({ rate: await saveHourlyRate(context.user, input) }, requestId);
+  });
 }

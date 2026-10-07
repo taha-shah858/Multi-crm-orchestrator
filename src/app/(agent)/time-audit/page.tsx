@@ -8,11 +8,11 @@ import { TIME_LOG_UPDATED_EVENT } from "@/components/operations/ActiveTimeTracke
 import { formatTrackedTime } from "@/lib/operations/time-tracking-policy";
 
 export interface TimeReport {
-  hourlyRateCents: number | null; hourlyRateCurrency: string;
-  clients: { id: string; name: string }[];
-  summaries: { id: string; name: string; seconds: number; expectedPayCents: number | null; logCount: number }[];
+  clients: { id: string; name: string; hourlyRateCents: number | null; hourlyRateCurrency: string }[];
+  summaries: { id: string; name: string; seconds: number; hourlyRateCents: number | null; hourlyRateCurrency: string; expectedPayCents: number | null; logCount: number }[];
   logs: { id: string; clientAccountId: string; clientName: string; seconds: number; minutes: number; trackedSeconds: number; contactId: string | null; description: string; loggedAt: string; source: string; isManualOverride: boolean }[];
   page: number; pageSize: number; logCount: number; totalSeconds: number; totalExpectedPayCents: number | null;
+  expectedPayByCurrency: { currency: string; expectedPayCents: number }[]; unratedClientCount: number;
 }
 const field = "rounded-lg border border-crm-border bg-crm-bg px-3 py-2 text-sm text-crm-text";
 const button = "rounded-lg border border-crm-border px-3 py-2 text-sm hover:border-primary-cyan disabled:opacity-50";
@@ -29,7 +29,8 @@ export default function TimeAuditPage() {
   const [hourlyRate, setHourlyRate] = useState(""); const [currency, setCurrency] = useState("USD");
   const [editingLog, setEditingLog] = useState<TimeReport["logs"][number] | null>(null);
   const [ledgerOpen, setLedgerOpen] = useState(false);
-  const generation = useRef(0); const rateLoaded = useRef(false);
+  const generation = useRef(0); const rateLoaded = useRef("");
+  const [rateClientId, setRateClientId] = useState("");
   const query = useCallback((wholeAgency = false) => {
     const params = new URLSearchParams();
     if (from) params.set("from", from); if (to) params.set("to", to);
@@ -47,13 +48,14 @@ export default function TimeAuditPage() {
       if (!response.ok || !payload.success) throw new Error(payload.error?.message || "Time audit could not be loaded.");
       if (current !== generation.current) return;
       setReport(payload.report); setError("");
-      if (!rateLoaded.current) {
-        setHourlyRate(payload.report.hourlyRateCents === null ? "" : (payload.report.hourlyRateCents / 100).toFixed(2));
-        setCurrency(payload.report.hourlyRateCurrency); rateLoaded.current = true;
+      if (rateLoaded.current !== activeClientAccount.id) {
+        const rate = payload.report.clients.find((client: TimeReport["clients"][number]) => client.id === activeClientAccount.id);
+        setHourlyRate(rate?.hourlyRateCents == null ? "" : (rate.hourlyRateCents / 100).toFixed(2));
+        setCurrency(rate?.hourlyRateCurrency ?? "USD"); rateLoaded.current = activeClientAccount.id; setRateClientId(activeClientAccount.id);
       }
     } catch (err) { if (current === generation.current) setError(err instanceof Error ? err.message : "Time audit could not be loaded."); }
     finally { if (current === generation.current) setLoading(false); }
-  }, [isClientAccountReady, user?.role, query]);
+  }, [isClientAccountReady, user?.role, query, activeClientAccount.id]);
   useEffect(() => {
     queueMicrotask(() => void load());
     const refresh = () => { if (document.visibilityState === "visible") void load(true); };
@@ -64,10 +66,10 @@ export default function TimeAuditPage() {
   async function saveRate(event: FormEvent) {
     event.preventDefault(); setSaving(true); setError(""); setNotice("");
     try {
-      const response = await fetch("/api/time-audit", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ hourlyRate, currency }) });
+      const response = await fetch("/api/time-audit", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ hourlyRate, currency, clientAccountId: rateClientId }) });
       const payload = await response.json();
       if (!response.ok || !payload.success) throw new Error(payload.error?.message || "Hourly rate could not be saved.");
-      setNotice("Hourly rate saved. Expected pay has been recalculated."); window.dispatchEvent(new Event(TIME_LOG_UPDATED_EVENT));
+      setNotice(`Hourly rate saved for ${activeClientAccount.name}. Expected pay has been recalculated for this client.`); window.dispatchEvent(new Event(TIME_LOG_UPDATED_EVENT));
     } catch (err) { setError(err instanceof Error ? err.message : "Hourly rate could not be saved."); }
     finally { setSaving(false); }
   }
@@ -84,13 +86,13 @@ export default function TimeAuditPage() {
     {error && <p role="alert" className="rounded-lg border border-red-400/30 p-3 text-sm text-red-400">{error}</p>}
     {notice && <p role="status" className="text-sm text-emerald-400">{notice}</p>}
     <form onSubmit={saveRate} className="rounded-xl border border-crm-border bg-crm-card p-5">
-      <h2 className="font-semibold">Your hourly pay</h2>
+      <h2 className="font-semibold">Hourly pay · {activeClientAccount.name}</h2>
       <div className="mt-3 flex flex-wrap items-end gap-3">
         <label className="grid gap-1 text-sm">Hourly rate<input className={field} type="number" min="0" max="1000000" step="0.01" required value={hourlyRate} onChange={event => setHourlyRate(event.target.value)} placeholder="e.g. 30.00" /></label>
         <label className="grid gap-1 text-sm">Currency<input className={`${field} w-24`} maxLength={3} pattern="[A-Za-z]{3}" required value={currency} onChange={event => setCurrency(event.target.value.toUpperCase())} /></label>
-        <button className={button} disabled={saving || !isClientAccountReady}>{saving ? "Saving…" : "Save hourly rate"}</button>
+        <button className={button} disabled={saving || !isClientAccountReady || rateClientId !== activeClientAccount.id}>{saving ? "Saving…" : "Save client hourly rate"}</button>
       </div>
-      <p className="mt-3 text-xs text-crm-text-muted">Expected pay = hourly rate × seconds worked ÷ 3,600. Ten minutes earns one-sixth of your hourly rate. Changing the rate recalculates all included logs; estimates do not record actual payments.</p>
+      <p className="mt-3 text-xs text-crm-text-muted">This rate belongs to the selected client only. Expected pay = client hourly rate × seconds worked ÷ 3,600. Changing it recalculates this client&apos;s logs; estimates do not record actual payments.</p>
     </form>
     <section className="flex flex-wrap items-end gap-3" aria-label="Report filters">
       <label className="grid gap-1 text-sm">Client view<select className={field} value={allClients ? "ALL" : "CURRENT"} onChange={event => { setAllClients(event.target.value === "ALL"); setPage(1); }}><option value="CURRENT">Current client: {activeClientAccount.name}</option><option value="ALL">All assigned clients</option></select></label>
@@ -99,11 +101,12 @@ export default function TimeAuditPage() {
       <span className="pb-2 text-xs text-crm-text-muted">Leave dates empty for all time. CSV includes every assigned client and every matching log.</span>
     </section>
     <div className="grid gap-4 md:grid-cols-3">
-      {[ ["Client view", scope], ["Time spent", visibleReport ? formatTrackedTime(visibleReport.totalSeconds) : unavailable], ["Expected pay", visibleReport ? money(visibleReport.totalExpectedPayCents, visibleReport.hourlyRateCurrency) : unavailable] ].map(([label, value]) => <div key={label} className="rounded-xl border border-crm-border bg-crm-card p-5"><p className="text-sm text-crm-text-muted">{label}</p><p className="mt-2 text-xl font-semibold">{value}</p></div>)}
+      {[ ["Client view", scope], ["Time spent", visibleReport ? formatTrackedTime(visibleReport.totalSeconds) : unavailable], ["Expected pay", visibleReport ? visibleReport.expectedPayByCurrency.map(total => money(total.expectedPayCents, total.currency)).join(" + ") || "Set client hourly rate" : unavailable] ].map(([label, value]) => <div key={label} className="rounded-xl border border-crm-border bg-crm-card p-5"><p className="text-sm text-crm-text-muted">{label}</p><p className="mt-2 text-xl font-semibold">{value}</p></div>)}
     </div>
     <section className="overflow-x-auto rounded-xl border border-crm-border bg-crm-card p-5">
+      {!!visibleReport?.unratedClientCount && <p className="mb-3 text-sm text-amber-700">{visibleReport.unratedClientCount} client(s) with logged time have no hourly rate. Their time is included; expected pay includes only clients with a saved rate.</p>}
       <h2 className="mb-3 font-semibold">Time per client</h2>
-      <table className="w-full text-left text-sm"><thead className="text-crm-text-muted"><tr><th className="p-2">Client</th><th className="p-2">Time (minutes:seconds)</th><th className="p-2">Hours</th><th className="p-2">Expected pay</th><th className="p-2">Logs</th></tr></thead><tbody>{visibleReport?.summaries.map(client => <tr key={client.id} className="border-t border-crm-border"><td className="p-2">{client.name}</td><td className="p-2 font-mono">{formatTrackedTime(client.seconds)}</td><td className="p-2">{(client.seconds / 3600).toFixed(4)}</td><td className="p-2">{money(client.expectedPayCents, visibleReport.hourlyRateCurrency)}</td><td className="p-2">{client.logCount}</td></tr>)}</tbody></table>
+      <table className="w-full text-left text-sm"><thead className="text-crm-text-muted"><tr><th className="p-2">Client</th><th className="p-2">Time (minutes:seconds)</th><th className="p-2">Hours</th><th className="p-2">Hourly rate</th><th className="p-2">Expected pay</th><th className="p-2">Logs</th></tr></thead><tbody>{visibleReport?.summaries.map(client => <tr key={client.id} className="border-t border-crm-border"><td className="p-2">{client.name}</td><td className="p-2 font-mono">{formatTrackedTime(client.seconds)}</td><td className="p-2">{(client.seconds / 3600).toFixed(4)}</td><td className="p-2">{money(client.hourlyRateCents, client.hourlyRateCurrency)}</td><td className="p-2">{money(client.expectedPayCents, client.hourlyRateCurrency)}</td><td className="p-2">{client.logCount}</td></tr>)}</tbody></table>
       <p className="mt-3 text-xs text-crm-text-muted">Saved seconds, including manual logs and corrections. The top timer shows the current client&apos;s all-time total and pauses while you work on another client. Active seconds are saved at each heartbeat or pause.</p>
     </section>
     <section className="overflow-x-auto rounded-xl border border-crm-border bg-crm-card p-5">

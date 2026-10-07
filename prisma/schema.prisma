@@ -421,6 +421,8 @@ model ClientAssignment {
   clientAccountId String
   userId          String
   assignedAt      DateTime      @default(now())
+  hourlyRateCents Int?
+  hourlyRateCurrency String @default("USD")
   clientAccount   ClientAccount @relation(fields: [clientAccountId], references: [id], onDelete: Cascade)
   user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
