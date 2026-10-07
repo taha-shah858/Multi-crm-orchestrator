@@ -4,7 +4,7 @@ import type { Prisma, TimeTrackingSession } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { AppError } from "@/lib/errors/app-error";
 import type { AuthenticatedUser } from "@/lib/models/canonical";
-import { TIME_MAX_GAP_MS, type TimeTrackingInput, type TimeTrackingSnapshot } from "@/lib/operations/time-tracking-policy";
+import { summarizeTime, TIME_MAX_GAP_MS, type TimeTrackingInput, type TimeTrackingSnapshot } from "@/lib/operations/time-tracking-policy";
 
 export function parseTrackingInput(input: Record<string, unknown>): TimeTrackingInput {
   const reasons = ["IDLE", "HIDDEN", "MANUAL", "SWITCH", "LEAVING", "OFFLINE"];
@@ -25,7 +25,8 @@ async function accessibleClient(tx: Prisma.TransactionClient, user: Authenticate
 
 async function snapshot(tx: Prisma.TransactionClient, cursor: TimeTrackingSession, ignored = false): Promise<TimeTrackingSnapshot> {
   const log = cursor.timeLogId ? await tx.timeLog.findUnique({ where: { id: cursor.timeLogId }, select: { trackedSeconds: true } }) : null;
-  return { isRunning: cursor.isRunning, clientAccountId: cursor.clientAccountId, timeLogId: cursor.timeLogId, trackedSeconds: log?.trackedSeconds ?? 0, ignored };
+  const groups = cursor.clientAccountId ? await tx.timeLog.groupBy({ by: ["source", "isManualOverride"], where: { organizationId: cursor.organizationId, userId: cursor.userId, clientAccountId: cursor.clientAccountId }, _sum: { minutes: true, trackedSeconds: true } }) : [];
+  return { isRunning: cursor.isRunning, clientAccountId: cursor.clientAccountId, timeLogId: cursor.timeLogId, trackedSeconds: log?.trackedSeconds ?? 0, clientTotalSeconds: summarizeTime(groups).activeSeconds, ignored };
 }
 
 async function createSegment(tx: Prisma.TransactionClient, user: AuthenticatedUser, client: { id: string; name: string }, at: Date, requestId: string) {

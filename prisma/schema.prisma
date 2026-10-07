@@ -359,6 +359,8 @@ model User {
   initiatedOAuthStates    OAuthState[]            @relation("OAuthStateInitiator")
   dealHandoffs            DealHandoff[]
   defaultCommissionRate   Float?                  @default(10.0)
+  hourlyRateCents         Int?
+  hourlyRateCurrency      String                  @default("USD")
   agentClickUpRecords     AgentClickUpRecord[]
 
   @@index([organizationId])

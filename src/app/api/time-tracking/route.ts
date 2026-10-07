@@ -3,8 +3,18 @@ import { requireAuthenticatedUser, requireRequestContext } from "@/lib/auth/requ
 import { AppError } from "@/lib/errors/app-error";
 import { success, withApiErrorHandling } from "@/lib/http/api-response";
 import { parseTrackingInput, trackActiveTime } from "@/lib/operations/time-tracking-service";
+import { prisma } from "@/lib/db/prisma";
+import { summarizeTime } from "@/lib/operations/time-tracking-policy";
 
 export const dynamic = "force-dynamic";
+export async function GET(request: NextRequest) {
+  return withApiErrorHandling(request, async requestId => {
+    const context = await requireRequestContext(request);
+    if (context.user.role !== "AGENT") throw new AppError("FORBIDDEN", 403, "Agent access required.", "Time tracking is available in the agent workspace.");
+    const groups = await prisma.timeLog.groupBy({ by: ["source", "isManualOverride"], where: { organizationId: context.user.organizationId, userId: context.user.id, clientAccountId: context.activeClientAccountId }, _sum: { minutes: true, trackedSeconds: true } });
+    return success({ clientAccountId: context.activeClientAccountId, clientTotalSeconds: summarizeTime(groups).activeSeconds }, requestId);
+  });
+}
 export async function POST(request: NextRequest) {
   return withApiErrorHandling(request, async (requestId) => {
     const user = await requireAuthenticatedUser(request);

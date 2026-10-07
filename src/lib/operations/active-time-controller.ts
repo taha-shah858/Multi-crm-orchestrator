@@ -10,6 +10,7 @@ interface ControllerOptions {
   onChange: (state: ActiveTimeState) => void;
   onSaved: () => void;
   initiallyPaused?: boolean;
+  initialSeconds?: number;
 }
 
 /** Small, testable browser policy. The server calculates and persists elapsed time. */
@@ -29,8 +30,10 @@ export class ActiveTimeController {
   constructor(private readonly options: ControllerOptions) {
     this.lastActivity = this.confirmedAt = options.now();
     this.manuallyPaused = options.initiallyPaused ?? false;
+    this.confirmedSeconds = options.initialSeconds ?? 0;
   }
   activity() { this.lastActivity = this.options.now(); }
+  restoreTotal(seconds: number) { if (!this.active && !this.disposed) { this.confirmedSeconds = seconds; this.publish(this.state); } }
   setPaused(paused: boolean) { this.manuallyPaused = paused; this.activity(); return this.tick(); }
   getState(): ActiveTimeState {
     const extra = this.state.status === "RUNNING" ? Math.floor(Math.max(0, Math.min(this.options.now() - this.confirmedAt, this.lastActivity + TIME_IDLE_MS - this.confirmedAt)) / 1000) : 0;
@@ -57,6 +60,7 @@ export class ActiveTimeController {
     // Enqueue the final partial interval; fetch keepalive survives page navigation.
     if (this.active) this.pause("LEAVING");
     this.disposed = true;
+    return this.queue;
   }
   private publish(state: ActiveTimeState) {
     this.state = state;
@@ -74,7 +78,7 @@ export class ActiveTimeController {
         const result = await this.options.send(input);
         if (this.disposed) return;
         if (result.clientAccountId && result.clientAccountId !== this.options.clientAccountId) return;
-        this.confirmedSeconds = result.trackedSeconds;
+        this.confirmedSeconds = result.clientTotalSeconds ?? result.trackedSeconds;
         this.confirmedAt = this.options.now();
         if (!result.ignored) this.options.onSaved();
         if (action === "HEARTBEAT" && this.active) this.publish({ status: "RUNNING", seconds: result.trackedSeconds });

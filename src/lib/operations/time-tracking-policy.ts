@@ -16,6 +16,7 @@ export interface TimeTrackingSnapshot {
   clientAccountId: string | null;
   timeLogId: string | null;
   trackedSeconds: number;
+  clientTotalSeconds?: number;
   ignored: boolean;
 }
 export function effectiveTimeSeconds(log: { source: string; minutes: number; trackedSeconds: number; isManualOverride: boolean }) {
@@ -29,4 +30,8 @@ export function formatTrackedTime(seconds: number) {
   const total = Math.max(0, Math.floor(seconds));
   const minutes = Math.floor(total / 60);
   return `${minutes.toString().padStart(2, "0")}:${(total % 60).toString().padStart(2, "0")}`;
+}
+
+export function expectedHourlyPayCents(seconds: number, hourlyRateCents: number | null) {
+  return hourlyRateCents === null ? null : Math.round(seconds * hourlyRateCents / 3600);
 }

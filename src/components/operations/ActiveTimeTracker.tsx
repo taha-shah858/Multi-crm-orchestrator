@@ -13,12 +13,15 @@ export default function ActiveTimeTracker() {
   const [state, setState] = useState<ActiveTimeState>({ status: "STARTING", seconds: 0 });
   const [paused, setPaused] = useState(false);
   const pausedPreference = useRef(false);
+  const transition = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     if (!isClientAccountReady || !activeClientAccount.id || user?.role !== "AGENT") return;
     const preferenceKey = `crm:time-paused:${user.id}`;
     const clientId = activeClientAccount.id;
     let idleTimeout: ReturnType<typeof setTimeout>;
+    let ready = false;
+    let cancelled = false;
     try { pausedPreference.current = localStorage.getItem(preferenceKey) === "true"; } catch { /* Tracking still works without storage. */ }
     const tracker = new ActiveTimeController({
       clientAccountId: clientId, tabId: crypto.randomUUID(), now: Date.now,
@@ -39,8 +42,8 @@ export default function ActiveTimeTracker() {
     });
     controller.current = tracker;
     const scheduleIdle = () => { clearTimeout(idleTimeout); idleTimeout = setTimeout(() => void tracker.tick(), TIME_IDLE_MS); };
-    const activity = () => { tracker.activity(); scheduleIdle(); if (tracker.getState().status !== "RUNNING") void tracker.tick(); };
-    const visibility = () => { if (document.visibilityState === "visible" && document.hasFocus()) activity(); else void tracker.tick(); };
+    const activity = () => { tracker.activity(); scheduleIdle(); if (ready && tracker.getState().status !== "RUNNING") void tracker.tick(); };
+    const visibility = () => { if (document.visibilityState === "visible" && document.hasFocus()) activity(); else if (ready) void tracker.tick(); };
     const leave = () => { void tracker.pause("LEAVING"); };
     const storage = (event: StorageEvent) => {
       if (event.key !== preferenceKey) return;
@@ -58,11 +61,24 @@ export default function ActiveTimeTracker() {
     window.addEventListener("storage", storage);
     scheduleIdle();
     // Callback runs asynchronously so subscribing does not synchronously set React state.
-    queueMicrotask(() => void tracker.tick());
-    const heartbeat = setInterval(() => void tracker.tick(), TIME_HEARTBEAT_MS);
-    const display = setInterval(() => setState(tracker.getState()), 1000);
+    const previousStop = transition.current;
+    queueMicrotask(() => setState({ status: "STARTING", seconds: 0 }));
+    void previousStop.then(async () => {
+      if (cancelled) return;
+      try {
+        const response = await fetch("/api/time-tracking", { cache: "no-store" });
+        const payload = await response.json();
+        if (!cancelled && response.ok && payload.clientAccountId === clientId) tracker.restoreTotal(payload.clientTotalSeconds);
+      } catch { /* Heartbeat retries still retrieve the persisted total. */ }
+      if (cancelled) return;
+      ready = true;
+      await tracker.tick();
+    });
+    const heartbeat = setInterval(() => { if (ready) void tracker.tick(); }, TIME_HEARTBEAT_MS);
+    const display = setInterval(() => { if (ready) setState(tracker.getState()); }, 1000);
     return () => {
-      tracker.dispose();
+      cancelled = true;
+      transition.current = previousStop.then(() => tracker.dispose());
       controller.current = null;
       clearTimeout(idleTimeout); clearInterval(heartbeat); clearInterval(display);
       for (const event of activityEvents) window.removeEventListener(event, activity, true);

@@ -27,6 +27,8 @@ const { ActiveTimeController } = require("../src/lib/operations/active-time-cont
 const trackingApi = require("../src/app/api/time-tracking/route.ts");
 const timeApi = require("../src/app/api/time-logs/route.ts");
 const editApi = require("../src/app/api/time-logs/[id]/route.ts");
+const auditApi = require("../src/app/api/time-audit/route.ts");
+const { getTimeAudit, saveHourlyRate, timeAuditCsv } = require("../src/lib/operations/time-audit-service.ts");
 const marker = `active-time-${Date.now()}`;
 const ids = { org: marker, foreign: `${marker}-foreign`, agent: `${marker}-agent`, other: `${marker}-other`, admin: `${marker}-admin`, client: `${marker}-client`, second: `${marker}-second`, denied: `${marker}-denied` };
 const user = { id: ids.agent, organizationId: ids.org, name: "Time Agent", email: `${marker}@example.test`, role: "AGENT" };
@@ -75,6 +77,20 @@ async function databaseChecks() {
   assert.equal(await seconds(), 87);
   assert.equal(await prisma.timeLog.count({ where: { organizationId: ids.org } }), 2);
   passed("Exact seconds persist, brief starts create no empty rows, pauses exclude away time");
+
+  await reset(); tab = randomUUID();
+  await track(1, tab, 0);
+  assert.equal((await track(2, tab, 19, "PAUSE", ids.client, { reason: "SWITCH" })).clientTotalSeconds, 19);
+  const secondTab = randomUUID(); await track(1, secondTab, 19, "HEARTBEAT", ids.second);
+  await track(2, secondTab, 39, "HEARTBEAT", ids.second);
+  await track(3, secondTab, 59, "PAUSE", ids.second, { reason: "SWITCH" });
+  const returningTab = randomUUID();
+  assert.equal((await track(1, returningTab, 59)).clientTotalSeconds, 19);
+  assert.equal((await track(2, returningTab, 79)).clientTotalSeconds, 39);
+  assert.equal(await seconds(ids.second), 40);
+  assert.equal((await track(3, returningTab, 79, "PAUSE")).clientTotalSeconds, 39);
+  assert.equal((await track(1, randomUUID(), 600)).clientTotalSeconds, 39);
+  passed("Each client's cumulative timer resumes from 19 seconds after switching and survives reloads without charging away time");
 
   await reset(); tab = randomUUID();
   await Promise.all(Array.from({ length: 12 }, () => track(1, tab, 0)));
@@ -208,6 +224,38 @@ async function databaseChecks() {
   assert.equal(listResponse.status, 200); assert.equal((await listResponse.json()).summary.activeSeconds, 4110);
   assert.equal((await timeApi.GET(request("/api/time-logs?from=2026-02-31", token))).status, 422);
   passed("HTTP routes enforce sessions, selected client, valid input and server-owned time");
+
+  let audit = await getTimeAudit(user, { from: "2026-01-15", to: "2026-01-15" });
+  assert.equal(audit.totalSeconds, 4170); assert.equal(audit.totalExpectedPayCents, null);
+  await saveHourlyRate(user, { hourlyRate: "30.00", currency: "USD" });
+  audit = await getTimeAudit(user, { from: "2026-01-15", to: "2026-01-15" });
+  assert.equal(audit.totalExpectedPayCents, 3475); assert.equal(audit.logs.length, 50); assert.equal(audit.logCount, 128);
+  const csvReport = await getTimeAudit(user, { from: "2026-01-15", to: "2026-01-15" }, undefined, 1, true);
+  assert.equal(csvReport.logs.length, 128); assert.equal(csvReport.logs.some(log => log.description === "Other agent"), false);
+  assert.equal((await getTimeAudit(user, {}, ids.second)).totalSeconds, 60);
+  assert.equal((await getTimeAudit(user, { from: "2026-01-16" })).totalSeconds, 0);
+  await assert.rejects(getTimeAudit(user, {}, ids.denied), error => error.status === 403);
+  await assert.rejects(getTimeAudit({ ...user, organizationId: ids.foreign }), error => Boolean(error));
+  for (const invalid of [-1, "oops", "1.234", "", Infinity]) await assert.rejects(saveHourlyRate(user, { hourlyRate: invalid, currency: "USD" }), error => error.status === 422);
+  assert.equal((await auditApi.GET(request("/api/time-audit", undefined))).status, 401);
+  assert.equal((await auditApi.GET(request("/api/time-audit", adminToken))).status, 403);
+  assert.equal((await auditApi.GET(request(`/api/time-audit?clientId=${ids.denied}`, token))).status, 403);
+  const exported = await auditApi.GET(request("/api/time-audit?format=csv&from=2026-01-15&to=2026-01-15", token));
+  assert.equal(exported.status, 200); assert.match(exported.headers.get("content-type"), /text\/csv/);
+  assert.match(await exported.text(), /"TOTAL","69:30","4170"/);
+  const readTotal = await trackingApi.GET(request("/api/time-tracking", token));
+  assert.equal((await readTotal.json()).clientTotalSeconds, 4110);
+  passed("All-client time audit and uncapped CSV include exact own-client totals, corrections and rate estimates with authorization and date filtering");
+
+  await reset();
+  await prisma.timeLog.create({ data: { organizationId: ids.org, clientAccountId: ids.client, userId: ids.agent, source: "AUTO", trackedSeconds: 600, minutes: 10, description: "=HYPERLINK(unsafe)", loggedAt: new Date(base) } });
+  audit = await getTimeAudit(user);
+  assert.equal(audit.totalExpectedPayCents, 500);
+  assert.match(timeAuditCsv(audit), /'\=HYPERLINK/);
+  await saveHourlyRate(user, { hourlyRate: "60", currency: "USD" });
+  assert.equal((await getTimeAudit(user)).totalExpectedPayCents, 1000);
+  assert.equal((await prisma.user.findUniqueOrThrow({ where: { id: ids.other } })).hourlyRateCents, null);
+  passed("Ten minutes earns one-sixth of the hourly rate; rate changes recalculate estimates and CSV text cannot run formulas");
 }
 
 function browserFixture(initiallyPaused = false) {
@@ -220,6 +268,14 @@ function browserFixture(initiallyPaused = false) {
   return fixture;
 }
 async function browserChecks() {
+  let restoreNow = 0;
+  const restored = new ActiveTimeController({ clientAccountId: "client", tabId: randomUUID(), now: () => restoreNow, available: () => "ACTIVE", onChange: () => {}, onSaved: () => {},
+    send: async () => ({ clientAccountId: "client", trackedSeconds: 0, clientTotalSeconds: 19, timeLogId: null, isRunning: true, ignored: false }),
+  });
+  await restored.tick(); assert.equal(restored.getState().seconds, 19);
+  restoreNow = 5000; assert.equal(restored.getState().seconds, 24);
+  const paused = browserFixture(true); paused.controller.restoreTotal(19); await paused.controller.tick(); assert.equal(paused.controller.getState().seconds, 19);
+  passed("Browser display uses cumulative client total plus current seconds, including restored manually paused timers");
   let f = browserFixture(); await f.controller.tick();
   assert.equal(f.controller.getState().status, "RUNNING");
   f.now = 20000; await f.controller.tick(); f.now = 120000; await f.controller.tick();

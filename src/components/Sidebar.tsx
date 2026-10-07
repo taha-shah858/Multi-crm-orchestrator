@@ -20,6 +20,7 @@ import {
   LogOut,
   Briefcase,
   Shield,
+  Clock3,
 } from "lucide-react";
 import { isAdminWorkspaceRole } from "@/lib/auth/roles";
 import BrandIcon from "@/components/ui/BrandIcon";
@@ -35,6 +36,7 @@ const workspaceNavigation = [
   { name: "Script Architect",     href: "/scripts",      icon: FileText   },
   { name: "Calendar Planner",     href: "/calendar",     icon: Calendar   },
   { name: "Sales Operations",     href: "/operations",   icon: WalletCards},
+  { name: "Time Audit",           href: "/time-audit",   icon: Clock3},
   { name: "Documents & Proposals",href: "/documents",    icon: FileText   },
   { name: "Multi-CRM Suite",      href: "/multi-crm",    icon: Sparkles   },
 ];
