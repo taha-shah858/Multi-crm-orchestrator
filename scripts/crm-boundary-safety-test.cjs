@@ -510,6 +510,35 @@ test("current default sync and new handoff use Zoho when legacy also exists", as
   assert.deepEqual(state.providers.map((item) => item.kind), ["ZOHO_IMPORT", "ZOHO_HANDOFF"]);
 });
 
+const emailDuplicate = (details = {}) => ({ data: [{ status: "error", code: "DUPLICATE_DATA", details: {
+  api_name: "Email", duplicate_record: { id: "existing-contact", module: { api_name: "Contacts" } }, more_records: false, ...details,
+} }] });
+test("Zoho handoff verifies and reuses an existing email contact before linking the deal", async () => {
+  let linkedContact;
+  state.fetchResponse = (url, options) => {
+    if (String(url).includes("/Contacts/existing-contact")) return Response.json({ data: [{ id: "existing-contact", Email: "CUSTOMER@example.test" }] });
+    if (String(url).endsWith("/Contacts")) return Response.json(emailDuplicate(), { status: 400 });
+    if (String(url).endsWith("/Deals")) linkedContact = JSON.parse(options.body).data[0].Contact_Name.id;
+    return Response.json({ data: [{ status: "success", code: "SUCCESS", details: { id: String(url).endsWith("/Deals") ? "new-deal" : "new-note" } }] });
+  };
+  const result = await zoho.syncHandoffToZoho(connection(), {
+    agencyDealId: "deal", clientAccountId: "a", dealName: "Sale", amountCents: 10000,
+    currency: "USD", closeStatus: "CLOSED_WON", closeDate: now.toISOString(), customer: { email: "customer@example.test" },
+  });
+  assert.equal(result.contactExternalId, "existing-contact"); assert.equal(linkedContact, "existing-contact");
+  assert.equal(result.dealExternalId, "new-deal"); assert.equal(result.noteExternalId, "new-note");
+  assert.equal(state.http.length, 4);
+});
+for (const existing of [{ id: "existing-contact", Email: "other@example.test" }, { id: "wrong-id", Email: "customer@example.test" }]) test("Zoho duplicate must verify exact contact identity: " + existing.id + existing.Email, async () => {
+  state.fetchResponse = (url) => String(url).includes("/Contacts/existing-contact") ? Response.json({ data: [existing] }) : Response.json(emailDuplicate(), { status: 400 });
+  await assert.rejects(zoho.createOrUpdateZohoRecord(connection(), "CONTACT", { Email: "customer@example.test" }, undefined, true), { code: "EXTERNAL_SERVICE_ERROR" });
+});
+test("Zoho unrelated duplicates and normal contact edits remain errors", async () => {
+  state.fetchResponse = () => Response.json(emailDuplicate(), { status: 400 });
+  await assert.rejects(zoho.createOrUpdateZohoRecord(connection(), "CONTACT", { Email: "customer@example.test" }), { code: "EXTERNAL_SERVICE_ERROR" });
+  state.fetchResponse = () => Response.json(emailDuplicate({ api_name: "Phone" }), { status: 400 });
+  await assert.rejects(zoho.createOrUpdateZohoRecord(connection(), "CONTACT", { Email: "customer@example.test" }, undefined, true), { code: "EXTERNAL_SERVICE_ERROR" });
+});
 test("Zoho write requires per-record success and confirmed matching ID", async () => {
   state.fetchResponse = () => Response.json({ data: [{ status: "success", code: "SUCCESS", details: { id: "12345" } }] });
   assert.equal((await zoho.createOrUpdateZohoRecord(connection(), "CONTACT", {}, "12345")).externalId, "12345");

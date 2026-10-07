@@ -6,9 +6,11 @@ The authenticated read-only endpoint `/api/client-crm/contacts` uses the same or
 
 Creating a deal links the canonical contact to the selected authorized client. An open deal does not send the contact to Zoho. The existing explicit Closed Won handoff sends the contact and deal to the client's Zoho connection. Local deal previews have no fabricated external ID or successful sync timestamp.
 
+If Zoho rejects handoff contact creation as an Email duplicate, the handoff reads that contact from the same Zoho connection and verifies both its ID and email before reusing it. It leaves existing contact fields untouched and continues creating the deal and note. Other duplicate fields, ambiguous matches, failed reads, and mismatched identities remain failures. Existing failed handoffs must be retried; this fix does not mark them successful without provider confirmation. Full recovery of partially created deals/notes remains a separate concern.
+
 ## Validation
 
-- CRM boundary suite: 59 checks passed, including matching, client isolation, directory changes, read-only behavior, canonical deal attribution, and explicit Zoho handoff.
+- CRM boundary suite: 63 checks passed, including matching, client isolation, directory changes, read-only behavior, canonical deal attribution, explicit Zoho handoff, and verified email-duplicate reuse.
 - Closed-deal commission database suite: 11 checks passed.
 - Production build and TypeScript checks passed.
 - A read-only check of existing northstar ecom data returned Noah Bennett and Ava Carter; neither contact was inserted or modified.

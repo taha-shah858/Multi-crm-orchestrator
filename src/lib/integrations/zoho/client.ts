@@ -241,6 +241,7 @@ export async function createOrUpdateZohoRecord(
   recordType: "CONTACT" | "DEAL" | "NOTE",
   data: Record<string, unknown>,
   externalId?: string,
+  reuseExistingEmailContact = false,
 ): Promise<{ externalId: string }> {
   const auth = await resolveZohoCredentials(connection);
 
@@ -267,18 +268,43 @@ export async function createOrUpdateZohoRecord(
     cache: "no-store",
   });
 
+  const responseBody = await res.text();
+  let result: Record<string, unknown> = {};
+  try { result = objectValue(JSON.parse(responseBody)); } catch { /* Invalid provider responses remain failures. */ }
+  const createdRecord = objectValue(Array.isArray(result.data) ? result.data[0] : null);
+  const duplicateDetails = objectValue(createdRecord.details);
+  const duplicateRecord = objectValue(duplicateDetails.duplicate_record);
+  // Only handoff contact creation may reuse an exact email duplicate. Do not
+  // overwrite existing client contact fields or treat unrelated errors as success.
+  if (reuseExistingEmailContact && !externalId && recordType === "CONTACT" &&
+      (res.ok || res.status === 400) && createdRecord.code === "DUPLICATE_DATA" &&
+      createdRecord.status === "error" && duplicateDetails.api_name === "Email" &&
+      objectValue(duplicateRecord.module).api_name === "Contacts" &&
+      duplicateDetails.more_records !== true && typeof data.Email === "string" && data.Email.trim()) {
+    const duplicateId = providerRecordId(duplicateRecord.id);
+    const existingResponse = await fetch(`${auth.apiDomain}/crm/v3/Contacts/${encodeURIComponent(duplicateId)}?fields=Email`, {
+      headers: zohoHeaders(auth.accessToken), cache: "no-store",
+    });
+    if (!existingResponse.ok) {
+      throw new AppError("EXTERNAL_SERVICE_ERROR", 502, "Zoho duplicate contact could not be verified.", "Zoho could not confirm the existing contact. Retry the handoff.");
+    }
+    const existingPayload = objectValue(await existingResponse.json());
+    const existing = objectValue(Array.isArray(existingPayload.data) ? existingPayload.data[0] : null);
+    if (providerRecordId(existing.id) !== duplicateId || typeof existing.Email !== "string" ||
+        existing.Email.trim().toLowerCase() !== data.Email.trim().toLowerCase()) {
+      throw new AppError("EXTERNAL_SERVICE_ERROR", 502, "Zoho duplicate contact email did not match.", "Zoho could not confirm a matching contact. Review the contact before retrying.");
+    }
+    return { externalId: duplicateId };
+  }
   if (!res.ok) {
-    const errorBody = await res.text();
     throw new AppError(
       "EXTERNAL_SERVICE_ERROR",
       502,
-      `Failed to ${method} Zoho ${recordType} (HTTP ${res.status}): ${errorBody}`,
+      `Failed to ${method} Zoho ${recordType} (HTTP ${res.status}): ${responseBody}`,
       `Zoho CRM rejected the ${recordType} update.`,
     );
   }
 
-  const result = objectValue(await res.json());
-  const createdRecord = objectValue(Array.isArray(result.data) ? result.data[0] : null);
   if (createdRecord.status !== "success" || createdRecord.code !== "SUCCESS") {
     throw new AppError("EXTERNAL_SERVICE_ERROR", 502, "Zoho rejected the record update.", "Zoho rejected the record update. The local edit was retained.");
   }
@@ -328,6 +354,8 @@ export async function syncHandoffToZoho(
         connection,
         "CONTACT",
         contactPayload,
+        undefined,
+        true,
       );
       contactExternalId = contactResult.externalId;
     } catch (contactErr) {
