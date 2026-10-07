@@ -1,4 +1,5 @@
 import { hashPassword } from "@/lib/auth/auth-service";
+import { EMAIL_REQUIREMENTS, PASSWORD_REQUIREMENTS, isValidEmail, isValidNewPassword } from "@/lib/auth/credential-policy";
 import { isAdminWorkspaceRole } from "@/lib/auth/roles";
 import { prisma } from "@/lib/db/prisma";
 import { AppError } from "@/lib/errors/app-error";
@@ -150,9 +151,9 @@ export async function createManagedUser(actor: AuthenticatedUser, input: Record<
   const clientAccountIds = Array.isArray(input.clientAccountIds)
     ? input.clientAccountIds.filter((id): id is string => typeof id === "string")
     : [];
-  if (!name || !userEmail || password.length < 10 || !role) {
-    throw new AppError("INVALID_USER_INPUT", 422, "User details are invalid.", "Enter a name, email, role, and password of at least 10 characters.");
-  }
+  if (!name || !role) throw new AppError("INVALID_USER_INPUT", 422, "User details are invalid.", "Enter a name and choose a role.");
+  if (!isValidEmail(userEmail)) throw new AppError("INVALID_USER_INPUT", 422, "Email format is invalid.", EMAIL_REQUIREMENTS);
+  if (!isValidNewPassword(password)) throw new AppError("INVALID_USER_INPUT", 422, "Password does not meet requirements.", PASSWORD_REQUIREMENTS);
   if (await prisma.user.findUnique({ where: { email: userEmail }, select: { id: true } })) {
     throw new AppError("EMAIL_IN_USE", 409, "Email is already registered.", "Choose another email address.");
   }

@@ -15,6 +15,7 @@
     "test:twilio": "node scripts/twilio-gateway-test.cjs",
     "test:crm-safety": "node scripts/crm-boundary-safety-test.cjs",
     "test:gemini": "node scripts/gemini-analysis-test.cjs",
+    "test:auth-credentials": "node scripts/auth-credentials-test.cjs",
     "test:stage2.6": "node scripts/stage2-6-sales-crm-test.cjs",
     "test:stage2.7": "node scripts/stage2-7-agency-client-crm-test.cjs",
     "test:stage2.8": "node scripts/stage2-8-agency-hubspot-zoho-client-crm-test.cjs",

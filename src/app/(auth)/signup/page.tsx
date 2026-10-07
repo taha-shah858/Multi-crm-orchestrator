@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Building2, UserRound } from "lucide-react";
 import BrandIcon from "@/components/ui/BrandIcon";
 import type { WorkspaceRole } from "@/lib/auth/roles";
+import PasswordInput from "@/components/auth/PasswordInput";
+import { EMAIL_REQUIREMENTS, PASSWORD_REQUIREMENTS, PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH, isValidEmail, isValidNewPassword } from "@/lib/auth/credential-policy";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -13,10 +15,14 @@ export default function SignupPage() {
   const [formData, setFormData] = useState({ workspace: "", email: "", password: "", confirmPassword: "" });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emailInUse, setEmailInUse] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (accountType !== "ADMIN") return;
+    setEmailInUse(false);
+    if (!isValidEmail(formData.email.trim().toLowerCase())) { setError(EMAIL_REQUIREMENTS); return; }
+    if (!isValidNewPassword(formData.password)) { setError(PASSWORD_REQUIREMENTS); return; }
     if (formData.password !== formData.confirmPassword) { setError("Passwords do not match."); return; }
     setIsLoading(true);
     setError(null);
@@ -26,7 +32,8 @@ export default function SignupPage() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ accountType, workspace: formData.workspace, email: formData.email, password: formData.password }),
       });
-      const payload = await response.json().catch(() => null) as { success?: boolean; error?: { message?: string } } | null;
+      const payload = await response.json().catch(() => null) as { success?: boolean; error?: { code?: string; message?: string } } | null;
+      setEmailInUse(payload?.error?.code === "EMAIL_IN_USE");
       if (!response.ok || !payload?.success) throw new Error(payload?.error?.message ?? "Workspace provisioning failed.");
       router.replace("/admin");
       router.refresh();
@@ -64,7 +71,7 @@ export default function SignupPage() {
           <select
             aria-label="Signup role"
             value={accountType}
-            onChange={(event) => { setAccountType(event.target.value as WorkspaceRole | ""); setError(null); }}
+            onChange={(event) => { setAccountType(event.target.value as WorkspaceRole | ""); setError(null); setEmailInUse(false); }}
             className={inputCls}
           >
             <option value="">Select Administrator or Sales Agent</option>
@@ -103,12 +110,14 @@ export default function SignupPage() {
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               <AuthInput label="Workspace title"   value={formData.workspace}        onChange={(v) => setFormData({ ...formData, workspace:        v })} />
-              <AuthInput label="Email"              value={formData.email}            onChange={(v) => setFormData({ ...formData, email:            v })} type="email" />
+              <AuthInput label="Email" value={formData.email} onChange={(v) => { setFormData({ ...formData, email: v }); setError(null); setEmailInUse(false); }} type="email" />
               <div className="grid grid-cols-2 gap-3">
                 <AuthInput label="Password"         value={formData.password}         onChange={(v) => setFormData({ ...formData, password:         v })} type="password" />
                 <AuthInput label="Confirm password" value={formData.confirmPassword}  onChange={(v) => setFormData({ ...formData, confirmPassword:  v })} type="password" />
               </div>
+              <p id="password-requirements" className="text-xs text-slate-600">{PASSWORD_REQUIREMENTS}</p>
               {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">{error}</p>}
+              {emailInUse && <Link href="/login" className="block text-sm font-medium text-blue-600 hover:underline">Sign in to your existing account</Link>}
               <button
                 type="submit"
                 disabled={isLoading}
@@ -132,6 +141,7 @@ export default function SignupPage() {
 }
 
 function AuthInput({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (value: string) => void; type?: string }) {
+  if (type === "password") return <PasswordInput label={label} labelClassName="text-[11px] font-semibold tracking-wider text-slate-600 uppercase" value={value} onChange={event => onChange(event.target.value)} required minLength={PASSWORD_MIN_LENGTH} maxLength={PASSWORD_MAX_LENGTH} autoComplete="new-password" aria-describedby="password-requirements" className="w-full border border-slate-300 rounded-md px-3 py-2.5 text-sm text-slate-900 bg-white focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" />;
   return (
     <label className="block space-y-1.5">
       <span className="text-[11px] font-semibold tracking-wider text-slate-600 uppercase">{label}</span>

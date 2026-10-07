@@ -3,7 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Building2, Key, Lock, UserRound } from "lucide-react";
+import { ArrowRight, Building2, Lock, UserRound } from "lucide-react";
+import PasswordInput from "@/components/auth/PasswordInput";
+import { EMAIL_REQUIREMENTS, isValidEmail } from "@/lib/auth/credential-policy";
 import BrandIcon from "@/components/ui/BrandIcon";
 import { workspaceHomeForRole, type WorkspaceRole } from "@/lib/auth/roles";
 import type { AuthenticatedUser } from "@/lib/models/canonical";
@@ -19,6 +21,7 @@ export default function LoginPage() {
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!workspaceRole) return;
+    if (!isValidEmail(email.trim().toLowerCase())) { setError(EMAIL_REQUIREMENTS); return; }
     setIsLoading(true);
     setError(null);
     try {
@@ -95,17 +98,11 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className={labelCls}>Email</label>
-              <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required autoComplete="email" className={inputCls} />
+              <label htmlFor="login-email" className={labelCls}>Email</label>
+              <input id="login-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required autoComplete="email" className={inputCls} />
             </div>
 
-            <div>
-              <label className={labelCls}>Password</label>
-              <span className="relative block">
-                <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required autoComplete="current-password" className={`${inputCls} pr-10`} />
-                <Key className="absolute right-3 top-3 h-4 w-4 text-slate-400" />
-              </span>
-            </div>
+            <PasswordInput label="Password" labelClassName={labelCls} value={password} onChange={(event) => setPassword(event.target.value)} required autoComplete="current-password" className={inputCls} />
 
             <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-3">
               <div>

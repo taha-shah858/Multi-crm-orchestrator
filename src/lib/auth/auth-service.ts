@@ -3,6 +3,7 @@ import { promisify } from "util";
 import { prisma } from "@/lib/db/prisma";
 import { AppError } from "@/lib/errors/app-error";
 import { isWorkspaceRole, workspaceRoleForUserRole } from "@/lib/auth/roles";
+import { EMAIL_REQUIREMENTS, PASSWORD_REQUIREMENTS, isValidEmail, isValidNewPassword } from "@/lib/auth/credential-policy";
 import type { AuthenticatedUser, ClientAccountSummary, UserRole } from "@/lib/models/canonical";
 
 const scrypt = promisify(scryptCallback);
@@ -51,6 +52,7 @@ export async function signIn(input: Record<string, unknown>) {
   const workspaceRole = input.workspaceRole;
   if (!isWorkspaceRole(workspaceRole)) throw new AppError("INVALID_CREDENTIALS", 422, "A workspace role is required.", "Choose the Admin / Manager or Sales Agent workspace.");
   if (!email || !password) throw new AppError("INVALID_CREDENTIALS", 422, "Email and password are required.", "Enter your email and password.");
+  if (!isValidEmail(email)) throw new AppError("INVALID_CREDENTIALS", 422, "Email format is invalid.", EMAIL_REQUIREMENTS);
 
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user || !user.passwordHash || !(await verifyPassword(password, user.passwordHash))) {
@@ -74,10 +76,11 @@ export async function signUp(input: Record<string, unknown>) {
   const name = text(input.name) || "Workspace administrator";
   const email = normalizeEmail(input.email);
   const password = typeof input.password === "string" ? input.password : "";
-  if (workspace.length < 2 || !email || password.length < 10) {
-    throw new AppError("INVALID_SIGNUP", 422, "Signup details are invalid.", "Enter a workspace, a valid email, and a password of at least 10 characters.");
-  }
-  if (await prisma.user.findUnique({ where: { email }, select: { id: true } })) throw new AppError("EMAIL_IN_USE", 409, "Email is already registered.", "Sign in with this email instead.");
+  if (workspace.length < 2) throw new AppError("INVALID_SIGNUP", 422, "Workspace is invalid.", "Enter a workspace title of at least two characters.");
+  if (!isValidEmail(email)) throw new AppError("INVALID_SIGNUP", 422, "Email format is invalid.", EMAIL_REQUIREMENTS);
+  if (!isValidNewPassword(password)) throw new AppError("INVALID_SIGNUP", 422, "Password does not meet requirements.", PASSWORD_REQUIREMENTS);
+  const duplicateEmail = () => new AppError("EMAIL_IN_USE", 409, "Email is already registered.", "An account already exists with this email. Go to Sign in to access your account.");
+  if (await prisma.user.findUnique({ where: { email }, select: { id: true } })) throw duplicateEmail();
 
   const passwordHash = await hashPassword(password);
   const result = await prisma.$transaction(async (transaction) => {
@@ -87,6 +90,11 @@ export async function signUp(input: Record<string, unknown>) {
     await transaction.clientAssignment.create({ data: { clientAccountId: client.id, userId: user.id } });
     await transaction.auditLog.create({ data: { organizationId: organization.id, userId: user.id, action: "USER_CREATED", entityType: "USER", entityId: user.id, source: "PLATFORM", metadata: { role: "ADMIN", signup: true } } });
     return { user, client };
+  }).catch(error => {
+    // The unique email constraint also protects concurrent signup requests.
+    if (error && typeof error === "object" && error.code === "P2002" &&
+      (error.meta?.modelName === "User" || (Array.isArray(error.meta?.target) && error.meta.target.includes("email")))) throw duplicateEmail();
+    throw error;
   });
   const session = await createSession(result.user.id);
   return { user: toAuthenticatedUser(result.user), defaultClientAccountId: result.client.id, session };
