@@ -519,6 +519,11 @@ test("Zoho handoff verifies and reuses an existing email contact before linking 
     if (String(url).includes("/Contacts/existing-contact")) return Response.json({ data: [{ id: "existing-contact", Email: "CUSTOMER@example.test" }] });
     if (String(url).endsWith("/Contacts")) return Response.json(emailDuplicate(), { status: 400 });
     if (String(url).endsWith("/Deals")) linkedContact = JSON.parse(options.body).data[0].Contact_Name.id;
+    if (String(url).endsWith("/Notes")) {
+      const note = JSON.parse(options.body).data[0];
+      assert.equal(note.Parent_Id, "new-deal");
+      assert.equal(note.$se_module, "Deals");
+    }
     return Response.json({ data: [{ status: "success", code: "SUCCESS", details: { id: String(url).endsWith("/Deals") ? "new-deal" : "new-note" } }] });
   };
   const result = await zoho.syncHandoffToZoho(connection(), {

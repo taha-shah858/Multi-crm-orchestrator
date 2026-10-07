@@ -403,10 +403,8 @@ export async function syncHandoffToZoho(
       ]
         .filter(Boolean)
         .join("\n"),
-      Parent_Id: {
-        id: dealExternalId,
-        module: "Deals",
-      },
+      Parent_Id: dealExternalId,
+      $se_module: "Deals",
     };
 
     const noteResult = await createOrUpdateZohoRecord(connection, "NOTE", notePayload);
