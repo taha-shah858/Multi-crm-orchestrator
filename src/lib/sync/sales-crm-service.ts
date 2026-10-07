@@ -14,6 +14,7 @@ import type { RequestContext } from "@/lib/models/canonical";
 import { prepareActiveClientSync } from "@/lib/sync/contact-sync-service";
 import { createDealHandoffFromAgencyDeal } from "@/lib/handoff/handoff-service";
 import { ensureClosedDealCommission } from "@/lib/operations/closed-deal-commission";
+import { assertClientMutationTarget } from "@/lib/client-crm/connection";
 
 type Input = Record<string, unknown>;
 const text = (value: unknown) => typeof value === "string" ? value.trim() : "";
@@ -213,13 +214,22 @@ export async function createAgencyDeal(
     throw new AppError("INVALID_DEAL_INPUT", 422, "Deal amount must be a positive number.", "Enter a valid amount in USD.");
   }
 
+  const clientAccountId = text(input.clientAccountId) || context.activeClientAccountId;
+  await assertClientMutationTarget(context, clientAccountId);
+  const contactVisibility = {
+    organizationId: context.user.organizationId,
+    OR: [
+      { clientAccountId },
+      { externalRecords: { some: { objectType: "CONTACT" as const, connection: { organizationId: context.user.organizationId, ownershipType: "COMPANY" as const, provider: "HUBSPOT" as const } } } },
+    ],
+  };
   let contact = null;
   const contactIdStr = typeof input.contactId === "string" ? input.contactId.trim() : null;
   if (contactIdStr) {
     contact = await prisma.contact.findFirst({
       where: {
         id: contactIdStr,
-        organizationId: context.user.organizationId,
+        ...contactVisibility,
       },
       include: {
         crmCompany: true,
@@ -231,6 +241,7 @@ export async function createAgencyDeal(
       const clientRecord = await prisma.clientCrmRecord.findFirst({
         where: {
           organizationId: context.user.organizationId,
+          clientAccountId,
           recordType: "CONTACT",
           OR: [
             { id: contactIdStr },
@@ -249,7 +260,7 @@ export async function createAgencyDeal(
           contact = await prisma.contact.findFirst({
             where: {
               id: canonicalId,
-              organizationId: context.user.organizationId,
+              ...contactVisibility,
             },
             include: {
               crmCompany: true,
@@ -260,14 +271,7 @@ export async function createAgencyDeal(
     }
   }
 
-  const clientAccountId =
-    (typeof input.clientAccountId === "string" && input.clientAccountId) ||
-    contact?.clientAccountId ||
-    context.activeClientAccountId;
-
-  if (!clientAccountId) {
-    throw new AppError("CLIENT_CONTEXT_REQUIRED", 422, "Client account context is required.", "Select an active client account.");
-  }
+  if (contactIdStr && !contact) throw new AppError("CONTACT_NOT_FOUND", 404, "Contact is unavailable.", "Choose a contact from the agency directory or this client.");
 
   const statusStr = typeof input.status === "string" ? input.status : "OPEN";
   const status: DealStatus = statusStr === "CLOSED_WON" ? "CLOSED_WON" : statusStr === "CLOSED_LOST" ? "CLOSED_LOST" : "OPEN";
@@ -398,15 +402,8 @@ export async function createAgencyDeal(
     };
   }
 
-  // Also sync directly into ClientCrmRecord for immediate visibility in Client CRM
+  // Local deal visibility is not a Zoho mapping or successful provider sync.
   try {
-    const clientConnection = await prisma.integrationConnection.findFirst({
-      where: {
-        organizationId: context.user.organizationId,
-        clientAccountId,
-      },
-    });
-
     const contactName = contact
       ? [contact.firstName, contact.lastName].filter(Boolean).join(" ").trim()
       : null;
@@ -415,22 +412,22 @@ export async function createAgencyDeal(
       data: {
         organizationId: context.user.organizationId,
         clientAccountId,
-        connectionId: clientConnection?.id ?? null,
-        provider: clientConnection?.provider || "ZOHO",
+        connectionId: null,
+        provider: "ZOHO",
         recordType: "DEAL",
-        externalId: `deal-${createdDeal.id}`,
+        externalId: null,
         name: createdDeal.title,
         amount: (createdDeal.valueCents / 100).toFixed(2),
         status: createdDeal.status === "CLOSED_WON" ? "Won" : "Open",
         stage: createdDeal.stageLabel || "Pipeline",
         details: createdDeal.notes || "Deal created via Platform",
         customFields: {
-          source: "UNIFIED_DIRECTORY",
+          source: "LOCAL_AGENCY_DEAL",
           dealId: createdDeal.id,
           contactId: createdDeal.contactId,
           contactName,
         },
-        lastSyncedAt: new Date(),
+        lastSyncedAt: null,
       },
     });
   } catch {

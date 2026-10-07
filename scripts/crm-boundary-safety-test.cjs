@@ -45,6 +45,7 @@ function hydrate(model, row, args = {}) {
   if (model === "contacts" && args.include?.externalRecords?.where) {
     result.externalRecords = result.externalRecords.filter((item) => matches(item, args.include.externalRecords.where));
   }
+  if (model === "deals" && args.include?.contact) result.contact = structuredClone(state.contacts.find(item => item.id === row.contactId) ?? null);
   return result;
 }
 
@@ -54,6 +55,7 @@ function table(model) {
   return {
     findFirst: async (args) => hydrate(model, rows().find((row) => matches(row, args.where)), args),
     findUnique: async (args) => hydrate(model, rows().find((row) => matches(row, args.where)), args),
+    findUniqueOrThrow: async (args) => { const row = rows().find(item => matches(item, args.where)); assert.ok(row); return hydrate(model, row, args); },
     findMany: async (args) => rows().filter((row) => matches(row, args.where)).map((row) => hydrate(model, row, args)),
     update: async (args) => {
       write("update", args);
@@ -88,7 +90,7 @@ function table(model) {
         }
         rows().push(row); return hydrate(model, row, args);
       }
-      if (model === "syncRuns" || model === "audits") {
+      if (model === "deals" || model === "records" || model === "syncRuns" || model === "audits") {
         const row = { id: model + "-" + rows().length, ...args.data };
         rows().push(row); return hydrate(model, row, args);
       }
@@ -164,12 +166,15 @@ global.fetch = async (...args) => {
 process.env.NODE_ENV = "test";
 
 const client = require(path.join(root, "src/lib/client-crm/client-crm-service.ts"));
+const directoryContacts = require(path.join(root, "src/lib/client-crm/client-directory-contacts.ts"));
+const sales = require(path.join(root, "src/lib/sync/sales-crm-service.ts"));
 const handoffs = require(path.join(root, "src/lib/handoff/handoff-service.ts"));
 const contacts = require(path.join(root, "src/lib/sync/contact-sync-service.ts"));
 const zoho = require(path.join(root, "src/lib/integrations/zoho/client.ts"));
 const legacy = require(path.join(root, "src/lib/integrations/activecampaign/client.ts"));
 const { NextRequest } = require("next/server");
 const recordsRoute = require(path.join(root, "src/app/api/client-crm/records/route.ts"));
+const directoryContactsRoute = require(path.join(root, "src/app/api/client-crm/contacts/route.ts"));
 const syncRoute = require(path.join(root, "src/app/api/client-crm/sync/route.ts"));
 const handoffRoute = require(path.join(root, "src/app/api/handoffs/route.ts"));
 const retryRoute = require(path.join(root, "src/app/api/handoffs/[id]/retry/route.ts"));
@@ -334,6 +339,51 @@ test("agency directory excludes private client contacts and selects agency prove
   assert.deepEqual(result.map((item) => item.id), ["agency"]); assert.equal(result[0].externalId, "hubspot-id");
   state.clients[1].agentAssignments = [{ userId: "agent" }];
   assert.deepEqual((await contacts.getActiveClientContacts(context("b"), { scope: "agency" })).map((item) => item.id), ["agency"]);
+});
+function directoryContact(id, company, extra = {}) {
+  return { id, organizationId: "org", clientAccountId: "agency-home", firstName: id, lastName: "Prospect", email: null, phone: null, company,
+    crmOwner: null, crmCompany: null, dealLinks: [], deals: [], interactions: [], createdAt: now, updatedAt: now,
+    externalRecords: [{ objectType: "CONTACT", externalId: `hs-${id}`, connection: { organizationId: "org", ownershipType: "COMPANY", provider: "HUBSPOT" } }], ...extra };
+}
+test("client Contacts projects matching agency leads without copying, importing or changing ownership", async () => {
+  Object.assign(state.clients[0], { name: "Northstar Ecom", brandName: "Northstar Store" });
+  state.contacts = [directoryContact("noah", " northstar ECOM "), directoryContact("ava", "NORTHSTAR ECOM LLC"), directoryContact("brand", "Northstar Store"), directoryContact("linked", null, {crmCompany:{name:"Northstar Ecom"}}),
+    directoryContact("other", "Northstar Logistics"), directoryContact("short", "Northstar"), directoryContact("foreign", "Northstar Ecom", {organizationId:"foreign"}),
+    directoryContact("private", "Northstar Ecom", {externalRecords:[{objectType:"CONTACT",externalId:"private",connection:connection()}]})];
+  state.records = [record({id:"unrelated-saved"})];
+  state.deals = [deal({id:"current-deal",contactId:"noah"}), deal({id:"other-client-deal",clientAccountId:"b",contactId:"noah"})];
+  const records = await directoryContacts.listClientDirectoryContacts(context());
+  assert.deepEqual(records.map(item=>item.id),["noah","ava","brand","linked"]);
+  assert.equal(records[0].provider,"HUBSPOT"); assert.equal(records[0].customFields.contactId,"noah");
+  assert.deepEqual(records[0].customFields.deals.map(item=>item.id),["current-deal"]);
+  assert.equal(state.contacts[0].clientAccountId,"agency-home");
+  assert.deepEqual(state.records.map(item=>item.id),["unrelated-saved"]);
+  assert.deepEqual(state.writes,[]); assert.deepEqual(state.providers,[]);
+  const response = await directoryContactsRoute.GET(request("/api/client-crm/contacts"));
+  assert.equal(response.status,200); assert.equal((await response.json()).records.length,4);
+  state.contacts.push(directoryContact("new", "Northstar Ecom"));
+  assert.equal((await directoryContacts.listClientDirectoryContacts(context())).length,5);
+  state.contacts[0].company="BluePeak Consulting";
+  assert.equal((await directoryContacts.listClientDirectoryContacts(context())).length,4);
+  await denied(directoryContacts.listClientDirectoryContacts(context("b")));
+  assert.deepEqual(state.writes,[]); assert.deepEqual(state.providers,[]);
+});
+test("an open deal uses the shared contact ID and selected client; Zoho is contacted only at handoff", async () => {
+  state.contacts=[directoryContact("agency-contact","Northstar Ecom")];
+  const input={title:"Northstar Sale",amount:100,contactId:"agency-contact",status:"OPEN"};
+  const created=await sales.createAgencyDeal(context(),input,"test-create");
+  assert.equal(created.deal.contactId,"agency-contact"); assert.equal(created.deal.clientAccountId,"a");
+  assert.deepEqual(state.providers,[]);
+  assert.equal(state.records[0].recordType,"DEAL"); assert.equal(state.records[0].lastSyncedAt,null); assert.equal(state.records[0].externalId,null);
+  assert.equal(state.contacts[0].clientAccountId,"agency-home");
+  await denied(sales.createAgencyDeal(context(),{...input,clientAccountId:"b"},"forged"));
+  state.clients[1].agentAssignments=[{userId:"agent"}];
+  await denied(sales.createAgencyDeal(context(),{...input,clientAccountId:"b"},"wrong-selected-client"));
+  state.contacts.push(directoryContact("private-b","Northstar Ecom",{clientAccountId:"b",externalRecords:[]}));
+  await assert.rejects(sales.createAgencyDeal(context(),{...input,contactId:"private-b"},"private-contact"),{code:"CONTACT_NOT_FOUND"});
+  state.deals[0].status="CLOSED_WON"; state.deals[0].closedAt=now;
+  const handed=await handoffs.createDealHandoffFromAgencyDeal(context(),created.deal.id,{clientCrmProvider:"ZOHO"});
+  assert.equal(handed.status,"SYNCED"); assert.equal(state.providers.filter(call=>call.kind==="ZOHO_HANDOFF").length,1);
 });
 test("contact override cannot bypass assignments even in agency scope", async () => {
   await denied(contacts.getActiveClientContacts(context(), { scope: "agency", clientAccountId: "b" }));

@@ -1,9 +1,8 @@
 /**
  * Strategy for matching Unified Lead Directory contacts to the active Client Account.
  * Supports:
- * 1. Direct assignment (contact.clientAccountId === clientAccount.id)
- * 2. Company name similarity (exact, substring, and keyword/token overlap)
- * 3. Brand name similarity
+ * Full normalized company or brand name matching only.
+ * Storage assignment and partial keyword overlap are not client relationships.
  */
 
 export interface ContactCandidate {
@@ -52,10 +51,11 @@ export interface MatchResult {
 export function normalizeCompanyName(str: string | null | undefined): string {
   if (!str) return "";
   return str
+    .normalize("NFKC")
     .toLowerCase()
-    .replace(/[^\w\s]/g, " ")
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .replace(
-      /\b(inc|incorporated|llc|ltd|limited|corp|corporation|holdings|group|partners|solutions|services|tech|technologies|growth|primary|account|ecom|co|company|capital|logistics|consulting|marketing)\b/gi,
+      /\b(inc|incorporated|llc|ltd|limited|corp|corporation)\s*$/gi,
       "",
     )
     .replace(/\s+/g, " ")
@@ -93,33 +93,6 @@ export function doesContactMatchClient(
       };
     }
 
-    // 3. Substring Inclusion (if long enough to avoid false positives)
-    if (clientNorm.length >= 3 && (clientNorm.includes(comp) || comp.includes(clientNorm))) {
-      return {
-        matches: true,
-        reason: `Company name "${comp}" is similar to client "${client.name}"`,
-        confidence: "HIGH",
-      };
-    }
-    if (brandNorm.length >= 3 && (brandNorm.includes(comp) || comp.includes(brandNorm))) {
-      return {
-        matches: true,
-        reason: `Company name "${comp}" is similar to brand "${client.brandName}"`,
-        confidence: "HIGH",
-      };
-    }
-
-    // 4. Token / Keyword Overlap
-    const compTokens = comp.split(" ").filter((t) => t.length >= 3);
-    const clientTokens = `${clientNorm} ${brandNorm}`.split(" ").filter((t) => t.length >= 3);
-    const common = compTokens.filter((t) => clientTokens.includes(t));
-    if (common.length > 0) {
-      return {
-        matches: true,
-        reason: `Company keyword match ("${common.join(", ")}") with "${client.name}"`,
-        confidence: "MEDIUM",
-      };
-    }
   }
 
   return { matches: false, confidence: "NONE" };

@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import {
   Briefcase,
   Users,
@@ -97,6 +98,10 @@ export default function ClientCrmPage() {
     email?: string;
     companyName?: string;
   }[]>([]);
+  const [contactsClientId, setContactsClientId] = useState("");
+  const applicableClientContacts = contactsClientId === activeClientAccount.id ? clientContacts : [];
+  const recordsRequestVersion = useRef(0);
+  const contactsRequestVersion = useRef(0);
 
   // Create Deal Modal State
   const [isCreateDealModalOpen, setIsCreateDealModalOpen] = useState(false);
@@ -119,10 +124,13 @@ export default function ClientCrmPage() {
   const [isSubmittingNewDeal, setIsSubmittingNewDeal] = useState(false);
 
   const fetchClientContacts = useCallback(async (): Promise<{ id: string; name: string; email?: string; companyName?: string }[]> => {
+    if (!isClientAccountReady) return [];
+    const version = ++contactsRequestVersion.current;
     try {
-      const res = await fetch("/api/client-crm/records?type=CONTACT", { cache: "no-store" });
+      const res = await fetch("/api/client-crm/contacts", { cache: "no-store" });
       const data = await res.json();
-      if (data.success && Array.isArray(data.records)) {
+      if (version !== contactsRequestVersion.current) return [];
+      if (res.ok && data.success && Array.isArray(data.records)) {
         const contactCandidates = data.records.map((r: ClientCrmRecordSummary) => ({
           id: (typeof r.customFields === "object" && r.customFields && "contactId" in r.customFields ? String(r.customFields.contactId) : null) || r.id,
           name: r.name || r.email || "Unnamed Contact",
@@ -130,30 +138,34 @@ export default function ClientCrmPage() {
           companyName: r.companyName || undefined,
         }));
         setClientContacts(contactCandidates);
+        setContactsClientId(activeClientAccount.id);
         return contactCandidates;
       }
     } catch {
       // Ignore background contact fetch error
     }
     return [];
-  }, []);
+  }, [activeClientAccount.id, isClientAccountReady]);
 
-  const fetchRecords = useCallback(async () => {
+  const fetchRecords = useCallback(async (silent = false) => {
     if (!isClientAccountReady) return;
-    setIsLoading(true);
+    const version = ++recordsRequestVersion.current;
+    if (!silent) setIsLoading(true);
     try {
       if (activeTab === "HANDOFFS") {
         const res = await fetch(`/api/handoffs?clientAccountId=${encodeURIComponent(activeClientAccount.id)}`, { cache: "no-store" });
         const data = await res.json();
+        if (version !== recordsRequestVersion.current) return;
         if (!res.ok || !data.success) {
           throw new Error(data.error?.message || "Failed to load handoffs");
         }
         setHandoffs(data.handoffs || []);
       } else {
-        const res = await fetch(`/api/client-crm/records?type=${activeTab}`, {
+        const res = await fetch(activeTab === "CONTACT" ? "/api/client-crm/contacts" : `/api/client-crm/records?type=${activeTab}`, {
           cache: "no-store",
         });
         const data = await res.json();
+        if (version !== recordsRequestVersion.current) return;
         if (!res.ok || !data.success) {
           throw new Error(data.error?.message || "Failed to load client CRM records");
         }
@@ -167,20 +179,31 @@ export default function ClientCrmPage() {
             companyName: r.companyName || undefined,
           }));
           setClientContacts(contactCandidates);
+          setContactsClientId(activeClientAccount.id);
         }
       }
     } catch (err: unknown) {
+      if (version !== recordsRequestVersion.current) return;
       const errMsg = err instanceof Error ? err.message : "Failed to load data";
       setFeedback({ type: "error", message: errMsg });
     } finally {
-      setIsLoading(false);
+      if (version === recordsRequestVersion.current) setIsLoading(false);
     }
   }, [activeTab, isClientAccountReady, activeClientAccount.id]);
 
   useEffect(() => {
     void fetchRecords();
-    void fetchClientContacts();
-  }, [fetchRecords, fetchClientContacts, activeClientAccount.id]);
+    if (activeTab !== "CONTACT") void fetchClientContacts();
+    return () => { recordsRequestVersion.current++; contactsRequestVersion.current++; };
+  }, [fetchRecords, fetchClientContacts, activeClientAccount.id, activeTab]);
+
+  useEffect(() => {
+    if (activeTab !== "CONTACT" || !isClientAccountReady) return;
+    const refresh = () => { if (!document.hidden) void fetchRecords(true); };
+    const timer = window.setInterval(refresh, 15_000);
+    window.addEventListener("focus", refresh);
+    return () => { window.clearInterval(timer); window.removeEventListener("focus", refresh); };
+  }, [activeTab, isClientAccountReady, fetchRecords]);
 
   const handleSyncClientCrm = async () => {
     setIsSyncing(true);
@@ -399,7 +422,7 @@ export default function ClientCrmPage() {
   };
 
   const openCreateDealGeneral = async () => {
-    let contactsList = clientContacts;
+    let contactsList = applicableClientContacts;
     if (contactsList.length === 0) {
       contactsList = await fetchClientContacts();
     }
@@ -537,6 +560,7 @@ export default function ClientCrmPage() {
   };
 
   const filteredRecords = records.filter((r) => {
+    if (r.clientAccountId !== activeClientAccount.id) return false;
     if (r.recordType !== activeTab) return false;
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
@@ -591,7 +615,7 @@ export default function ClientCrmPage() {
         </div>
 
         <div className="flex items-center gap-2.5">
-          <button
+          {activeTab !== "CONTACT" && <button
             onClick={handleSyncClientCrm}
             disabled={isSyncing}
             className="px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium font-sans flex items-center gap-2 cursor-pointer shadow-xs transition-colors disabled:opacity-50"
@@ -603,7 +627,7 @@ export default function ClientCrmPage() {
               }`}
             />
             <span>{isSyncing ? `Syncing ${providerDisplayName}...` : `Sync ${providerDisplayName}`}</span>
-          </button>
+          </button>}
           <button
             onClick={() => void fetchRecords()}
             className="px-3.5 py-2 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-medium font-sans flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
@@ -648,7 +672,7 @@ export default function ClientCrmPage() {
                 Agency Sales → Client Operations Architecture
               </p>
               <p className="font-sans text-sm font-normal text-slate-700 leading-relaxed mt-0.5">
-                Contacts in the Unified Lead Directory matching <span className="text-blue-700 font-semibold">{activeClientAccount.name}</span> by company appear directly here. Editing them syncs bi-directionally with the Unified Lead Directory and the client&apos;s CRM.
+                Contacts in the Unified Lead Directory matching <span className="text-blue-700 font-semibold">{activeClientAccount.name}</span> by company or brand appear directly here. Refresh reads the directory. Contacts are sent to Zoho only through a deal handoff; edit their details in the Unified Lead Directory.
               </p>
             </div>
           </div>
@@ -722,7 +746,7 @@ export default function ClientCrmPage() {
       {isLoading ? (
         <div className="p-12 text-center text-xs font-sans text-slate-500 flex items-center justify-center gap-2">
           <RefreshCw className="w-4 h-4 animate-spin text-blue-600" />
-          Loading records from {activeClientAccount.name}&apos;s {providerDisplayName}...
+          {activeTab === "CONTACT" ? "Loading matching Unified Lead Directory contacts..." : `Loading records for ${activeClientAccount.name}...`}
         </div>
       ) : activeTab === "HANDOFFS" ? (
         // Deal Handoffs View
@@ -871,7 +895,7 @@ export default function ClientCrmPage() {
               No {activeTab.toLowerCase()} records found for {activeClientAccount.name}
             </p>
             <p className="text-xs text-crm-text-muted font-sans mt-1">
-              {activeTab === "DEAL"
+              {activeTab === "CONTACT" ? (searchQuery.trim() ? "No matching contacts for this search. Clear the search to see all company matches." : `No Unified Lead Directory contacts match ${activeClientAccount.name}'s company or brand name yet. Add or update contacts in the directory, then refresh here.`) : activeTab === "DEAL"
                 ? "Create a deal directly for one of this client's contacts or wait for inbound sync."
                 : `Click "Sync Client CRM" to import records from ${providerDisplayName} or wait for deal handoffs.`}
             </p>
@@ -924,6 +948,7 @@ export default function ClientCrmPage() {
                         <span className="text-[10px] font-sans text-crm-text-muted">
                           Ext ID: #{record.externalId || "local"}
                         </span>
+                        {record.customFields?.source === "LOCAL_AGENCY_DEAL" && <span className="text-[10px] text-slate-500">Agency deal · Local record</span>}
                       </div>
 
                       <div className="flex items-center gap-4 text-xs font-sans text-crm-text-muted flex-wrap">
@@ -980,13 +1005,13 @@ export default function ClientCrmPage() {
                         </button>
                       )}
 
-                      <button
+                      {record.recordType === "CONTACT" && record.customFields?.source === "UNIFIED_DIRECTORY" ? <Link href="/leads" className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs text-blue-700 hover:bg-blue-50">Edit in Unified Lead Directory</Link> : <button
                         onClick={() => openEditor(record)}
                         className="px-3 py-1.5 rounded-lg bg-crm-inner border border-crm-border-strong text-xs font-sans text-crm-text hover:text-emerald-800 hover:border-emerald-500/50 transition-all flex items-center gap-1.5 cursor-pointer"
                       >
                         <Edit3 className="w-3 h-3 text-emerald-800" />
                         <span>Edit & Sync</span>
-                      </button>
+                      </button>}
 
                       {record.recordType === "DEAL" && (
                         record.status !== "Won" ? (
@@ -1484,11 +1509,11 @@ export default function ClientCrmPage() {
                 <label className="text-[11px] font-sans text-crm-text-muted uppercase tracking-wider block">
                   Assign To Contact *
                 </label>
-                {clientContacts.length > 0 ? (
+                {applicableClientContacts.length > 0 ? (
                   <select
                     value={dealContactTarget?.id || ""}
                     onChange={(e) => {
-                      const found = clientContacts.find((c) => c.id === e.target.value);
+                      const found = applicableClientContacts.find((c) => c.id === e.target.value);
                       if (found) {
                         setDealContactTarget(found);
                         if (!createDealForm.title || createDealForm.title.includes(" - ")) {
@@ -1502,12 +1527,12 @@ export default function ClientCrmPage() {
                     required
                     className="w-full bg-crm-inner border border-crm-border-strong rounded-xl px-3 py-2 text-xs font-sans text-crm-text focus:outline-none focus:border-emerald-500/60"
                   >
-                    {dealContactTarget && !clientContacts.some((c) => c.id === dealContactTarget.id) && (
+                    {dealContactTarget && !applicableClientContacts.some((c) => c.id === dealContactTarget.id) && (
                       <option value={dealContactTarget.id}>
                         {dealContactTarget.name} {dealContactTarget.companyName ? `(${dealContactTarget.companyName})` : ""}
                       </option>
                     )}
-                    {clientContacts.map((c) => (
+                    {applicableClientContacts.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name} {c.companyName ? `(${c.companyName})` : ""} {c.email ? `<${c.email}>` : ""}
                       </option>
