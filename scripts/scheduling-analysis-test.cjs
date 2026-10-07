@@ -15,6 +15,7 @@ Module._load = function(name, parent, main) {
 require.extensions['.ts'] = (mod, filename) => mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText, filename);
 const { parseSchedulingAnalysis, analyzeSchedulingTranscript } = require('../src/lib/calendar/scheduling-analysis.ts');
 async function main() {
+  delete process.env.CALENDAR_AI_PROVIDER;
   const script = 'Prospect: Yes, October 15 at 2pm works for me.';
   const valid = { agreed: true, evidence: 'Yes, October 15 at 2pm works for me.', proposedTime: 'October 15 at 2pm', startTime: '2026-10-15T14:00:00+05:00', durationMinutes: 30 };
   assert.equal(parseSchedulingAnalysis(JSON.stringify(valid), script).startTime, '2026-10-15T09:00:00.000Z');
@@ -45,6 +46,22 @@ async function main() {
   responseText = JSON.stringify(valid);
   assert.equal((await post({ ...input, contactId: 'own-contact' })).status, 201);
   assert.equal(persisted.length, 1); assert.equal(persisted[0].clientAccountId, 'client'); assert.equal(persisted[0].organizationId, 'agency'); assert.equal(persisted[0].metadata.schedulingAnalysis.agreed, true);
+  process.env.CALENDAR_AI_PROVIDER = 'openai'; delete process.env.OPENAI_API_KEY;
+  let calls = 0, httpStatus = 200, outputStatus = 'completed', contentType = 'output_text';
+  global.fetch = async (url, options) => {
+    calls++; assert.equal(url, 'https://api.openai.com/v1/responses'); assert.equal(options.headers.Authorization, 'Bearer openai-test-only'); assert.ok(options.signal);
+    const body = JSON.parse(options.body); assert.equal(body.store, false); assert.equal(body.text.format.strict, true); assert.equal(body.input, script); assert.equal(body.model, 'gpt-4.1-mini');
+    return Response.json({ status: outputStatus, output: [{ type: 'message', content: [{ type: contentType, text: JSON.stringify(valid) }] }] }, { status: httpStatus });
+  };
+  await assert.rejects(analyzeSchedulingTranscript(script, 'UTC'), e => e.safeMessage.includes('OPENAI_API_KEY')); assert.equal(calls, 0);
+  process.env.OPENAI_API_KEY = 'openai-test-only'; delete process.env.OPENAI_MODEL;
+  assert.equal((await analyzeSchedulingTranscript(script, 'Asia/Karachi')).provider, 'OPENAI');
+  assert.equal((await post(input)).status, 201); assert.equal(persisted[1].metadata.schedulingAnalysis.provider, 'OPENAI');
+  for (const status of [401, 403, 404, 429, 503]) { httpStatus = status; await assert.rejects(analyzeSchedulingTranscript(script, 'UTC'), e => e.status === 503 && !e.safeMessage.includes('openai-test-only')); }
+  httpStatus = 200; outputStatus = 'incomplete'; await assert.rejects(analyzeSchedulingTranscript(script, 'UTC'), e => e.status === 502);
+  outputStatus = 'completed'; contentType = 'refusal'; await assert.rejects(analyzeSchedulingTranscript(script, 'UTC'), e => e.status === 502);
+  process.env.CALENDAR_AI_PROVIDER = 'unknown'; await assert.rejects(analyzeSchedulingTranscript(script, 'UTC'), e => e.status === 503);
+  console.log('PASS OpenAI: structured request, server-side key, missing key makes no requests, provider provenance, invalid credentials/model, quotas, refusal and incomplete responses.');
   console.log('PASS signal endpoint: session/role/client/contact boundaries, input limits, no agreement writes nothing, positive agreement persists scoped metadata without booking.');
   console.log('PASS scheduling analysis: grounded evidence, timezone conversion, ambiguous dates, duration bounds, agreement/no agreement, missing key and provider errors. No live requests.');
 }
