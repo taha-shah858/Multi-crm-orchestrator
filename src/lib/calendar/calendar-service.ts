@@ -54,7 +54,7 @@ async function validateLinks(context: RequestContext, input: AppointmentInput) {
   const interactionId = text(input.interactionId) || null;
   const [contact, interaction] = await Promise.all([
     contactId ? prisma.contact.findFirst({ where: { id: contactId, organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId }, select: { id: true, firstName: true, lastName: true, email: true } }) : null,
-    interactionId ? prisma.interaction.findFirst({ where: { id: interactionId, organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId }, select: { id: true, contactId: true, subject: true, body: true } }) : null,
+    interactionId ? prisma.interaction.findFirst({ where: { id: interactionId, organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId }, select: { id: true, contactId: true, subject: true, body: true, metadata: true } }) : null,
   ]);
   if (contactId && !contact) throw new AppError("CONTACT_NOT_FOUND", 404, "Contact is outside active client.", "Choose a contact from the active client account.");
   if (interactionId && !interaction) throw new AppError("INTERACTION_NOT_FOUND", 404, "Interaction is outside active client.", "Choose an interaction from the active client account.");
@@ -72,8 +72,10 @@ export async function listCalendarWorkspace(context: RequestContext) {
   ]);
   const scheduledInteractionIds = new Set(appointments.flatMap((appointment) => appointment.interactionId ? [appointment.interactionId] : []));
   const intents = interactions.flatMap((interaction) => {
-    const reason = detectSchedulingIntent(interaction.subject, interaction.body);
-    return reason && !scheduledInteractionIds.has(interaction.id) ? [{ id: interaction.id, contactId: interaction.contactId, subject: interaction.subject, body: interaction.body, occurredAt: interaction.occurredAt, contact: interaction.contact, reason }] : [];
+    const metadata = interaction.metadata as { schedulingAnalysis?: { agreed: boolean; evidence: string; proposedTime: string | null; startTime: string | null; durationMinutes: number; timeZone: string } } | null;
+    const analysis = metadata?.schedulingAnalysis;
+    const reason = analysis ? (analysis.agreed ? analysis.evidence : null) : detectSchedulingIntent(interaction.subject, interaction.body);
+    return reason && !scheduledInteractionIds.has(interaction.id) ? [{ id: interaction.id, contactId: interaction.contactId, subject: interaction.subject, body: interaction.body, occurredAt: interaction.occurredAt, contact: interaction.contact, reason, analysis }] : [];
   });
   // Calendly cancellation/reschedule links are capabilities: sharing them would
   // let another agent change the booking outside the app's owner check.
@@ -99,7 +101,7 @@ export async function createAppointment(context: RequestContext, input: Appointm
   const timeZone = meetingTimeZone(input.timeZone);
   const adapter = remote ? null : calendarAdapterFor(selectedProvider);
   const external = adapter ? await adapter.createEvent({ title, startTime, endTime }) : null;
-  const intentDetected = Boolean(links.interaction && detectSchedulingIntent(links.interaction.subject, links.interaction.body));
+  const intentDetected = Boolean(links.interaction && ((links.interaction.metadata as { schedulingAnalysis?: { agreed?: boolean } } | null)?.schedulingAnalysis?.agreed || detectSchedulingIntent(links.interaction.subject, links.interaction.body)));
   const appointment = await prisma.$transaction(async tx => {
     const created = await tx.appointment.create({ data: { organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, contactId: links.contactId, interactionId: links.interactionId, userId: context.user.id, title, description: text(input.description) || null, startTime, endTime, provider: selectedProvider, source: intentDetected ? "INTENT_DETECTED" : "MANUAL", intentDetected, externalId: external?.externalId, externalMetadata: external?.metadata, calendarConnectionId: connection?.id, externalAccountId: connection?.providerAccountId, calendarSyncStatus: remote ? "PENDING" : "LOCAL_ONLY", sendInvite, attendeeEmail: sendInvite ? attendeeEmail : null, attendeeName: links.contact ? `${links.contact.firstName} ${links.contact.lastName}` : null, timeZone, calendlyEventTypeUri: selectedProvider === "CALENDLY" ? text(input.calendlyEventTypeUri) : null }, include: appointmentInclude });
     await tx.auditLog.create({ data: { organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, userId: context.user.id, action: "APPOINTMENT_CREATED", entityType: "APPOINTMENT", entityId: created.id, requestId, source: "PLATFORM", metadata: { provider: created.provider, source: created.source, intentDetected } } });

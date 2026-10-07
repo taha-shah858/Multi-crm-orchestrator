@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { Calendar as CalendarIcon, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock3, Edit3, Plus, Sparkles, X } from "lucide-react";
+import { Calendar as CalendarIcon, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Plus, Sparkles, X } from "lucide-react";
 import { MultiCrmCard, MultiCrmTag } from "@/components/ui/MultiCrmCard";
 import { useClientAccount } from "@/context/ClientAccountContext";
 import { readApiJson } from "@/lib/http/client-api";
@@ -15,7 +15,7 @@ type View = "WEEK" | "DAY" | "MONTH";
 
 interface Contact { id: string; firstName: string; lastName: string; company: string | null; email?: string | null; }
 interface Appointment { id: string; userId: string | null; title: string; description: string | null; startTime: string; endTime: string; status: Status; provider: Provider; source: "MANUAL" | "INTENT_DETECTED"; calendarSyncStatus: "LOCAL_ONLY" | "PENDING" | "SYNCED" | "FAILED" | "REVIEW_REQUIRED"; lastSyncError: string | null; externalId: string | null; externalMetadata: { eventUrl?: string; rescheduleUrl?: string } | null; sendInvite: boolean; timeZone: string; calendlyEventTypeUri: string | null; intentDetected: boolean; contact: Contact | null; interaction: { id: string; subject: string | null; occurredAt: string } | null; }
-interface Intent { id: string; contactId: string | null; subject: string | null; body: string; occurredAt: string; contact: Contact | null; reason: string; }
+interface Intent { id: string; contactId: string | null; subject: string | null; body: string; occurredAt: string; contact: Contact | null; reason: string; analysis?: { evidence: string; proposedTime: string | null; startTime: string | null; durationMinutes: number; }; }
 interface FormValues { title: string; description: string; contactId: string; interactionId: string; startTime: string; endTime: string; provider: Provider; status: Status; sendInvite: boolean; timeZone: string; calendlyEventTypeUri: string; }
 
 const blankForm = (): FormValues => ({ title: "", description: "", contactId: "", interactionId: "", startTime: "", endTime: "", provider: "MANUAL", status: "SCHEDULED", sendInvite: false, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, calendlyEventTypeUri: "" });
@@ -41,12 +41,15 @@ export default function CalendarPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]); const [intents, setIntents] = useState<Intent[]>([]); const [contacts, setContacts] = useState<Contact[]>([]);
   const [view, setView] = useState<View>("WEEK"); const [focusDate, setFocusDate] = useState(() => new Date()); const [statusFilter, setStatusFilter] = useState<"ALL" | Status>("ALL");
   const [isLoading, setIsLoading] = useState(false); const [isWorking, setIsWorking] = useState(false); const [isModalOpen, setIsModalOpen] = useState(false); const [editing, setEditing] = useState<Appointment | null>(null); const [form, setForm] = useState<FormValues>(blankForm()); const [contactSearch, setContactSearch] = useState(""); const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
-  const requestVersion = useRef(0); const currentClientId = useRef(activeClientAccount.id); currentClientId.current = activeClientAccount.id;
+  const [script, setScript] = useState(""); const [scriptContact, setScriptContact] = useState(""); const [analyzing, setAnalyzing] = useState(false);
+  const requestVersion = useRef(0); const currentClientId = useRef(activeClientAccount.id); useEffect(() => { currentClientId.current = activeClientAccount.id; }, [activeClientAccount.id]);
 
   useEffect(() => {
     if (!isClientAccountReady) return;
     const controller = new AbortController(); const version = ++requestVersion.current; const clientId = activeClientAccount.id;
-    setIsLoading(true); setAppointments([]); setIntents([]); setContacts([]); setMessage(null); setIsModalOpen(false); setEditing(null);
+    // Reset client-scoped drafts and results before loading the newly selected account.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setScript(""); setScriptContact(""); setAnalyzing(false); setIsLoading(true); setAppointments([]); setIntents([]); setContacts([]); setMessage(null); setIsModalOpen(false); setEditing(null);
     const load = async () => {
       try {
         const [calendarResponse, contactsResponse] = await Promise.all([
@@ -91,10 +94,22 @@ export default function CalendarPage() {
     finally { if (currentClientId.current === clientId && requestVersion.current === version) setIsWorking(false); }
   };
 
-  const openCreate = (intent?: Intent, selectedSlot?: Date) => { const start = selectedSlot ?? new Date(); start.setMinutes(Math.ceil(start.getMinutes() / 30) * 30, 0, 0); const end = new Date(start.getTime() + 30 * 60_000); setEditing(null); setMessage(null); setContactSearch(""); setForm({ ...blankForm(), title: intent?.contact ? `Meeting with ${contactName(intent.contact)}` : "", contactId: intent?.contactId ?? "", interactionId: intent?.id ?? "", startTime: localDateTime(start.toISOString()), endTime: localDateTime(end.toISOString()) }); setIsModalOpen(true); };
+  const openCreate = (intent?: Intent, selectedSlot?: Date) => { const start = selectedSlot ?? (intent?.analysis?.startTime ? new Date(intent.analysis.startTime) : new Date()); if (!intent?.analysis?.startTime) start.setMinutes(Math.ceil(start.getMinutes() / 30) * 30, 0, 0); const end = new Date(start.getTime() + (intent?.analysis?.durationMinutes ?? 30) * 60_000); setEditing(null); setMessage(null); setContactSearch(""); setForm({ ...blankForm(), provider: intent && connections.some(c => c.provider === "GOOGLE" && c.connected) ? "GOOGLE" : "MANUAL", title: intent ? `Meeting with ${contactName(intent.contact)}` : "", description: intent?.analysis?.evidence ?? "", contactId: intent?.contactId ?? "", interactionId: intent?.id ?? "", startTime: localDateTime(start.toISOString()), endTime: localDateTime(end.toISOString()) }); setIsModalOpen(true); };
   const openEdit = (appointment: Appointment) => { setEditing(appointment); setMessage(null); setContactSearch(""); setForm({ title: appointment.title, description: appointment.description ?? "", contactId: appointment.contact?.id ?? "", interactionId: appointment.interaction?.id ?? "", startTime: localDateTime(appointment.startTime), endTime: localDateTime(appointment.endTime), provider: appointment.provider, status: appointment.status, sendInvite: appointment.sendInvite, timeZone: appointment.timeZone, calendlyEventTypeUri: appointment.calendlyEventTypeUri ?? "" }); setIsModalOpen(true); };
   const slotDate = (day: Date, hour: number) => new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour, 0, 0, 0);
   const moveCalendar = (direction: number) => setFocusDate((current) => view === "MONTH" ? new Date(current.getFullYear(), current.getMonth() + direction, 1) : addDays(current, direction * (view === "DAY" ? 1 : 7)));
+
+  const analyzeScript = async () => {
+    const clientId = activeClientAccount.id, version = requestVersion.current;
+    setAnalyzing(true); setMessage(null);
+    try {
+      const payload = await readApiJson<{ success: true; signal: Intent | null; message: string }>(await fetch("/api/calendar/signals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ transcript: script, contactId: scriptContact, clientAccountId: clientId, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }) }));
+      if (version !== requestVersion.current || currentClientId.current !== clientId) return;
+      if (payload.signal) { setIntents(items => [payload.signal!, ...items]); setScript(""); }
+      setMessage({ tone: "success", text: payload.message });
+    } catch (error) { if (version === requestVersion.current && currentClientId.current === clientId) setMessage({ tone: "error", text: error instanceof Error ? error.message : "Analysis failed." }); }
+    finally { if (version === requestVersion.current && currentClientId.current === clientId) setAnalyzing(false); }
+  };
 
   const submit = async (event: FormEvent) => {
     event.preventDefault(); const version = requestVersion.current; const clientId = activeClientAccount.id; setIsWorking(true); setMessage(null);
@@ -150,6 +165,13 @@ export default function CalendarPage() {
         </div>
       </div>
 
+      <MultiCrmCard className="p-5 space-y-3">
+        <h2 className="text-base font-semibold">Analyze a conversation</h2>
+        <p className="text-sm text-slate-500">Paste a prospect conversation. AI finds meeting agreement and proposed dates; you confirm the slot before anything is booked. Text is sent to Gemini for analysis.</p>
+        <label className="block text-sm">Prospect (optional)<select disabled={analyzing || isLoading} aria-label="Script prospect" value={scriptContact} onChange={e => setScriptContact(e.target.value)} className="ml-3 rounded border p-2"><option value="">Account-level meeting</option>{contacts.map(c => <option key={c.id} value={c.id}>{contactName(c)}</option>)}</select></label>
+        <textarea disabled={analyzing || isLoading} aria-label="Conversation script" value={script} onChange={e => setScript(e.target.value)} maxLength={12000} rows={5} className="w-full rounded-lg border border-slate-200 p-3 text-sm" placeholder="Agent: Would you like to meet? Prospect: Yes, October 15 at 2pm works for me…" />
+        <button disabled={analyzing || !script.trim() || !isClientAccountReady || isLoading} onClick={analyzeScript} className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-50">{analyzing ? "Analyzing…" : "Generate scheduling signal"}</button>
+      </MultiCrmCard>
       <CalendarConnectionsPanel onConnections={setConnections} onEventTypes={setEventTypes} />
 
       {message && (
@@ -175,11 +197,12 @@ export default function CalendarPage() {
             </div>
             <p className="text-xs text-slate-500">Conversation signals await your date and time confirmation.</p>
             <div className="space-y-3">
-              {intents.slice(0, 4).map((intent) => (
+              {intents.map((intent) => (
                 <div key={intent.id} className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2">
                   <p className="text-xs font-semibold text-slate-900 line-clamp-2">{intent.subject || "Meeting request detected"}</p>
                   <p className="text-xs text-slate-500">{contactName(intent.contact)} · {displayDateTime(intent.occurredAt)}</p>
-                  <p className="text-xs text-slate-600 line-clamp-2">{intent.body}</p>
+                  <p className="text-xs text-slate-600 line-clamp-2">{intent.analysis?.evidence ?? intent.body}</p>
+                  {intent.analysis && <p className="text-xs text-blue-700">{intent.analysis.startTime ? displayDateTime(intent.analysis.startTime) : intent.analysis.proposedTime ?? "Date and time need confirmation"} · Suggested {intent.analysis.durationMinutes} minutes. Confirm before booking.</p>}
                   <button
                     onClick={() => openCreate(intent)}
                     className="w-full rounded-md border border-blue-200 bg-blue-50 hover:bg-blue-100 px-2 py-1.5 text-xs font-medium text-blue-700 transition-colors cursor-pointer"
