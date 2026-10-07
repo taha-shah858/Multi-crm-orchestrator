@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     const returnPath = request.nextUrl.searchParams.get("returnPath") || "/operations";
     const result = await beginClickUpOAuth(user, returnPath);
     return NextResponse.redirect(result.authorizationUrl);
-  } catch (error) {
+  } catch {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("error", "auth_required");
     return NextResponse.redirect(loginUrl);

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { FilePenLine, FileText, Plus, Save, Sparkles, UserRound } from "lucide-react";
-import { MultiCrmCard, MultiCrmInnerPanel, MultiCrmTag } from "@/components/ui/MultiCrmCard";
+import { MultiCrmCard, MultiCrmTag } from "@/components/ui/MultiCrmCard";
 import { useClientAccount } from "@/context/ClientAccountContext";
 import { readApiJson } from "@/lib/http/client-api";
 

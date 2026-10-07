@@ -1,44 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  Users,
-  Search,
-  Sparkles,
-  Phone,
-  Mail,
-  ExternalLink,
-  Building2,
-  SlidersHorizontal,
-  ArrowUpDown,
-  Download,
-  Plus,
-  Tag,
-  ArrowLeft,
-  Send,
-  Edit3,
-  MoreHorizontal,
-  ChevronRight,
-  Globe,
-  Filter,
-  X,
-  Sliders,
-  Database,
-  Calendar,
-  Layers,
-  MapPin,
-  Briefcase,
-  DollarSign,
-  ShieldCheck,
-  RefreshCw,
-  Eye,
-  Settings2,
-} from "lucide-react";
-import {
-  MultiCrmCard,
-  MultiCrmInnerPanel,
-  MultiCrmTag,
-} from "@/components/ui/MultiCrmCard";
+import { Users, Search, Sparkles, Phone, ExternalLink, Building2, Download, Plus, ArrowLeft, Send, Edit3, X, Database, Layers, DollarSign, ShieldCheck, RefreshCw, Eye, Settings2 } from "lucide-react";
+import { MultiCrmCard, MultiCrmTag } from "@/components/ui/MultiCrmCard";
 import { useClientAccount } from "@/context/ClientAccountContext";
 import { loadAgencyDirectory } from "@/lib/leads/load-directory";
 
@@ -138,9 +102,6 @@ export default function LeadsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCrm, setSelectedCrm] = useState("All");
   const [scoreFilter, setScoreFilter] = useState<number>(0);
-  const [activeTab, setActiveTab] = useState<"overview" | "timeline">(
-    "overview"
-  );
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [isSavingContact, setIsSavingContact] = useState(false);
@@ -153,7 +114,7 @@ export default function LeadsPage() {
   const [crmRetryTarget, setCrmRetryTarget] = useState<{ type: "companies" | "deals"; id: string } | null>(null);
   const [showAssessmentModal, setShowAssessmentModal] = useState(false);
   const [isSavingAssessment, setIsSavingAssessment] = useState(false);
-  const [assessmentFeedback, setAssessmentFeedback] = useState("");
+  const [, setAssessmentFeedback] = useState("");
   const [assessmentForm, setAssessmentForm] = useState<AssessmentForm | null>(null);
 
   // CRM Import POC State

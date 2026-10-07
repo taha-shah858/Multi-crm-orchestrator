@@ -5,10 +5,7 @@ import { recordAuditEvent } from "@/lib/audit/audit-log";
 import { prisma } from "@/lib/db/prisma";
 import { AppError } from "@/lib/errors/app-error";
 import { getIntegrationAdapter } from "@/lib/integrations/registry";
-import {
-  activeClientIntegrationWhere,
-  hubspotConnectionWhere,
-} from "@/lib/integrations/connection-resolution";
+import { hubspotConnectionWhere } from "@/lib/integrations/connection-resolution";
 import type { CompanyWriteInput, DealWriteInput } from "@/lib/integrations/types";
 import type { RequestContext } from "@/lib/models/canonical";
 import { prepareActiveClientSync } from "@/lib/sync/contact-sync-service";

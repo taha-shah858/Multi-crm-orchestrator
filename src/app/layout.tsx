@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-// ParticleWaveBackground and AdvancedWidget removed — enterprise static background
-import { SpatialProvider } from "@/context/SpatialContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 
 const geistSans = Geist({
@@ -29,12 +27,10 @@ export default function RootLayout({
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body className="antialiased min-h-[100dvh] bg-slate-50 text-slate-900 relative overflow-x-hidden font-sans">
         <ThemeProvider>
-          <SpatialProvider>
-            {/* Route groups provide their own dashboard or auth shell. */}
-            <div className="relative z-10 flex flex-col min-h-screen">
-              {children}
-            </div>
-          </SpatialProvider>
+          {/* Route groups provide their own dashboard or auth shell. */}
+          <div className="relative z-10 flex flex-col min-h-screen">
+            {children}
+          </div>
         </ThemeProvider>
       </body>
     </html>

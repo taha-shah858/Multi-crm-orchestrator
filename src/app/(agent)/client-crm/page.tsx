@@ -1,31 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  Briefcase,
-  Users,
-  DollarSign,
-  FileText,
-  RefreshCw,
-  Search,
-  ExternalLink,
-  ShieldCheck,
-  AlertTriangle,
-  Clock,
-  ArrowRight,
-  Edit3,
-  CheckCircle2,
-  XCircle,
-  X,
-  Layers,
-  Sparkles,
-  Plus,
-} from "lucide-react";
-import {
-  MultiCrmCard,
-  MultiCrmInnerPanel,
-  MultiCrmTag,
-} from "@/components/ui/MultiCrmCard";
+import { Briefcase, Users, DollarSign, FileText, RefreshCw, Search, ShieldCheck, Edit3, CheckCircle2, X, Layers, Sparkles, Plus } from "lucide-react";
+import { MultiCrmCard } from "@/components/ui/MultiCrmCard";
 import { useClientAccount } from "@/context/ClientAccountContext";
 import type { ClientCrmRecordSummary, DealHandoffSummary } from "@/lib/models/canonical";
 

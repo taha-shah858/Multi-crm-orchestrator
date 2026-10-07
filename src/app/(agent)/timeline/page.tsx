@@ -1,34 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import {
-  GitCommit,
-  Filter,
-  Clock,
-  Sparkles,
-  PhoneCall,
-  Layers,
-  Search,
-  Calendar,
-  User,
-  CheckCircle2,
-  RefreshCw,
-  Radio,
-  Code2,
-  X,
-  Database,
-  Activity,
-  Zap,
-  Copy,
-  Check,
-  ChevronRight,
-} from "lucide-react";
+import { GitCommit, Filter, Clock, Sparkles, PhoneCall, Layers, Search, Calendar, User, RefreshCw, Radio, Code2, X, Database, Activity, Zap, Copy, Check, ChevronRight } from "lucide-react";
 
-import {
-  MultiCrmCard,
-  MultiCrmInnerPanel,
-  MultiCrmTag,
-} from "@/components/ui/MultiCrmCard";
+import { MultiCrmCard, MultiCrmTag } from "@/components/ui/MultiCrmCard";
 import { useClientAccount } from "@/context/ClientAccountContext";
 
 export interface FieldDiff {

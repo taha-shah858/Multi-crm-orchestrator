@@ -2,6 +2,16 @@
 
 Audited 2026-10-01 against [PROJECT_REQUIREMENTS.md](PROJECT_REQUIREMENTS.md).
 
+## Unused code cleanup, 2026-10-07
+
+Branch `codex/unused-code-cleanup` preserves the current application changes in snapshot commit `09701cb` before cleanup. The original `codex/auth-validation-integration` ref, protected `new`, `ai-ui-backend`, and deferred `email-setup` refs remain unchanged. No branches were deleted or pushed.
+
+Verified current TypeScript imports and application route reachability, then checked candidates against source and scripts. The existing Graphify graph is stale (built at `f86eab2e`) and was only used as historical context. Removed eight unreferenced preview/visual components, the obsolete development bootstrap seeder, and the spatial context/configuration after confirming there are no consumers of `useSpatial`. Removing the spatial provider also removes its otherwise unused continuous animation-frame state updates. Removed 33 unused imports and unused tab/client-permission state. Removed six unused direct dependencies (`three`, `@types/three`, `framer-motion`, `recharts`, `clsx`, `tailwind-merge`) and regenerated the npm lockfile without upgrading retained packages intentionally.
+
+Retained active pages/API routes, authentication and email delivery, all required provider implementations, database migrations/models, manual workflows, tests, and requirements documentation. Legacy ActiveCampaign code remains compatible with existing records as required. No production database data or live provider records were changed by cleanup.
+
+Validation: production build (including TypeScript and route generation), authentication credential tests, merged authentication integration tests, and dashboard/ClickUp regression tests passed. Integration tests use disposable PostgreSQL fixtures and intercept provider calls; no live email or ClickUp operations occurred. Full-source lint was used to locate unused imports; existing unrelated lint errors (including `any` types) remain, so repository-wide lint is not certified clean.
+
 ## Agent home and ClickUp reporting, 2026-10-07
 
 Implemented on `codex/auth-validation-integration` following the live [persistence audit](docs/database-persistence-audit.md). Agent home now uses an authenticated, read-only PostgreSQL overview for company-owned HubSpot directory counts, the agent's recorded outbound calls today (UTC), saved analyses and closed deals, assigned-client CRM connections, personal calendar connections/upcoming appointments and recent personal interactions. Metrics/activity span currently assigned clients; agency directory totals remain shared across client switching. A pending agent gets an assignment waiting state. Credentials are excluded; refresh does not trigger provider sync. Preview CRM creation/sync controls are replaced with real module navigation. The user explicitly excluded Multi-CRM's Sync Clusters; it remains unchanged.

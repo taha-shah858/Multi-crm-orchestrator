@@ -1,29 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import {
-  ArrowDownRight,
-  ArrowUpRight,
-  CalendarDays,
-  CheckCircle2,
-  Clock3,
-  ExternalLink,
-  FileSpreadsheet,
-  FolderSync,
-  HandCoins,
-  Layers,
-  Pencil,
-  Plus,
-  ReceiptText,
-  RefreshCw,
-  Sparkles,
-  TrendingUp,
-  Unplug,
-  WalletCards,
-  X,
-  Zap,
-} from "lucide-react";
-import { MultiCrmCard, MultiCrmInnerPanel, MultiCrmTag } from "@/components/ui/MultiCrmCard";
+import { CheckCircle2, Clock3, ExternalLink, FileSpreadsheet, FolderSync, HandCoins, Layers, Plus, ReceiptText, RefreshCw, Sparkles, Unplug, WalletCards, X, Zap } from "lucide-react";
+import { MultiCrmCard, MultiCrmTag } from "@/components/ui/MultiCrmCard";
 import { useClientAccount } from "@/context/ClientAccountContext";
 import type { CurrencyTotals } from "@/lib/operations/reconciliation";
 import { ReconciliationControls, currencySummary, downloadCommissionReport, reportQuery, type ReportDates } from "@/components/operations/ReconciliationControls";

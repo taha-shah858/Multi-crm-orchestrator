@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Building2, MessageSquare, PhoneCall, Search, ShieldCheck, User } from "lucide-react";
-import { MultiCrmCard, MultiCrmInnerPanel, MultiCrmTag } from "@/components/ui/MultiCrmCard";
+import { MultiCrmCard, MultiCrmTag } from "@/components/ui/MultiCrmCard";
 import { useClientAccount } from "@/context/ClientAccountContext";
 import { readApiJson } from "@/lib/http/client-api";
 

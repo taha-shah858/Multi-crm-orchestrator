@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowUpRight, Building2, DatabaseZap, LockKeyhole, RefreshCw, Unplug, Briefcase } from "lucide-react";
+import { ArrowUpRight, Building2, DatabaseZap, LockKeyhole, RefreshCw, Briefcase } from "lucide-react";
 import { useClientAccount } from "@/context/ClientAccountContext";
 import { readApiJson } from "@/lib/http/client-api";
 import type { IntegrationConnectionSummary } from "@/lib/models/canonical";
-import { MultiCrmCard, MultiCrmInnerPanel, MultiCrmTag } from "@/components/ui/MultiCrmCard";
+import { MultiCrmCard, MultiCrmTag } from "@/components/ui/MultiCrmCard";
 
 interface IntegrationPayload {
   success: true;
@@ -25,7 +25,6 @@ const formatDate = (value: string | null) => (value ? new Date(value).toLocaleSt
 export default function IntegrationsAppCenter() {
   const { activeClientAccount, isClientAccountReady } = useClientAccount();
   const [connections, setConnections] = useState<IntegrationConnectionSummary[]>([]);
-  const [canConnectClient, setCanConnectClient] = useState(false);
   const [canConnectCompany, setCanConnectCompany] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [workingId, setWorkingId] = useState<string | null>(null);
@@ -41,7 +40,6 @@ export default function IntegrationsAppCenter() {
       const data = await readApiJson<IntegrationPayload>(response);
       if (version !== requestVersion.current) return;
       setConnections(data.connections);
-      setCanConnectClient(data.permissions.canConnectClient);
       setCanConnectCompany(data.permissions.canConnectCompany);
     } catch (error) {
       if (version === requestVersion.current)
