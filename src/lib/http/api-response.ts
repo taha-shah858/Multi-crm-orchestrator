@@ -22,25 +22,26 @@ export async function withApiErrorHandling(
       return Response.json(
         {
           success: false,
-          error: { code: error.code, message: error.safeMessage },
+          error: { code: error.code, message: error.safeMessage || error.message },
           requestId,
         },
         { status: error.status },
       );
     }
 
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(
       JSON.stringify({
         event: "unhandled_api_error",
         requestId,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage,
         stack: error instanceof Error ? error.stack : undefined,
       }),
     );
     return Response.json(
       {
         success: false,
-        error: { code: "INTERNAL_ERROR", message: "An unexpected error occurred." },
+        error: { code: "INTERNAL_ERROR", message: errorMessage || "An unexpected error occurred." },
         requestId,
       },
       { status: 500 },

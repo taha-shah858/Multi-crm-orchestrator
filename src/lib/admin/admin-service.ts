@@ -218,13 +218,16 @@ export async function updateManagedUser(actor: AuthenticatedUser, id: string, in
   }
 
   return prisma.$transaction(async (transaction) => {
-    if (requestedAssignments) await transaction.clientAssignment.deleteMany({ where: { userId: id } });
+    if (requestedAssignments) {
+      await transaction.clientAssignment.deleteMany({ where: { userId: id, clientAccountId: { notIn: accounts.map(account => account.id) } } });
+      await transaction.clientAssignment.createMany({ data: accounts.map(account => ({ userId: id, clientAccountId: account.id })), skipDuplicates: true });
+    }
     const updated = await transaction.user.update({
       where: { id },
       data: {
         role,
         ...(status ? { status } : {}),
-        ...(requestedAssignments ? { clientAccess: { create: accounts.map((account) => ({ clientAccountId: account.id })) } } : {}),
+
       },
       select: {
         id: true,

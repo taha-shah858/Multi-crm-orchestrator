@@ -9,7 +9,10 @@ import { SESSION_COOKIE } from "@/lib/auth/request-context";
 export function proxy(request: NextRequest) {
   const sessionCookie = request.cookies.get(SESSION_COOKIE);
   const pathname = request.nextUrl.pathname;
-  const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/signup");
+  const isAuthPage =
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/signup") ||
+    pathname.startsWith("/accept-invite");
 
   if (!sessionCookie && !isAuthPage) {
     return NextResponse.redirect(new URL("/login", request.url));

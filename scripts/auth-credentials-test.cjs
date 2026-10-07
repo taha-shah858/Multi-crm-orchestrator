@@ -4,6 +4,7 @@ const root = path.resolve(__dirname, '..');
 const resolve = Module._resolveFilename, load = Module._load;
 const users = new Map();
 let transactions = 0, sessions = 0, raceError;
+const pending = new Map();
 const prisma = {
   user: {
     findUnique: async ({where}) => users.get(where.email) ?? null,
@@ -17,10 +18,10 @@ const prisma = {
   $transaction: async callback => {transactions++; if(raceError) throw raceError; return callback(prisma);},
 };
 Module._resolveFilename = function(name,parent,main,options){return resolve.call(this,name.startsWith('@/')?path.join(root,'src',name.slice(2)):name,parent,main,options);};
-Module._load = function(name,parent,main){return name === '@/lib/db/prisma' ? {prisma} : load.call(this,name,parent,main);};
+Module._load = function(name,parent,main){if(name==='@/lib/email/email-service') return {storePendingSignupOtp:async data=>pending.set(data.email,data),verifyAndConsumePendingSignupOtp:async(email,otp,complete)=>{const data=pending.get(email);if(!data)throw Error('No pending signup');const result=await prisma.$transaction(tx=>complete(tx,data));pending.delete(email);return result;}}; return name === '@/lib/db/prisma' ? {prisma} : load.call(this,name,parent,main);};
 require.extensions['.ts'] = (mod,filename) => mod._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,filename);
 const {isValidEmail,isValidNewPassword} = require('../src/lib/auth/credential-policy.ts');
-const {signUp,signIn,hashPassword} = require('../src/lib/auth/auth-service.ts');
+const {signUp,verifySignUpOtp,signIn,hashPassword} = require('../src/lib/auth/auth-service.ts');
 const {createManagedUser} = require('../src/lib/admin/admin-service.ts');
 async function main(){
   for(const email of ['owner@example.com','first.last+tag@sub.example.co.uk']) assert.equal(isValidEmail(email),true,email);
@@ -30,16 +31,20 @@ async function main(){
   const input = {accountType:'ADMIN',workspace:'Test workspace',email:'  Owner@Example.com  ',password:'Abcd1!x'};
   for(const patch of [{email:'bad-address'},{password:'abcdef1!'},{password:'Abcdefg1'},{workspace:'x'}]) await assert.rejects(signUp({...input,...patch}),error=>error.code==='INVALID_SIGNUP' && error.status===422);
   assert.equal(transactions,0); assert.equal(sessions,0);
-  const result = await signUp(input);
-  assert.equal(result.user.email,'owner@example.com'); assert.equal(sessions,1);
+  const initiated = await signUp(input);
+  assert.equal(initiated.requiresVerification,true); assert.equal(users.size,0); assert.equal(sessions,0);
+  const result = await verifySignUpOtp({email:'owner@example.com',otp:'123456'});
+  assert.equal(result.user.email,'owner@example.com'); assert.equal(sessions,0);
   assert.notEqual(users.get('owner@example.com').passwordHash,input.password);
   const before = transactions;
   await assert.rejects(signUp(input),error=>error.code==='EMAIL_IN_USE' && error.safeMessage.includes('already exists'));
   assert.equal(transactions,before);
   raceError = {code:'P2002',meta:{target:['email']}};
-  await assert.rejects(signUp({...input,email:'race@example.com'}),error=>error.code==='EMAIL_IN_USE');
+  await signUp({...input,email:'race@example.com'});
+  await assert.rejects(verifySignUpOtp({email:'race@example.com',otp:'123456'}),error=>error.code==='EMAIL_IN_USE');
   raceError = {code:'P2002',meta:{modelName:'ClientAccount',target:['id']}};
-  await assert.rejects(signUp({...input,email:'other@example.com'}),error=>error===raceError);
+  await signUp({...input,email:'other@example.com'});
+  await assert.rejects(verifySignUpOtp({email:'other@example.com',otp:'123456'}),error=>error===raceError);
   raceError = undefined;
   assert.equal((await signIn({email:' OWNER@example.com ',password:input.password,workspaceRole:'ADMIN'})).user.email,'owner@example.com');
   await assert.rejects(signIn({email:'owner@example.com',password:'wrong',workspaceRole:'ADMIN'}),error=>error.code==='INVALID_CREDENTIALS');
@@ -51,6 +56,6 @@ async function main(){
   for(const patch of [{email:'bad-address'},{password:'abcdef1!'}]) await assert.rejects(createManagedUser(admin,{name:'Agent',email:'agent@example.com',password:'Abcd1!x',role:'AGENT',...patch}),error=>error.code==='INVALID_USER_INPUT');
   const agent = await createManagedUser(admin,{name:'Agent',email:'agent@example.com',password:'Abcd1!x',role:'AGENT'});
   assert.equal(agent.role,'AGENT');
-  console.log('PASS email format, seven-character password complexity, signup and managed-user enforcement, hashing/login, existing passwords, role isolation and duplicate/racing signup errors. No database or email service used.');
+  console.log('PASS email format, seven-character password complexity, OTP-gated signup and managed-user enforcement, hashing/login, existing passwords, role isolation and duplicate/racing signup errors. No database or email service used.');
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});
