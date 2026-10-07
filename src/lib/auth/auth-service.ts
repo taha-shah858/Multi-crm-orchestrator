@@ -38,7 +38,7 @@ async function verifyPassword(password: string, stored: string) {
   return expectedBuffer.length === actual.length && timingSafeEqual(expectedBuffer, actual);
 }
 
-async function createSession(userId: string) {
+export async function createSession(userId: string) {
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
   await prisma.authSession.create({ data: { userId, tokenHash: tokenHash(token), expiresAt } });
@@ -67,27 +67,93 @@ export async function signIn(input: Record<string, unknown>) {
 }
 
 export async function signUp(input: Record<string, unknown>) {
-  if (input.accountType !== "ADMIN") {
-    throw new AppError("INVALID_SIGNUP", 422, "Only company administrators can self-register.", "Sales Agent accounts must be provisioned by a company administrator.");
+  const { signupSchema } = await import("@/lib/auth/validations");
+  const parsed = signupSchema.safeParse(input);
+  if (!parsed.success) {
+    const errorMsg = parsed.error.issues.map((i) => i.message).join(". ");
+    throw new AppError("INVALID_SIGNUP", 422, errorMsg, errorMsg);
   }
-  const workspace = text(input.workspace);
-  const name = text(input.name) || "Workspace administrator";
-  const email = normalizeEmail(input.email);
-  const password = typeof input.password === "string" ? input.password : "";
-  if (workspace.length < 2 || !email || password.length < 10) {
-    throw new AppError("INVALID_SIGNUP", 422, "Signup details are invalid.", "Enter a workspace, a valid email, and a password of at least 10 characters.");
+
+  const { workspace, email, password, accountType, name } = parsed.data;
+
+  if (await prisma.user.findUnique({ where: { email }, select: { id: true } })) {
+    throw new AppError("EMAIL_IN_USE", 409, "Email is already registered.", "Sign in with this email instead.");
   }
-  if (await prisma.user.findUnique({ where: { email }, select: { id: true } })) throw new AppError("EMAIL_IN_USE", 409, "Email is already registered.", "Sign in with this email instead.");
+
+  const workspaceName = (workspace && workspace.trim().length > 0)
+    ? workspace.trim()
+    : name
+    ? `${name}'s Workspace`
+    : "Primary Workspace";
 
   const passwordHash = await hashPassword(password);
+  const { storePendingSignupOtp } = await import("@/lib/email/email-service");
+
+  await storePendingSignupOtp({
+    workspace: workspaceName,
+    email,
+    passwordHash,
+    name: name || "Workspace administrator",
+    accountType,
+  });
+
+  return {
+    success: true,
+    requiresVerification: true,
+    email,
+    message: "A 6-digit verification code has been dispatched to your email address.",
+  };
+}
+
+export async function verifySignUpOtp(input: Record<string, unknown>) {
+  const { verifyOtpSchema } = await import("@/lib/auth/validations");
+  const parsed = verifyOtpSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new AppError("INVALID_OTP", 422, parsed.error.issues[0]?.message || "Invalid OTP code format.", "Enter the 6 numeric digits received via email.");
+  }
+
+  const { verifyAndConsumePendingSignupOtp } = await import("@/lib/email/email-service");
+  const signupData = await verifyAndConsumePendingSignupOtp(parsed.data.email, parsed.data.otp);
+
+  if (await prisma.user.findUnique({ where: { email: signupData.email }, select: { id: true } })) {
+    throw new AppError("EMAIL_IN_USE", 409, "Email is already registered.", "Sign in with this email instead.");
+  }
+
   const result = await prisma.$transaction(async (transaction) => {
-    const organization = await transaction.organization.create({ data: { name: workspace } });
-    const user = await transaction.user.create({ data: { organizationId: organization.id, name, email, passwordHash, role: "ADMIN", status: "ACTIVE" } });
-    const client = await transaction.clientAccount.create({ data: { organizationId: organization.id, name: `${workspace} primary account`, brandName: workspace, status: "ACTIVE" } });
+    const organization = await transaction.organization.create({ data: { name: signupData.workspace } });
+    const user = await transaction.user.create({
+      data: {
+        organizationId: organization.id,
+        name: signupData.name || "Workspace administrator",
+        email: signupData.email,
+        passwordHash: signupData.passwordHash,
+        role: "ADMIN",
+        status: "ACTIVE",
+      },
+    });
+    const client = await transaction.clientAccount.create({
+      data: {
+        organizationId: organization.id,
+        name: `${signupData.workspace} primary account`,
+        brandName: signupData.workspace,
+        status: "ACTIVE",
+      },
+    });
     await transaction.clientAssignment.create({ data: { clientAccountId: client.id, userId: user.id } });
-    await transaction.auditLog.create({ data: { organizationId: organization.id, userId: user.id, action: "USER_CREATED", entityType: "USER", entityId: user.id, source: "PLATFORM", metadata: { role: "ADMIN", signup: true } } });
+    await transaction.auditLog.create({
+      data: {
+        organizationId: organization.id,
+        userId: user.id,
+        action: "USER_CREATED",
+        entityType: "USER",
+        entityId: user.id,
+        source: "PLATFORM",
+        metadata: { role: "ADMIN", signup: true, emailVerified: true },
+      },
+    });
     return { user, client };
   });
+
   const session = await createSession(result.user.id);
   return { user: toAuthenticatedUser(result.user), defaultClientAccountId: result.client.id, session };
 }

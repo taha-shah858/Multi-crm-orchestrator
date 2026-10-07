@@ -3,22 +3,32 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Activity,
+  AlertCircle,
   BarChart3,
   Building2,
   CheckCircle2,
   CircleDollarSign,
+  Clock,
   Clock3,
   DatabaseZap,
+  Mail,
   Network,
   RefreshCw,
+  Send,
+  ShieldAlert,
   ShieldCheck,
+  Trash2,
+  UserMinus,
+  UserPlus,
   Users,
+  X,
 } from "lucide-react";
 import type { AdminDashboardData } from "@/lib/admin/admin-types";
 import { MultiCrmCard, MultiCrmInnerPanel, MultiCrmTag } from "@/components/ui/MultiCrmCard";
 import { useAdminWorkspaceUser } from "@/components/admin/AdminWorkspaceShell";
 import { readApiJson } from "@/lib/http/client-api";
 import { AdminIntegrationManager } from "@/components/admin/AdminIntegrationManager";
+import { PasswordInput } from "@/components/ui/password-input";
 
 export type AdminView = "dashboard" | "agents" | "clients" | "assignments" | "operations" | "commissions" | "analytics" | "integrations" | "audit";
 
@@ -138,16 +148,428 @@ function DashboardView({ dashboard }: { dashboard: AdminDashboardData }) {
 }
 
 function AgentsView({ dashboard, canManage, mutate }: AdminManageProps) {
-  return <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-    <MultiCrmCard className="space-y-4 xl:col-span-8 bg-white border border-slate-200 shadow-xs rounded-xl p-6">
-      <SectionTitle icon={Users} title="Company team" detail="Roles, status, assignments, and operational record counts" />
-      <div className="space-y-3">{dashboard.agents.map((agent) => <AgentCard key={agent.id} agent={agent} />)}</div>
-    </MultiCrmCard>
-    <MultiCrmCard className="space-y-4 xl:col-span-4 bg-white border border-slate-200 shadow-xs rounded-xl p-6">
-      <SectionTitle icon={ShieldCheck} title={canManage ? "Create team member" : "Read-only management"} detail={canManage ? "Admin-created accounts use server-backed credentials" : "Managers can review but cannot change access"} />
-      {canManage ? <NewUserForm clients={dashboard.clients} mutate={mutate} /> : <ReadOnlyNotice />}
-    </MultiCrmCard>
-  </div>;
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [invitations, setInvitations] = useState<Array<{ id: string; email: string; role: string; expiresAt: string; isExpired: boolean }>>([]);
+  const [loadingInvites, setLoadingInvites] = useState(false);
+  const [tableFilter, setTableFilter] = useState<"all" | "active" | "invites">("all");
+  const user = useAdminWorkspaceUser();
+
+  const loadInvitations = useCallback(async () => {
+    setLoadingInvites(true);
+    try {
+      const response = await fetch("/api/members", { cache: "no-store" });
+      const data = await readApiJson<{ success: boolean; invitations: Array<{ id: string; email: string; role: string; expiresAt: string; isExpired: boolean }> }>(response);
+      if (data?.invitations) setInvitations(data.invitations);
+    } catch {
+      // Ignore background load error
+    } finally {
+      setLoadingInvites(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadInvitations();
+  }, [loadInvitations]);
+
+  const handleRevokeUser = async (userId: string, userName: string) => {
+    if (!confirm(`Are you sure you want to revoke all access and terminate active sessions for ${userName}?`)) return;
+    const success = await mutate(`/api/members/${userId}`, "DELETE" as any, {}, `Revoked access for ${userName}.`);
+    if (success) {
+      void loadInvitations();
+    }
+  };
+
+  const handleRevokeInvitation = async (invitationId: string, email: string) => {
+    if (!confirm(`Cancel pending invitation for ${email}?`)) return;
+    try {
+      const res = await fetch(`/api/members/invitations/${invitationId}`, { method: "DELETE" });
+      await readApiJson(res);
+      void loadInvitations();
+    } catch {
+      // Handled
+    }
+  };
+
+  const pendingInvitesCount = invitations.filter((i) => !i.isExpired).length;
+
+  return (
+    <div className="space-y-6">
+      {/* Top Header Card */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
+        <div>
+          <div className="flex items-center gap-2">
+            <Users className="h-5 w-5 text-blue-600" />
+            <h2 className="text-base font-bold text-slate-900 font-sans">Company Members & Access Control</h2>
+          </div>
+          <p className="mt-1 text-xs text-slate-500 font-sans">
+            Manage active members, roles, client account permissions, and outgoing email invitations.
+          </p>
+        </div>
+        <div className="flex items-center gap-2.5">
+          {canManage && (
+            <button
+              onClick={() => setIsInviteModalOpen(true)}
+              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 hover:bg-blue-700 px-4 py-2.5 text-xs font-semibold text-white shadow-xs transition-colors cursor-pointer"
+            >
+              <UserPlus className="h-4 w-4" />
+              <span>INVITE MEMBER</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Filter Tabs */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+        <button
+          onClick={() => setTableFilter("all")}
+          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+            tableFilter === "all" ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
+          }`}
+        >
+          All Members ({dashboard.agents.length + pendingInvitesCount})
+        </button>
+        <button
+          onClick={() => setTableFilter("active")}
+          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+            tableFilter === "active" ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
+          }`}
+        >
+          Active Members ({dashboard.agents.filter((a) => a.status === "ACTIVE").length})
+        </button>
+        <button
+          onClick={() => setTableFilter("invites")}
+          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+            tableFilter === "invites" ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
+          }`}
+        >
+          Pending Invites ({pendingInvitesCount})
+        </button>
+      </div>
+
+      {/* Members & Invitations Table (Salesforce / Zoho Standard) */}
+      <MultiCrmCard className="bg-white border border-slate-200 shadow-xs rounded-xl overflow-hidden p-0">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs font-sans">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr className="text-slate-600 font-semibold uppercase tracking-wider text-[11px]">
+                <th className="px-5 py-3.5">Name / Email</th>
+                <th className="px-4 py-3.5">Role</th>
+                <th className="px-4 py-3.5">Status</th>
+                <th className="px-4 py-3.5">Assigned Clients / Details</th>
+                <th className="px-4 py-3.5 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {/* Active & Existing Users */}
+              {tableFilter !== "invites" &&
+                dashboard.agents.map((agent) => {
+                  const isSelf = agent.id === user.id;
+                  return (
+                    <tr key={agent.id} className="hover:bg-slate-50/70 transition-colors">
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-2.5">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 font-bold text-slate-700 text-xs border border-slate-200">
+                            {agent.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-slate-900 flex items-center gap-1.5">
+                              {agent.name}
+                              {isSelf && (
+                                <span className="rounded bg-blue-50 border border-blue-200 px-1.5 py-0.2 text-[10px] text-blue-600 font-medium">
+                                  You
+                                </span>
+                              )}
+                            </p>
+                            <p className="text-slate-500 text-[11px] font-sans">{agent.email}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <MultiCrmTag variant={agent.role === "ADMIN" ? "magenta" : agent.role === "MANAGER" ? "purple" : "cyan"}>
+                          {agent.role === "ADMIN" ? "Admin" : agent.role === "MANAGER" ? "Manager" : "Sales Agent"}
+                        </MultiCrmTag>
+                      </td>
+                      <td className="px-4 py-4">
+                        {agent.status === "ACTIVE" ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                            Active
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 border border-rose-200 px-2.5 py-0.5 text-[11px] font-medium text-rose-700">
+                            <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                            {agent.status}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex flex-wrap gap-1 max-w-xs">
+                          {agent.clientAccess.length > 0 ? (
+                            agent.clientAccess.map((access) => (
+                              <span
+                                key={access.clientAccount.id}
+                                className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-700"
+                              >
+                                {access.clientAccount.name}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-slate-400 text-[11px] italic">No assigned clients</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-right">
+                        {canManage && !isSelf ? (
+                          <button
+                            onClick={() => handleRevokeUser(agent.id, agent.name)}
+                            title="Revoke member access and terminate all sessions"
+                            className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-white hover:bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-600 transition-colors cursor-pointer shadow-2xs"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            <span>Revoke Access</span>
+                          </button>
+                        ) : isSelf ? (
+                          <span className="text-[11px] text-slate-400 italic">Self Account</span>
+                        ) : null}
+                      </td>
+                    </tr>
+                  );
+                })}
+
+              {/* Pending Invitations */}
+              {tableFilter !== "active" &&
+                invitations.map((inv) => (
+                  <tr key={inv.id} className="bg-amber-50/30 hover:bg-amber-50/60 transition-colors">
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-amber-800 text-xs border border-amber-200">
+                          <Mail className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-slate-900">{inv.email}</p>
+                          <p className="text-[11px] text-amber-700 font-sans">
+                            Expires {new Date(inv.expiresAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <MultiCrmTag variant={inv.role === "ADMIN" ? "magenta" : inv.role === "MANAGER" ? "purple" : "cyan"}>
+                        {inv.role === "ADMIN" ? "Admin" : inv.role === "MANAGER" ? "Manager" : "Sales Agent"}
+                      </MultiCrmTag>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200 px-2.5 py-0.5 text-[11px] font-medium text-amber-800">
+                        <Clock className="h-3 w-3 text-amber-600" />
+                        Pending Invite
+                      </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className="text-[11px] text-slate-500 font-sans">
+                        Invitation link dispatched · Awaiting acceptance
+                      </span>
+                    </td>
+                    <td className="px-4 py-4 text-right">
+                      {canManage && (
+                        <button
+                          onClick={() => handleRevokeInvitation(inv.id, inv.email)}
+                          title="Revoke / Cancel Invitation"
+                          className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white hover:bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-700 transition-colors cursor-pointer shadow-2xs"
+                        >
+                          <X className="h-3.5 w-3.5 text-slate-500" />
+                          <span>Revoke Invite</span>
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+          {dashboard.agents.length === 0 && invitations.length === 0 && (
+            <p className="py-8 text-center text-xs text-slate-500 font-sans">No members or invitations found.</p>
+          )}
+        </div>
+      </MultiCrmCard>
+
+      {/* Invite Member Modal with Two Tabs */}
+      {isInviteModalOpen && (
+        <InviteMemberModal
+          clients={dashboard.clients}
+          mutate={mutate}
+          onClose={() => {
+            setIsInviteModalOpen(false);
+            void loadInvitations();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function InviteMemberModal({
+  clients,
+  mutate,
+  onClose,
+}: {
+  clients: AdminDashboardData["clients"];
+  mutate: AdminManageProps["mutate"];
+  onClose: () => void;
+}) {
+  const [tab, setTab] = useState<"invite" | "provision">("invite");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<"AGENT" | "MANAGER" | "ADMIN">("AGENT");
+  const [sendingInvite, setSendingInvite] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteNotice, setInviteNotice] = useState<string | null>(null);
+
+  // Tab 1 Submit: Send Email Invite
+  const handleSendInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSendingInvite(true);
+    setInviteError(null);
+    setInviteNotice(null);
+
+    try {
+      const response = await fetch("/api/members/invite", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: inviteEmail, role: inviteRole }),
+      });
+      const data = await readApiJson<{ success?: boolean; message?: string }>(response);
+      if (data?.success) {
+        setInviteNotice(data.message || `Invitation dispatched to ${inviteEmail}.`);
+        setInviteEmail("");
+        setTimeout(() => onClose(), 1200);
+      }
+    } catch (err) {
+      setInviteError(err instanceof Error ? err.message : "Failed to send invitation.");
+    } finally {
+      setSendingInvite(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+      <div className="relative w-full max-w-lg bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden font-sans">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 bg-slate-50">
+          <div className="flex items-center gap-2">
+            <UserPlus className="h-5 w-5 text-blue-600" />
+            <h3 className="text-base font-bold text-slate-900">Add Team Member</h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700 transition-colors cursor-pointer"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Modal Tabs */}
+        <div className="flex border-b border-slate-200 bg-white px-6">
+          <button
+            type="button"
+            onClick={() => setTab("invite")}
+            className={`border-b-2 py-3 px-4 text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer ${
+              tab === "invite"
+                ? "border-blue-600 text-blue-600 font-bold"
+                : "border-transparent text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            Tab 1: Send Email Invite
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("provision")}
+            className={`border-b-2 py-3 px-4 text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer ${
+              tab === "provision"
+                ? "border-blue-600 text-blue-600 font-bold"
+                : "border-transparent text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            Tab 2: Manual Provisioning
+          </button>
+        </div>
+
+        {/* Tab Body */}
+        <div className="p-6">
+          {tab === "invite" ? (
+            /* TAB 1: SEND EMAIL INVITE */
+            <form onSubmit={handleSendInvite} className="space-y-4">
+              <p className="text-xs text-slate-600 font-sans leading-relaxed">
+                Send an invitation link with a 48-hour expiration. The invitee can set up their name and password to join your workspace.
+              </p>
+
+              {inviteError && (
+                <p className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2 text-xs text-red-700">
+                  {inviteError}
+                </p>
+              )}
+              {inviteNotice && (
+                <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-xs text-emerald-800">
+                  {inviteNotice}
+                </p>
+              )}
+
+              <div>
+                <label className="block space-y-1.5 text-xs font-semibold uppercase tracking-wider text-slate-700 font-sans">
+                  Email Address
+                  <input
+                    type="email"
+                    required
+                    placeholder="teammate@company.com"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-xs font-sans text-slate-900 shadow-2xs outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                  />
+                </label>
+              </div>
+
+              <div>
+                <label className="block space-y-1.5 text-xs font-semibold uppercase tracking-wider text-slate-700 font-sans">
+                  Role
+                  <select
+                    value={inviteRole}
+                    onChange={(e) => setInviteRole(e.target.value as any)}
+                    className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-xs font-sans text-slate-900 shadow-2xs outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                  >
+                    <option value="AGENT">Sales Agent</option>
+                    <option value="MANAGER">Manager</option>
+                    <option value="ADMIN">Administrator</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className="rounded-lg border border-blue-100 bg-blue-50/60 p-3 text-[11px] text-blue-700 font-sans">
+                🔐 Generates an enterprise-branded invitation email with an encrypted crypto token link valid for 48 hours.
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={sendingInvite}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 px-4 py-2 text-xs font-semibold text-white shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  <Send className="h-3.5 w-3.5" />
+                  <span>{sendingInvite ? "DISPATCHING…" : "SEND EMAIL INVITE"}</span>
+                </button>
+              </div>
+            </form>
+          ) : (
+            /* TAB 2: MANUAL PROVISIONING */
+            <NewUserForm clients={clients} mutate={mutate} onComplete={onClose} />
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function ClientsView({ dashboard, canManage, mutate }: AdminManageProps) {
@@ -206,11 +628,99 @@ function AuditView({ dashboard }: { dashboard: AdminDashboardData }) {
 
 type AdminManageProps = { dashboard: AdminDashboardData; canManage: boolean; mutate: (url: string, method: "POST" | "PATCH", body: Record<string, unknown>, successMessage: string) => Promise<boolean> };
 
-function NewUserForm({ clients, mutate }: { clients: AdminDashboardData["clients"]; mutate: AdminManageProps["mutate"] }) {
-  const [form, setForm] = useState({ name: "", email: "", password: "", role: "AGENT" as "AGENT" | "MANAGER", clientAccountIds: [] as string[] });
+function NewUserForm({
+  clients,
+  mutate,
+  onComplete,
+}: {
+  clients: AdminDashboardData["clients"];
+  mutate: AdminManageProps["mutate"];
+  onComplete?: () => void;
+}) {
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "AGENT" as "AGENT" | "MANAGER",
+    clientAccountIds: [] as string[],
+  });
   const [saving, setSaving] = useState(false);
-  const submit = async (event: React.FormEvent) => { event.preventDefault(); setSaving(true); const saved = await mutate("/api/admin/users", "POST", form, `${form.name} was added to the company.`); if (saved) setForm({ name: "", email: "", password: "", role: "AGENT", clientAccountIds: [] }); setSaving(false); };
-  return <form onSubmit={submit} className="space-y-3"><AdminInput label="Name" value={form.name} onChange={(value) => setForm({ ...form, name: value })} /><AdminInput label="Email" type="email" value={form.email} onChange={(value) => setForm({ ...form, email: value })} /><AdminInput label="Temporary password" type="password" value={form.password} onChange={(value) => setForm({ ...form, password: value })} /><label className="block space-y-1.5 text-xs font-semibold uppercase tracking-wider text-slate-700 font-sans">ROLE<select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value as "AGENT" | "MANAGER" })} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-sans text-slate-900 shadow-2xs focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none"><option value="AGENT">Sales Agent</option><option value="MANAGER">Manager</option></select></label><fieldset className="space-y-2"><legend className="text-xs font-semibold uppercase tracking-wider text-slate-700 font-sans">INITIAL CLIENT ACCESS</legend>{clients.map((client) => <label key={client.id} className="flex items-center gap-2 text-xs font-sans text-slate-700 cursor-pointer"><input type="checkbox" checked={form.clientAccountIds.includes(client.id)} onChange={(event) => setForm({ ...form, clientAccountIds: event.target.checked ? [...form.clientAccountIds, client.id] : form.clientAccountIds.filter((id) => id !== client.id) })} />{client.name}</label>)}</fieldset><button disabled={saving} className="w-full rounded-lg bg-blue-600 hover:bg-blue-700 px-4 py-2.5 text-xs font-medium text-white shadow-xs transition-colors disabled:opacity-50 cursor-pointer">{saving ? "CREATING…" : "CREATE TEAM MEMBER"}</button></form>;
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setSaving(true);
+    const saved = await mutate("/api/admin/users", "POST", form, `${form.name} was added to the company.`);
+    if (saved) {
+      setForm({ name: "", email: "", password: "", role: "AGENT", clientAccountIds: [] });
+      if (onComplete) onComplete();
+    }
+    setSaving(false);
+  };
+  return (
+    <form onSubmit={submit} className="space-y-3">
+      <AdminInput
+        label="Full Name (Letters & Spaces Only)"
+        value={form.name}
+        onChange={(value) => setForm({ ...form, name: value })}
+      />
+      <AdminInput
+        label="Email Address"
+        type="email"
+        value={form.email}
+        onChange={(value) => setForm({ ...form, email: value })}
+      />
+      <PasswordInput
+        label="Temporary Password"
+        value={form.password}
+        onChange={(e) => setForm({ ...form, password: e.target.value })}
+        required
+        placeholder="Min 8 chars (upper, lower, num, symbol)"
+      />
+      <label className="block space-y-1.5 text-xs font-semibold uppercase tracking-wider text-slate-700 font-sans">
+        ROLE
+        <select
+          value={form.role}
+          onChange={(event) => setForm({ ...form, role: event.target.value as "AGENT" | "MANAGER" })}
+          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-sans text-slate-900 shadow-2xs focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none"
+        >
+          <option value="AGENT">Sales Agent</option>
+          <option value="MANAGER">Manager</option>
+        </select>
+      </label>
+      <fieldset className="space-y-2">
+        <legend className="text-xs font-semibold uppercase tracking-wider text-slate-700 font-sans">
+          INITIAL CLIENT ACCESS
+        </legend>
+        <div className="max-h-32 overflow-y-auto space-y-1.5 rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+          {clients.map((client) => (
+            <label key={client.id} className="flex items-center gap-2 text-xs font-sans text-slate-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.clientAccountIds.includes(client.id)}
+                onChange={(event) =>
+                  setForm({
+                    ...form,
+                    clientAccountIds: event.target.checked
+                      ? [...form.clientAccountIds, client.id]
+                      : form.clientAccountIds.filter((id) => id !== client.id),
+                  })
+                }
+              />
+              {client.name}
+            </label>
+          ))}
+          {clients.length === 0 && (
+            <span className="text-[11px] text-slate-400 italic">No client accounts available.</span>
+          )}
+        </div>
+      </fieldset>
+      <button
+        disabled={saving}
+        className="w-full rounded-lg bg-blue-600 hover:bg-blue-700 px-4 py-2.5 text-xs font-medium text-white shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+      >
+        {saving ? "PROVISIONING…" : "PROVISION TEAM MEMBER"}
+      </button>
+    </form>
+  );
 }
 
 function NewClientForm({ mutate }: { mutate: AdminManageProps["mutate"] }) {

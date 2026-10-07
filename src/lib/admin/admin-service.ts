@@ -143,16 +143,13 @@ export async function getAdminDashboard(user: AuthenticatedUser) {
 
 export async function createManagedUser(actor: AuthenticatedUser, input: Record<string, unknown>) {
   requireAdmin(actor);
-  const name = text(input.name);
-  const userEmail = email(input.email);
-  const password = typeof input.password === "string" ? input.password : "";
-  const role = input.role === "MANAGER" || input.role === "AGENT" ? input.role : null;
-  const clientAccountIds = Array.isArray(input.clientAccountIds)
-    ? input.clientAccountIds.filter((id): id is string => typeof id === "string")
-    : [];
-  if (!name || !userEmail || password.length < 10 || !role) {
-    throw new AppError("INVALID_USER_INPUT", 422, "User details are invalid.", "Enter a name, email, role, and password of at least 10 characters.");
+  const { createMemberSchema, formatZodError } = await import("@/lib/auth/validations");
+  const parsed = createMemberSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new AppError("INVALID_USER_INPUT", 422, formatZodError(parsed.error), "Provide a valid name, email, password, and role.");
   }
+  const { name, email: userEmail, password, role, clientAccountIds = [] } = parsed.data;
+
   if (await prisma.user.findUnique({ where: { email: userEmail }, select: { id: true } })) {
     throw new AppError("EMAIL_IN_USE", 409, "Email is already registered.", "Choose another email address.");
   }
