@@ -1,5 +1,6 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
+import { AppError } from "@/lib/errors/app-error";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
@@ -18,12 +19,22 @@ function getPrismaClient(): PrismaClient {
   if (
     globalForPrisma.prisma &&
     "emailVerificationToken" in globalForPrisma.prisma &&
-    "workspaceInvitation" in globalForPrisma.prisma
+    "workspaceInvitation" in globalForPrisma.prisma &&
+    "passwordResetToken" in globalForPrisma.prisma
   ) {
     return globalForPrisma.prisma;
   }
 
   const client = createPrismaClient();
+  if (!Reflect.get(client, "passwordResetToken")) {
+    void client.$disconnect();
+    throw new AppError(
+      "INTEGRATION_CONFIGURATION_ERROR",
+      503,
+      "The running server has an outdated Prisma client.",
+      "Restart the development server to load the updated database client, then try again.",
+    );
+  }
   globalForPrisma.prisma = client;
   return client;
 }

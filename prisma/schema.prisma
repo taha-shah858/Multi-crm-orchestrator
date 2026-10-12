@@ -354,6 +354,7 @@ model User {
   calendarOAuthStates     CalendarOAuthState[]
   documents               Document[]
   sessions                AuthSession[]
+  passwordResetToken      PasswordResetToken?
   ownedIntegrations       IntegrationConnection[] @relation("IntegrationOwner")
   connectedIntegrations   IntegrationConnection[] @relation("IntegrationConnectedBy")
   ownedOAuthStates        OAuthState[]            @relation("OAuthStateOwner")
@@ -1217,5 +1218,16 @@ model EmailVerificationToken {
   attempts   Int      @default(0)
 
   @@index([email])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
 }
 

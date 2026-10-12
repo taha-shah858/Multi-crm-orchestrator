@@ -3,7 +3,7 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, Building2, CheckCircle2, Lock, UserRound } from "lucide-react";
+import { ArrowRight, Building2, CheckCircle2, UserRound } from "lucide-react";
 import BrandIcon from "@/components/ui/BrandIcon";
 import { PasswordInput } from "@/components/ui/password-input";
 import { workspaceHomeForRole, type WorkspaceRole } from "@/lib/auth/roles";
@@ -147,14 +147,9 @@ function LoginContent() {
                 autoComplete="current-password"
                 placeholder="Enter your password"
               />
-            </div>
-
-            <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <div>
-                <p className="text-sm font-medium text-slate-700">Server-backed session</p>
-                <p className="text-xs text-slate-400">Secure cookie · 7-day expiry</p>
+              <div className="mt-2 text-right">
+                <Link href={`/forgot-password?email=${encodeURIComponent(email)}`} className="text-sm text-blue-600 hover:underline">Forgot password?</Link>
               </div>
-              <Lock className="h-4 w-4 text-emerald-500" />
             </div>
 
             {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">{error}</p>}

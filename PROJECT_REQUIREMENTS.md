@@ -17,6 +17,8 @@ The pasted table's `Client (HubSpot/Salesforce)` wording is superseded by the us
 
 ## Current implementation boundary
 
+On 2026-10-07, the user requested a login-page Forgot password option that emails a reset link. Password recovery is authorized on the current development branch using the existing email dispatcher; it does not authorize merging deferred `email-setup`. Implement single-use expiring links and apply the shared new-password policy while preserving account role/client assignments.
+
 On 2026-10-07, the user requested current-branch email/password form improvements before any `email-setup` merge: password visibility controls, clearer duplicate-account errors, email format validation without sending a code, and a minimum of 7 characters with an uppercase letter, a number and a special character. Apply this policy to new passwords; retain existing-password login compatibility. Format validation does not establish email ownership. See [validation notes](docs/password-email-validation.md); verification codes and Google authentication remain deferred.
 
 On 2026-10-01, the user explicitly chose to continue implementation from `twilio+calendly` and defer merging `email-setup` until the end, after mail credentials are ready. Do not merge or cherry-pick that branch's authentication work early. Authentication remains a required final capability, but is not a prerequisite for correcting this branch's data ownership, authorization, CRM routing, accounting, or other modules. Read the other branch for compatibility context when needed; do not duplicate its signup implementation.

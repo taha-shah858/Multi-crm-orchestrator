@@ -24,6 +24,12 @@ export const emailValidator = z.string().trim().toLowerCase().refine(isValidEmai
  */
 export const passwordValidator = z.string().refine(isValidNewPassword, PASSWORD_REQUIREMENTS);
 
+export const forgotPasswordSchema = z.object({ email: emailValidator });
+export const resetPasswordSchema = z.object({
+  token: z.string().regex(/^[a-f0-9]{64}$/, "This reset link is invalid. Request a new link."),
+  password: passwordValidator,
+});
+
 /**
  * Exactly 6 digits numeric OTP validator.
  */

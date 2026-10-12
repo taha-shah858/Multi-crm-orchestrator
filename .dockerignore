@@ -1,0 +1,10 @@
+.git
+.next
+node_modules
+.env
+.env.*
+!.env.example
+!.env.docker.example
+graphify-out
+coverage
+npm-debug.log*

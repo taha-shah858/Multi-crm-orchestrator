@@ -2,6 +2,14 @@
 
 Audited 2026-10-01 against [PROJECT_REQUIREMENTS.md](PROJECT_REQUIREMENTS.md).
 
+## Password recovery, 2026-10-07
+
+Implemented on `codex/unused-code-cleanup` by user request. Login links to public `/forgot-password`; existing active agent/admin/manager accounts can request an email link through the existing Resend/SMTP dispatcher. `/reset-password` applies the shared new-password policy and confirmation UI. Recovery pages bypass the auth-layout redirect so an emailed link remains usable when another account is signed in. Proxy allows both pages without a session. No deferred signup branch was merged.
+
+Migration `20261007000400_password_reset` adds one `PasswordResetToken` per user with a unique hashed random token, expiry, cascade foreign key and expiry index; applied to local PostgreSQL and Prisma client regenerated. Links are single use and expire after 30 minutes; requests have a 60-second per-account cooldown and subsequent links replace prior ones. User row locks serialize issuance/consumption. Password change, token consumption, session revocation and audit are transactional. Role, account status, assignments and business records are preserved. Only active accounts are eligible. Public request responses do not reveal account existence; failed delivery invalidates the issued token and logs a nonsensitive event. Links use configured APP_URL (HTTPS required in production), not incoming Host/Origin headers. Reset page disables referrer transmission and removes the URL token after success.
+
+Validation: production build/TypeScript, targeted lint, password reset PostgreSQL regression tests, credential tests and merged authentication tests passed. Reset coverage includes expiry/replacement/replay, weak passwords, atomic rollback, concurrent consumption, old/new login, session revocation, role isolation, endpoints and cookie clearing, and failed email cleanup. Provider delivery is intercepted during tests; no live reset email was sent. Existing historical migration/table differences were preserved.
+
 ## Unused code cleanup, 2026-10-07
 
 Branch `codex/unused-code-cleanup` preserves the current application changes in snapshot commit `09701cb` before cleanup. The original `codex/auth-validation-integration` ref, protected `new`, `ai-ui-backend`, and deferred `email-setup` refs remain unchanged. No branches were deleted or pushed.
