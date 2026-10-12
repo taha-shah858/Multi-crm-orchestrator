@@ -6,12 +6,14 @@ This setup gives every developer an isolated copy of the application and Postgre
 
 1. Install Docker Desktop, make sure it is running, and clone the repository.
 2. Copy `.env.docker.example` to `.env.docker`.
-3. In `.env.docker`, set a unique PostgreSQL password and generate a unique `INTEGRATION_ENCRYPTION_KEY` with `openssl rand -base64 32`.
+3. In `.env.docker`, set a unique PostgreSQL password in both `POSTGRES_PASSWORD` and `DATABASE_URL` (which uses `db:5432` internally). Generate a unique `INTEGRATION_ENCRYPTION_KEY` with `openssl rand -base64 32`; keep it stable for stored tokens. Set a separate private session-secret value if using that configuration.
 4. Start the services with `docker compose up --build`.
 5. Open `http://localhost:3000`, select **Admin / Manager**, and create a workspace.
-6. Read the verification code in `docker compose logs app`. `EMAIL_DEV_LOG=true` prints codes only in that developer's local container logs.
+6. If SMTP/Resend is configured, the verification code is sent through that provider. Otherwise `EMAIL_DEV_LOG=true` prints it in that developer's local container logs; read it with `docker compose logs app`.
 
 The database starts empty. The `postgres_data` Docker volume persists that developer's records across restarts; it never contains another developer's records.
+
+No separate PostgreSQL installation or pgAdmin setup is needed. Compose creates the user/database and applies migrations automatically. For optional pgAdmin inspection, connect to `localhost:5433` with your `.env.docker` database name, user and password. Existing non-Docker accounts are stored in a different database and are not automatically copied.
 
 ## Connect a personal test CRM account
 
@@ -30,7 +32,9 @@ git pull
 docker compose up --build
 ```
 
-Source changes are mounted into the running development container. Rebuilding is needed after dependency, Docker, Prisma schema, or migration changes. New migrations run automatically before the app starts. A pull does not copy another developer's database, OAuth tokens, or CRM records.
+Application code and dependencies come from the rebuilt image. Run `docker compose up --build` after pulling changes or editing source files; Docker reuses unchanged build steps. Dependencies and the generated Prisma client are updated together, without a dependency volume retaining old packages. New migrations run automatically before the app starts. The PostgreSQL volume retains existing accounts and records. A pull does not copy another developer's database, OAuth tokens, or CRM records.
+
+Existing installations using the former `app_node_modules` volume can use the same command. Compose recreates the app container without that mount. The old unused dependency volume may remain on disk, but it is no longer used. No database volume deletion is required.
 
 ## Reset only your local test database
 

@@ -1,5 +1,7 @@
 # PostgreSQL persistence audit
 
+Historical read-only snapshot from 2026-10-07. The agent dashboard and ClickUp UI defects below were subsequently corrected; use [current status](PROJECT_ALIGNMENT_AUDIT.md) for present scope. Database counts and extra tables describe that inspected native database, not a fresh Docker database.
+
 Checked 2026-10-07 on `codex/auth-validation-integration`, against the local `multicrm` PostgreSQL database (`public` schema).
 
 ## Conclusion and limits
@@ -51,7 +53,7 @@ Junction tables for contact/deal/interaction/company links also contain records 
 
 Follow-up implemented on 2026-10-07: the agent home preview was replaced with a database-backed dashboard and real module navigation. The ClickUp buttons now call the implemented single/batch endpoints and display `SYNCED`, correct counts and partial-confirmation outcomes. See the latest progress entry in `PROJECT_ALIGNMENT_AUDIT.md`. Per the user's instruction, Sync Clusters remains unchanged. The findings above describe the audit snapshot before these fixes.
 
-Fix the ClickUp URL and batch response contract first, then replace or remove preview-only CRM controls and connect home metrics to tenant-scoped database queries. Add durable draft saving if pasted transcripts must survive reload/provider failure. Review failed external sync records separately, without treating local persistence as provider success. Keep historical tables/data until branch compatibility and retention are deliberately addressed.
+The ClickUp URL/batch response and dashboard corrections above are implemented; do not recreate them from this old recommendation. Durable draft saving remains relevant if pasted transcripts must survive reload/provider failure. Review failed external sync records separately, without treating local persistence as provider success. Keep historical tables/data until compatibility and retention are deliberately addressed.
 
 For full end-to-end certification, use isolated disposable test fixtures and verify each UI create/edit operation by reading it back after reload, including provider failure/retry and cross-client access. This audit did not perform those writes against real user data.
 

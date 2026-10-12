@@ -1,6 +1,6 @@
 # Project requirements and working memory
 
-Recorded on 2026-10-01 from the user's module specification and follow-up decisions. This is the durable repository record of the product direction. Read it before future planning or feature implementation, alongside `PROJECT_ALIGNMENT_AUDIT.md`. It specifies requirements; it does not claim those features are implemented.
+Recorded on 2026-10-01 from the user's module specification and follow-up decisions; documentation reorganized on 2026-10-12. This is the durable repository record of the product direction. Read it before future planning or feature implementation, alongside `PROJECT_ALIGNMENT_AUDIT.md`. It specifies requirements; it does not claim those features are implemented. See [the architecture](architecture.md) and [current alignment audit](PROJECT_ALIGNMENT_AUDIT.md) for implemented scope, including existing admin OTP signup; historical deferral notes do not mean this checkout lacks all verification.
 
 ## Confirmed architecture and account ownership
 
@@ -19,13 +19,13 @@ The pasted table's `Client (HubSpot/Salesforce)` wording is superseded by the us
 
 On 2026-10-07, the user requested a login-page Forgot password option that emails a reset link. Password recovery is authorized on the current development branch using the existing email dispatcher; it does not authorize merging deferred `email-setup`. Implement single-use expiring links and apply the shared new-password policy while preserving account role/client assignments.
 
-On 2026-10-07, the user requested current-branch email/password form improvements before any `email-setup` merge: password visibility controls, clearer duplicate-account errors, email format validation without sending a code, and a minimum of 7 characters with an uppercase letter, a number and a special character. Apply this policy to new passwords; retain existing-password login compatibility. Format validation does not establish email ownership. See [validation notes](docs/password-email-validation.md); verification codes and Google authentication remain deferred.
+On 2026-10-07, the user requested current-branch email/password form improvements before any `email-setup` merge: password visibility controls, clearer duplicate-account errors, email format validation without sending a code, and a minimum of 7 characters with an uppercase letter, a number and a special character. Apply this policy to new passwords; retain existing-password login compatibility. Format validation does not establish email ownership. See [validation notes](password-email-validation.md). Current admin signup also requires OTP verification from the separate auth-validation integration; independent agent signup and Google authentication remain gaps.
 
 On 2026-10-01, the user explicitly chose to continue implementation from `twilio+calendly` and defer merging `email-setup` until the end, after mail credentials are ready. Do not merge or cherry-pick that branch's authentication work early. Authentication remains a required final capability, but is not a prerequisite for correcting this branch's data ownership, authorization, CRM routing, accounting, or other modules. Read the other branch for compatibility context when needed; do not duplicate its signup implementation.
 
-New focused branches may be created from the current development baseline when useful, using the `codex/` prefix. Preserve current documentation changes. Keep existing authenticated-user/request-context contracts compatible where possible so the deferred auth integration can be reviewed and tested at the end.
+New focused branches may be created from the current development baseline when useful, using the `codex/` prefix. Preserve current documentation changes. Keep existing authenticated-user/request-context contracts compatible where possible so the deferred auth integration can be reviewed and tested at the end. On 2026-10-11 the user authorized deleting superseded local branches, including `twilio+calendly` and `email-setup`, with their history preserved in a local recovery bundle. Use the current checkout; historical branch names are not instructions to recreate those branches or integrate their separate features.
 
-The user protected branch `new` as the existing structure. Its branch ref/committed contents must remain unchanged. The first implementation batch uses `codex/crm-boundary-safety`, created from `twilio+calendly` at `e4ad0b4`; no work is to be merged into `new` without a later user instruction.
+The earlier protection of `new` was superseded by the user's 2026-10-11 instruction to copy the committed `codex/unused-code-cleanup` state locally into `new`, `phases`, `dev`, `production`, and `main`. That operation was local only. It does not authorize automatically merging future work into those branches or publishing it to GitHub.
 
 ## Required modules
 

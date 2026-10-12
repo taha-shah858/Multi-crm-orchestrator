@@ -22,7 +22,7 @@ Implemented after Closed Won → commission creation, on `codex/commission-recon
 
 ## Remaining scope
 
-Payment-date/cash-flow reports, historical balance snapshots, and paginated ledger browsing remain separate work. Automatic active time tracking (6.7) is implemented in [active time tracking](active-time-tracking.md). HubSpot agency / Zoho client / ClickUp agent is the required CRM mapping. Google/Outlook plus Calendly remain the scheduling target. Deferred signup work stays on `email-setup`; `new` remains protected.
+Payment-date/cash-flow reports, historical balance snapshots, and paginated ledger browsing remain separate work. Automatic active time tracking (6.7) is implemented in [active time tracking](active-time-tracking.md). HubSpot agency / Zoho client / ClickUp agent is the required CRM mapping. Google/Outlook plus Calendly are implemented through the calendar sync service; live acceptance remains distinct. See [current status](PROJECT_ALIGNMENT_AUDIT.md) for authentication gaps and superseded branch protections.
 
 ## Checks
 

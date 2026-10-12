@@ -2,7 +2,7 @@
 
 Agents can connect their own Google Calendar, Outlook Calendar and Calendly account from **Calendar Planner → Your calendars**. The meeting form keeps the manual calendar available and adds a provider selector, an invitation checkbox and Calendly event types. Each meeting displays its sync status. Open a meeting to retry a failed sync, refresh its external changes, or follow its provider link.
 
-This extends the existing scheduling workspace. It does not change the agreed CRM mapping: HubSpot for the agency, Zoho for clients, and ClickUp for agents. The `new` and `email-setup` branches are not merged or changed.
+This extends the existing scheduling workspace. It does not change the agreed CRM mapping: HubSpot for the agency, Zoho for clients, and ClickUp for agents. See [current status](PROJECT_ALIGNMENT_AUDIT.md) for branch history and authentication gaps.
 
 ## Provider behavior
 
@@ -21,7 +21,7 @@ Google and Outlook meetings without the invitation checkbox have no external att
 
 No deployment is needed to develop this feature. Register OAuth applications and use an allowed localhost redirect URL matching the actual port. The example below assumes `http://localhost:3000`; change both the provider registration and environment value together if using another port. Calendar authorization is separate from signup/sign-in OAuth and does not require merging `email-setup`.
 
-Set these values in `.env.local`, then restart the application:
+Set these values in `.env.local` for native development or `.env.docker` for Docker, then restart/recreate the application:
 
 ```dotenv
 GOOGLE_CALENDAR_CLIENT_ID=

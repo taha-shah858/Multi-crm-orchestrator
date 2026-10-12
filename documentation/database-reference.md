@@ -1,5 +1,7 @@
 # Database reference
 
+This catalogue is a dated native-database inspection, not a Docker setup requirement. Docker creates PostgreSQL 16 and a fresh database from the repository's migrations. Counts, database version, historical tables and row totals below describe the inspected 2026-10-07 environment only.
+
 Later change on 2026-10-07: password recovery added `PasswordResetToken` (userId → User.id, ON DELETE CASCADE), unique userId/tokenHash indexes, an expiry index and migration `20261007000400_password_reset`. The catalogue/counts below remain the earlier inspection snapshot. Current Prisma model count is now 39; this additive feature did not remove historical tables.
 
 Read-only inspection on 2026-10-07, branch codex/unused-code-cleanup. Counts include all local agencies and demo/test data. No credentials or row contents are included.

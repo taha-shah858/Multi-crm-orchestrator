@@ -1,6 +1,6 @@
 # Authentication validation integration — 2026-10-07
 
-The interrupted pull was backed up and aborted. Integration is isolated on `codex/auth-validation-integration`, merging `dcc25b2` from `multi-crm-authentication-validation` into `ai-ui-backend` at `9d41b25`. The original `ai-ui-backend` ref and `codex/backup-ai-ui-backend-20261007` retain the baseline. `new` and `email-setup` are untouched.
+Historical integration report: `codex/auth-validation-integration` merged `dcc25b2` from `multi-crm-authentication-validation` into the `ai-ui-backend` baseline at `9d41b25`. This behavior is included in the current checkout. The named local branches were subsequently consolidated/deleted by user request; see [current status](PROJECT_ALIGNMENT_AUDIT.md).
 
 The working-tree snapshot and calendar text patch are in the task's local `merge-safety-20261007` backup directory. A named Git stash also preserves the uncommitted Calendar Planner text edit; it is restored after the merge commit and retained as a recovery copy. Local `.env.local` credentials remain outside Git.
 
@@ -25,4 +25,4 @@ This merge does not merge or recreate `email-setup`, Google signup, independent 
 
 `auth-credentials-test.cjs` and `auth-merge-integration-test.cjs` verify password/login compatibility, OTP gating and recovery, attempts/expiry/replay, transactional rollback, access boundaries, preserved hourly rates and history, and email failure handling using isolated fixtures and intercepted delivery. Existing calendar, scheduling analysis, active time tracking, commission/reconciliation, CRM boundary, Twilio and Gemini suites pass. TypeScript and production build pass.
 
-The merged branch is for review; nothing is pushed or merged back into the original development branch automatically.
+The checks above describe the original integration, not a new verification run. Current branch state and later password recovery are recorded in the alignment audit.

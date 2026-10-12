@@ -2,7 +2,7 @@
 
 Calendar Planner includes **Analyze a conversation**. Select the current client, optionally choose a prospect, paste up to 12,000 characters and generate a scheduling signal. The transcript is sent to the configured provider.
 
-Set `CALENDAR_AI_PROVIDER=openai`, `OPENAI_API_KEY` and optionally `OPENAI_MODEL` in `.env.local`, then restart the server. OpenAI defaults to `gpt-4.1-mini` and uses the Responses API with a strict JSON schema, a 20-second timeout and `store: false`. The key stays server-side. Live OpenAI verification requires your key.
+Set `CALENDAR_AI_PROVIDER=openai`, `OPENAI_API_KEY` and optionally `OPENAI_MODEL` in `.env.local` for native development or `.env.docker` for Docker, then restart/recreate the server. The code defaults to `gpt-4.1-mini` and uses the Responses API with a strict JSON schema, a 20-second timeout and `store: false`. The key stays server-side. Live OpenAI verification requires your key.
 
 To use Gemini instead, set `CALENDAR_AI_PROVIDER=gemini` and configure `GEMINI_API_KEY` and optional `GEMINI_MODEL` (default `gemini-3.8-flash`). If provider selection is omitted, existing deployments continue using Gemini. There is no automatic fallback to a different provider. Each newly analyzed signal stores its provider in metadata. This setting affects Calendar Planner analysis; AI Copilot keeps its existing Gemini implementation.
 
