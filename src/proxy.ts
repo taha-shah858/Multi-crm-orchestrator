@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { SESSION_COOKIE } from "@/lib/auth/request-context";
+
+// Keep this literal local to the Edge-compatible proxy. Importing the server
+// request-context module would also load Prisma through the auth service.
+const SESSION_COOKIE = "multi_crm_session";
 
 /**
  * Next.js 16 Proxy performs optimistic route redirects only. Server routes use
