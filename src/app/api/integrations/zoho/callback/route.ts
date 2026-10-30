@@ -4,46 +4,44 @@ import { requireAuthenticatedUser } from "@/lib/auth/request-context";
 import { isAdminWorkspaceRole } from "@/lib/auth/roles";
 import { isAppError } from "@/lib/errors/app-error";
 import { completeZohoOAuth, recordZohoOAuthDenial } from "@/lib/integrations/integration-service";
+import { appOrigin, invitationCookie, stageZohoConsent } from "@/lib/integrations/zoho/connection-requests";
 
 export async function GET(request: NextRequest) {
-  let fallbackPath = "/integrations";
+  const state = request.nextUrl.searchParams.get("state") || "";
+  const invited = /^zi_[A-Za-z0-9_-]{43}$/.test(state);
+  let fallbackPath = invited ? "/connect-zoho" : "/integrations";
+  let response: NextResponse;
   try {
-    const user = await requireAuthenticatedUser(request);
-    fallbackPath = isAdminWorkspaceRole(user.role) ? "/admin/integrations" : "/integrations";
-    const state = request.nextUrl.searchParams.get("state") ?? "";
-    const providerError = request.nextUrl.searchParams.get("error");
-    if (providerError) {
-      const returnPath = await recordZohoOAuthDenial(user, state);
-      const destination = new URL(returnPath, request.url);
-      destination.searchParams.set("integration", "denied");
-      return NextResponse.redirect(destination);
+    const options = { accountsServer: request.nextUrl.searchParams.get("accounts-server") || request.nextUrl.searchParams.get("accounts_server") || undefined };
+    const code = request.nextUrl.searchParams.get("code") || "";
+    const denied = request.nextUrl.searchParams.has("error");
+    if (invited) {
+      await stageZohoConsent(state, code, { ...options, browser: request.cookies.get(invitationCookie(state))?.value, denied });
+      response = NextResponse.redirect(new URL("/connect-zoho?result=review", appOrigin()));
+    } else {
+      // Ordinary OAuth remains authenticated and bound to its initiating user.
+      const user = await requireAuthenticatedUser(request);
+      fallbackPath = isAdminWorkspaceRole(user.role) ? "/admin/integrations" : "/integrations";
+      if (denied) {
+        await recordZohoOAuthDenial(user, state);
+        response = NextResponse.redirect(new URL(`${fallbackPath}?integration=denied&provider=zoho`, appOrigin()));
+      } else {
+        const result = await completeZohoOAuth(user, state, code, options);
+        response = NextResponse.redirect(new URL(`${result.returnPath}?integration=review&provider=zoho`, appOrigin()));
+      }
     }
-    const code = request.nextUrl.searchParams.get("code") ?? "";
-    const accountsServer =
-      request.nextUrl.searchParams.get("accounts-server") ||
-      request.nextUrl.searchParams.get("accounts_server") ||
-      undefined;
-    const location = request.nextUrl.searchParams.get("location") || undefined;
-    const callbackRedirectUri = `${request.nextUrl.origin}/api/integrations/zoho/callback`;
-
-    const rawEnvUri = process.env.ZOHO_REDIRECT_URI?.trim().replace(/^"|"$/g, "");
-    const result = await completeZohoOAuth(user, state, code, {
-      accountsServer: accountsServer || (location ? `https://accounts.zoho.${location === "us" ? "com" : location}` : undefined),
-      redirectUri: rawEnvUri || callbackRedirectUri,
-    });
-    const destination = new URL(result.returnPath, request.url);
-    destination.searchParams.set("integration", "connected");
-    destination.searchParams.set("provider", "zoho");
-    return NextResponse.redirect(destination);
   } catch (error) {
-    const rawMessage = error instanceof Error ? error.message : "Zoho authorization could not be completed.";
-    console.error("[Zoho OAuth Callback] Error:", rawMessage);
-    const destination = new URL(fallbackPath, request.url);
-    destination.searchParams.set("integration", "error");
-    destination.searchParams.set(
-      "message",
-      isAppError(error) ? error.safeMessage : rawMessage,
-    );
-    return NextResponse.redirect(destination);
+    const destination = new URL(fallbackPath, appOrigin());
+    if (invited) destination.searchParams.set("result", "failed");
+    else {
+      destination.searchParams.set("integration", "error");
+      destination.searchParams.set("provider", "zoho");
+      destination.searchParams.set("message", isAppError(error) ? error.safeMessage : "Zoho authorization could not be verified. No connection was changed.");
+    }
+    response = NextResponse.redirect(destination);
   }
+  if (invited) response.cookies.set(invitationCookie(state), "", { path: "/api/integrations/zoho/callback", maxAge: 0, httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" });
+  response.headers.set("Referrer-Policy", "no-referrer");
+  response.headers.set("Cache-Control", "no-store");
+  return response;
 }

@@ -32,7 +32,7 @@ Domain services in src/lib
 | `prisma/schema.prisma`, `prisma/migrations` | Relational models and schema migrations |
 | `scripts` | Regression checks and explicit maintenance utilities |
 
-The schema currently declares 39 Prisma models. Operational data, PDF bytes, hashed sessions, sync status and audit events are stored in PostgreSQL. Theme, unsubmitted form input and some timer preferences remain browser state. Reports calculate totals from persisted records; they are not separate copies of the financial ledger.
+The schema currently declares 40 Prisma models, including staged Zoho connection requests. Operational data, PDF bytes, hashed sessions, sync status and audit events are stored in PostgreSQL. Theme, unsubmitted form input and some timer preferences remain browser state. Reports calculate totals from persisted records; they are not separate copies of the financial ledger.
 
 ## Ownership and provider routing
 
@@ -60,7 +60,11 @@ Service queries enforce organization, client assignment, ownership and role boun
 
 ## Integrations and consistency
 
+Zoho onboarding now supports [client connection invitations](zoho-client-connection-invitations.md). Direct and invited OAuth verify the provider organization/current user, stage encrypted credentials and require agency approval. Replacement needs explicit confirmation; existing record mappings cannot silently cross organizations. The invitation callback uses its own browser binding and state, while ordinary callbacks retain app-session authentication.
+
 CRM adapters are registered for HubSpot, Zoho, ClickUp, legacy ActiveCampaign and mock tests. OAuth state and encrypted token storage belong to the initiating user/organization and target. Tokens use AES-256-GCM with a private stable `INTEGRATION_ENCRYPTION_KEY`. Connection summaries must exclude secrets.
+
+Managed HubSpot/Zoho connections support confirmed removal by Admin/Manager. Removal deletes local credentials, marks the connection disconnected/removed, and hides it from management and active resolution. Records and mappings remain attached to the archived row; Zoho organization-switch checks still apply. Reauthorization restores the row after the normal verification/approval checks.
 
 Agency import persists canonical contacts, companies, deals and activity associations using external-record mappings. Local edits and explicit sync/retry are separate paths. Zoho handoffs and ClickUp tracking validate their client/agent/deal targets; synchronization may fail after local records have been saved.
 
@@ -69,7 +73,7 @@ Local database transactions cannot roll back an already completed CRM request, s
 ## Other implemented workflows
 
 - Twilio callbacks validate signatures and normalize SMS/call outcomes with provider-SID deduplication. Live voice uses a handset bridge; browser microphone calling is not implemented. Manual logs/phone links remain available.
-- Lead analysis uses Gemini when configured and valid, otherwise a labeled rules-engine fallback. Analysis is editable; automatic approved-field CRM writeback and automatic transcription remain separate gaps. Scripts and proposal drafts currently use fixed contextual templates, not the Gemini analysis generation path.
+- Lead analysis uses Gemini when configured and valid, otherwise a labeled rules-engine fallback. Analysis is editable and processes complete transcripts up to 100,000 characters; automatic approved-field CRM writeback and automatic transcription remain separate gaps. Scripts and proposals use a shared Gemini writing service with structured sections, scoped conversation context, optional briefs, validation and persisted provider/fallback provenance. Commercial proposal terms require manual confirmation. See [Gemini sales content](gemini-sales-content.md).
 - Google/Outlook/Calendly use authenticated calendar connections and the calendar sync service. The separate mock adapter supports local tests. Appointments are saved before remote booking; Google/Outlook have stable create identifiers, while ambiguous Calendly creates require review. Personal calendar accounts remain agent-owned across clients.
 - Closed-deal and manual commissions share commission/ledger records. Payments/corrections serialize balances and commit audit/ledger changes together. Reports group monetary totals by currency.
 - Active time uses focused/visible-tab heartbeats and locked per-agent sessions. Manual time and audited corrections remain available. Time Audit stores per-client rates on assignments and computes expected pay; it is not payroll payment processing.

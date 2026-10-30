@@ -262,8 +262,8 @@ async function main() {
     const clientCrmRecordsA = await listClientCrmRecords(contextAgentA, "CONTACT");
     const clientCrmRecordsB = await listClientCrmRecords(contextAgentB, "CONTACT");
 
-    assert(clientCrmRecordsA.length > 0 && clientCrmRecordsA.every(r => r.connectionId === ids.clientZohoConnA && r.provider === "ZOHO"), "Client A sees only its imported Zoho records");
-    assert(clientCrmRecordsB.length > 0 && clientCrmRecordsB.every(r => r.connectionId === ids.clientZohoConnB && r.provider === "ZOHO"), "Client B sees only its imported Zoho records");
+    assert(clientCrmRecordsA.length > 0 && clientCrmRecordsA.every(r => r.connectionId === zohoConnResultA.connection.id && r.provider === "ZOHO"), "Client A sees only its imported Zoho records");
+    assert(clientCrmRecordsB.length > 0 && clientCrmRecordsB.every(r => r.connectionId === zohoConnResultB.connection.id && r.provider === "ZOHO"), "Client B sees only its imported Zoho records");
 
     // Isolation check: Client A does NOT see Grace Hopper
     assert(!clientCrmRecordsA.some(r => r.email === `${marker}-grace@compiler.test`), "Client A must NOT see Client B's contact");

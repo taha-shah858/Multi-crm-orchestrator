@@ -11,7 +11,7 @@ const ts = require("typescript");
 const root = path.resolve(__dirname, "..");
 const now = new Date("2026-10-01T00:00:00Z");
 const context = (client = "a") => ({ activeClientAccountId: client, user: { id: "agent", organizationId: "org", role: "AGENT", name: "Agent", email: "agent@example.invalid" } });
-const connection = (id = "zoho-a", provider = "ZOHO", client = "a", extra = {}) => ({ id, organizationId: "org", clientAccountId: client, ownershipType: "CLIENT_ACCOUNT", provider, status: "CONNECTED", updatedAt: now, ...extra });
+const connection = (id = "zoho-a", provider = "ZOHO", client = "a", extra = {}) => ({ id, organizationId: "org", clientAccountId: client, ownershipType: "CLIENT_ACCOUNT", provider, status: "CONNECTED", removedAt: null, updatedAt: now, ...extra });
 const record = (extra = {}) => ({ id: "record", organizationId: "org", clientAccountId: "a", connectionId: "zoho-a", provider: "ZOHO", recordType: "CONTACT", externalId: "12345", name: "Original", email: null, phone: null, companyName: null, status: null, stage: null, amount: null, details: null, customFields: { source: "PROVIDER_IMPORT", providerRecordId: "12345" }, lastSyncedAt: now, createdAt: now, updatedAt: now, ...extra });
 const deal = (extra = {}) => ({ id: "deal", organizationId: "org", clientAccountId: "a", userId: "agent", title: "Sale", valueCents: 10000, currency: "USD", status: "OPEN", contactId: null, closedAt: null, notes: null, commissionRate: null, expectedRevenueCents: null, ...extra });
 const handoff = (extra = {}) => ({ id: "handoff", organizationId: "org", clientAccountId: "a", agencyDealId: "deal", agentId: "agent", dealName: "Sale", dealAmountCents: 10000, currency: "USD", closeStatus: "CLOSED_WON", closeDate: now, closeOutcome: null, recommendedNextAction: null, notes: null, clientCrmProvider: "ZOHO", clientCrmRecordId: null, status: "FAILED", retryCount: 0, lastAttemptedAt: null, lastSuccessfulSyncAt: null, lastError: null, createdAt: now, updatedAt: now, ...extra });
@@ -234,6 +234,12 @@ for (const provider of ["TWILIO", "HUBSPOT", "CLICKUP", "GOOGLE_CALENDAR", "ACTI
 test("wrong owner and disconnected connections cannot be selected", async () => {
   state.connections = [connection("agency", "ZOHO", "a", { ownershipType: "COMPANY" }), connection("disconnected", "ZOHO", "a", { status: "DISCONNECTED" })];
   await assert.rejects(client.syncClientCrm(context()), { code: "CRM_PROVIDER_UNAVAILABLE" });
+});
+
+test("removed connection cannot be selected even if its health status changes", async () => {
+  state.connections = [connection("removed", "ZOHO", "a", { removedAt: now, status: "CONNECTED" })];
+  await assert.rejects(client.syncClientCrm(context()), { code: "CRM_PROVIDER_UNAVAILABLE" });
+  assert.deepEqual(state.providers, []);
 });
 test("explicit legacy import stays isolated", async () => {
   state.connections.push(connection("legacy", "ACTIVECAMPAIGN"));

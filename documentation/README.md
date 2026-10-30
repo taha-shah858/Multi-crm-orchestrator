@@ -8,8 +8,11 @@ The root README covers startup. This folder holds the maintained project documen
 - [Requirements](PROJECT_REQUIREMENTS.md): required modules 6.1–6.9, manual failsafes, account ownership, and the acceptance scenario.
 - [Alignment audit](PROJECT_ALIGNMENT_AUDIT.md): current implemented scope, gaps, and verification limits.
 - [Local Docker development](docker-local-development.md): isolated setup, credentials, account creation, updates, and database lifecycle.
+- [Zoho client connection invitations](zoho-client-connection-invitations.md): external-client consent, verified organization review, replacement confirmation, setup and regression checks.
 
 ## Feature guides
+
+- [Gemini sales content](gemini-sales-content.md): structured scripts, proposal/follow-up drafts, truthful fallback labels and complete-transcript analysis.
 
 - [Client CRM contact directory](client-directory-contacts.md)
 - [Twilio gateway](twilio-gateway.md)

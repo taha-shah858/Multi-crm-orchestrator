@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Building2, DatabaseZap, Link2, RefreshCw, ShieldCheck, Unplug } from "lucide-react";
+import { Building2, DatabaseZap, Link2, RefreshCw, ShieldCheck, Trash2, Unplug } from "lucide-react";
 import { readApiJson } from "@/lib/http/client-api";
+import { isSyncableConnectionStatus } from "@/lib/integrations/connection-resolution";
 import type { IntegrationConnectionSummary, IntegrationOwnershipType } from "@/lib/models/canonical";
 import { MultiCrmCard, MultiCrmInnerPanel, MultiCrmTag } from "@/components/ui/MultiCrmCard";
 
@@ -13,6 +14,7 @@ export function AdminIntegrationManager({ clients }: { clients: Array<{ id: stri
   const [scope, setScope] = useState<IntegrationOwnershipType>("CLIENT_ACCOUNT");
   const [clientAccountId, setClientAccountId] = useState(clients[0]?.id ?? "");
   const [working, setWorking] = useState<string | null>(null);
+  const [removing, setRemoving] = useState<string | null>(null);
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
 
   const load = useCallback(async () => {
@@ -31,11 +33,12 @@ export function AdminIntegrationManager({ clients }: { clients: Array<{ id: stri
     const params = new URLSearchParams(window.location.search);
     if (!params.has("integration")) return;
     const connected = params.get("integration") === "connected";
+    const review = params.get("integration") === "review";
     const providerName = params.get("provider") === "zoho" ? "Zoho CRM" : "HubSpot";
     queueMicrotask(() => {
       setMessage({
-        tone: connected ? "success" : "error",
-        text: connected
+        tone: connected || review ? "success" : "error",
+        text: review ? "Zoho organization verified. Review and approve it under Client Zoho authorization below. No connection has changed yet." : connected
           ? `${providerName} connected successfully.`
           : params.get("message") || `${providerName} authorization did not complete.`,
       });
@@ -77,19 +80,23 @@ export function AdminIntegrationManager({ clients }: { clients: Array<{ id: stri
     }
   };
 
-  const action = async (connection: IntegrationConnectionSummary, operation: "sync" | "retry" | "disconnect") => {
+  const action = async (connection: IntegrationConnectionSummary, operation: "sync" | "retry" | "disconnect" | "remove") => {
     setWorking(connection.id);
     setMessage(null);
     try {
       const response = await fetch(
         operation === "disconnect" ? `/api/integrations/${connection.id}` : `/api/integrations/${connection.id}/${operation}`,
-        { method: operation === "disconnect" ? "DELETE" : "POST" },
+        {
+          method: operation === "disconnect" ? "DELETE" : "POST",
+          ...(operation === "remove" ? { headers: { "content-type": "application/json" }, body: JSON.stringify({ confirmedConnectionId: connection.id }) } : {}),
+        },
       );
       await readApiJson(response);
       setMessage({
         tone: "success",
-        text: operation === "disconnect" ? "Integration disconnected." : "CRM synchronization completed.",
+        text: operation === "remove" ? "Connection removed. Imported records and mapping history were kept." : operation === "disconnect" ? "Integration disconnected." : "CRM synchronization completed.",
       });
+      setRemoving(null);
       await load();
     } catch (error) {
       setMessage({ tone: "error", text: error instanceof Error ? error.message : "The integration action failed." });
@@ -189,7 +196,7 @@ export function AdminIntegrationManager({ clients }: { clients: Array<{ id: stri
                 <option value="https://accounts.zoho.eu">Europe (.eu)</option>
                 <option value="https://accounts.zoho.com.au">Australia (.com.au)</option>
                 <option value="https://accounts.zoho.jp">Japan (.jp)</option>
-                <option value="https://accounts.zoho.ca">Canada (.ca)</option>
+                <option value="https://accounts.zohocloud.ca">Canada (.ca)</option>
               </select>
             </label>
           )}
@@ -263,7 +270,7 @@ export function AdminIntegrationManager({ clients }: { clients: Array<{ id: stri
                   )}
 
                   <div className="flex flex-wrap gap-2">
-                    {connection.ownershipType === "CLIENT_ACCOUNT" && (
+                    {connection.ownershipType === "CLIENT_ACCOUNT" && isSyncableConnectionStatus(connection.status) && connection.permissions.canSync && (
                       <button
                         onClick={() => void action(connection, connection.status === "DEGRADED" ? "retry" : "sync")}
                         disabled={working === connection.id}
@@ -273,15 +280,39 @@ export function AdminIntegrationManager({ clients }: { clients: Array<{ id: stri
                         {connection.status === "DEGRADED" ? "Retry" : "Sync now"}
                       </button>
                     )}
-                    <button
+                    {connection.status !== "DISCONNECTED" && connection.permissions.canDisconnect && <button
                       onClick={() => void action(connection, "disconnect")}
                       disabled={working === connection.id}
                       className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 transition-colors disabled:opacity-40 cursor-pointer"
                     >
                       <Unplug className="h-3 w-3" />
                       Disconnect
-                    </button>
+                    </button>}
+                    {(isAgencyCrm || isClientCrm) && connection.permissions.canManage && (
+                      <button
+                        onClick={() => setRemoving(connection.id)}
+                        disabled={working !== null}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-40"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        Remove connection
+                      </button>
+                    )}
                   </div>
+                  {removing === connection.id && (
+                    <div className="space-y-3 rounded-lg border border-red-200 bg-white p-3" role="group" aria-label="Confirm connection removal">
+                      <p className="text-xs text-slate-700">
+                        Remove {connection.providerAccountName || connection.provider} from {connection.clientAccount?.name || connection.owner?.name || "the agency"}?
+                        {" "}This stops access through this connection, deletes its stored credentials, and removes it from this list. Imported records and mapping history stay in the app. The account in Zoho or HubSpot is not deleted.
+                        {isClientCrm && " Existing records will still prevent switching this client to a different or unverified Zoho organization. Use a new client account for a different organization."}
+                        {isAgencyCrm && connection.ownershipType === "COMPANY" && " Agency HubSpot synchronization will stop until you reconnect."}
+                      </p>
+                      <div className="flex gap-2">
+                        <button onClick={() => void action(connection, "remove")} disabled={working !== null} className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40">Confirm removal</button>
+                        <button onClick={() => setRemoving(null)} disabled={working !== null} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-700">Cancel</button>
+                      </div>
+                    </div>
+                  )}
                 </MultiCrmInnerPanel>
               );
             })}

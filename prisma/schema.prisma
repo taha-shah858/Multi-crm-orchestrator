@@ -132,6 +132,9 @@ enum AuditAction {
   CLIENT_CRM_SYNC_FAILED
   ZOHO_CONNECTED
   ZOHO_DISCONNECTED
+  ZOHO_CONNECTION_REQUESTED
+  ZOHO_CONSENT_RECEIVED
+  ZOHO_CONNECTION_REQUEST_REVOKED
   CLICKUP_CONNECTED
   CLICKUP_DISCONNECTED
   CLICKUP_TASK_SYNC_STARTED
@@ -293,6 +296,7 @@ enum SyncTrigger {
 }
 
 model Organization {
+  zohoConnectionRequests ZohoConnectionRequest[]
   id                      String                  @id @default(cuid())
   name                    String
   createdAt               DateTime                @default(now())
@@ -327,6 +331,7 @@ model Organization {
 }
 
 model User {
+  zohoConnectionRequests ZohoConnectionRequest[]
   id                      String                  @id @default(cuid())
   organizationId          String
   email                   String                  @unique
@@ -381,6 +386,7 @@ model AuthSession {
 }
 
 model ClientAccount {
+  zohoConnectionRequests ZohoConnectionRequest[]
   id                              String                  @id @default(cuid())
   organizationId                  String
   name                            String
@@ -448,6 +454,7 @@ model IntegrationConnection {
   connectedAt         DateTime?
   lastSyncAt          DateTime?
   lastError           String?
+  removedAt           DateTime?
   createdAt           DateTime                 @default(now())
   updatedAt           DateTime                 @updatedAt
   organization        Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -1229,5 +1236,37 @@ model PasswordResetToken {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([expiresAt])
+}
+
+model ZohoConnectionRequest {
+  id                    String @id @default(cuid())
+  organizationId        String
+  clientAccountId       String
+  createdById           String
+  source                String @default("INVITATION")
+  status                String @default("PENDING")
+  tokenHash             String? @unique
+  stateHash             String? @unique
+  browserHash           String?
+  oauthExpiresAt        DateTime?
+  expiresAt             DateTime
+  baselineFingerprint   String
+  providerOrganizationId String?
+  providerOrganizationName String?
+  providerUserId        String?
+  providerUserName      String?
+  apiDomain             String?
+  accountsUrl           String?
+  encryptedAccessToken  String?
+  encryptedRefreshToken String?
+  accessTokenExpiresAt  DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clientAccount         ClientAccount @relation(fields: [clientAccountId], references: [id], onDelete: Cascade)
+  createdBy             User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status, expiresAt])
+  @@index([clientAccountId])
 }
 

@@ -20,13 +20,14 @@ function getPrismaClient(): PrismaClient {
     globalForPrisma.prisma &&
     "emailVerificationToken" in globalForPrisma.prisma &&
     "workspaceInvitation" in globalForPrisma.prisma &&
-    "passwordResetToken" in globalForPrisma.prisma
+    "passwordResetToken" in globalForPrisma.prisma &&
+    "zohoConnectionRequest" in globalForPrisma.prisma
   ) {
     return globalForPrisma.prisma;
   }
 
   const client = createPrismaClient();
-  if (!Reflect.get(client, "passwordResetToken")) {
+  if (!Reflect.get(client, "passwordResetToken") || !Reflect.get(client, "zohoConnectionRequest")) {
     void client.$disconnect();
     throw new AppError(
       "INTEGRATION_CONFIGURATION_ERROR",

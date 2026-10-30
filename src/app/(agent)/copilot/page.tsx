@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   BrainCircuit,
   CheckCircle2,
@@ -17,7 +17,7 @@ import { useClientAccount } from "@/context/ClientAccountContext";
 interface Contact { id: string; firstName: string; lastName: string; company: string | null; }
 interface Interaction { id: string; type: string; body: string; subject: string | null; contact: { id: string; firstName: string; lastName: string } | null; occurredAt: string; }
 interface Analysis {
-  id: string; provider: "GEMINI" | "RULES_ENGINE"; transcript: string; summary: string; budget: string | null; timeline: string | null; requirements: string | null; intent: string | null; objections: string | null;
+  contactId: string | null; id: string; provider: "GEMINI" | "RULES_ENGINE"; transcript: string; summary: string; budget: string | null; timeline: string | null; requirements: string | null; intent: string | null; objections: string | null;
   leadScore: number; temperature: string; dealProbability: number; isManualOverride: boolean; createdAt: string;
   contact: { id: string; firstName: string; lastName: string; company: string | null } | null;
   interaction: { id: string; type: string; occurredAt: string } | null;
@@ -56,7 +56,7 @@ export default function CopilotPage() {
   const requestVersion          = useRef(0);
   const currentClientAccountId = useRef(activeClientAccount.id);
 
-  useEffect(() => { currentClientAccountId.current = activeClientAccount.id; }, [activeClientAccount.id]);
+  useLayoutEffect(() => { currentClientAccountId.current = activeClientAccount.id; }, [activeClientAccount.id]);
 
   const load = useCallback(async () => {
     if (!isClientAccountReady) return;
@@ -66,15 +66,17 @@ export default function CopilotPage() {
     setContacts([]); setInteractions([]); setAnalyses([]); setContactId(""); setInteractionId(""); setTranscript(""); setSelectedAnalysis(null); setEdit(null); setMessage(null);
     try {
       const [cr, ir, ar] = await Promise.all([
-        fetch("/api/contacts", { cache: "no-store" }),
+        fetch("/api/ai/contacts", { cache: "no-store" }),
         fetch("/api/interactions", { cache: "no-store" }),
         fetch("/api/lead-analyses", { cache: "no-store" }),
       ]);
       const [cd, id, ad] = await Promise.all([cr.json(), ir.json(), ar.json()]);
       if (version !== requestVersion.current || currentClientAccountId.current !== clientAccountId) return;
       if (!cr.ok || !ir.ok || !ar.ok || !cd.success || !id.success || !ad.success) throw new Error("AI workspace data could not be loaded for this client account.");
-      setContacts(cd.contacts); setInteractions(id.interactions); setAnalyses(ad.analyses);
-      const first = ad.analyses[0] as Analysis | undefined;
+      const allowed = new Set((cd.contacts as Contact[]).map(contact => contact.id));
+      const visibleAnalyses = (ad.analyses as Analysis[]).filter(item => !item.contactId || allowed.has(item.contactId));
+      setContacts(cd.contacts); setInteractions(id.interactions.filter((item: Interaction) => !item.contact?.id || allowed.has(item.contact.id))); setAnalyses(visibleAnalyses);
+      const first = visibleAnalyses[0];
       setSelectedAnalysis(first ?? null); setEdit(first ? editableFrom(first) : null);
     } catch (error) {
       if (version === requestVersion.current && currentClientAccountId.current === clientAccountId)
@@ -84,7 +86,11 @@ export default function CopilotPage() {
     }
   }, [activeClientAccount.id, isClientAccountReady]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    let cancelled = false;
+    queueMicrotask(() => { if (!cancelled) void load(); });
+    return () => { cancelled = true; };
+  }, [load]);
 
   const selectInteraction = (id: string) => {
     setInteractionId(id);

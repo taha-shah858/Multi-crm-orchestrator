@@ -16,8 +16,6 @@ import {
 } from "@/lib/integrations/hubspot/oauth";
 import {
   buildZohoAuthorizationUrl,
-  encryptedZohoCredentialData,
-  exchangeZohoAuthorizationCode,
   ZOHO_SCOPES,
 } from "@/lib/integrations/zoho/oauth";
 import {
@@ -100,7 +98,7 @@ export async function listIntegrationConnections(user: AuthenticatedUser, active
   }
 
   const connections = await prisma.integrationConnection.findMany({
-    where,
+    where: { ...where, removedAt: null },
     include: {
       clientAccount: { select: { id: true, name: true, allowAgentIntegrationManagement: true } },
       owner: { select: { id: true, name: true, email: true } },
@@ -195,7 +193,7 @@ export async function completeHubSpotOAuth(user: AuthenticatedUser, state: strin
           userId: stored.userId,
           providerAccountId: tokens.hub_id ? String(tokens.hub_id) : null,
           providerAccountName: tokens.hub_id ? `HubSpot account ${tokens.hub_id}` : "Connected HubSpot account",
-          status: "CONNECTED",
+          status: "CONNECTED", removedAt: null,
           scopes,
           connectedByUserId: user.id,
           connectedAt: new Date(),
@@ -210,7 +208,7 @@ export async function completeHubSpotOAuth(user: AuthenticatedUser, state: strin
           provider: "HUBSPOT",
           providerAccountId: tokens.hub_id ? String(tokens.hub_id) : null,
           providerAccountName: tokens.hub_id ? `HubSpot account ${tokens.hub_id}` : "Connected HubSpot account",
-          status: "CONNECTED",
+          status: "CONNECTED", removedAt: null,
           scopes,
           connectedByUserId: user.id,
           connectedAt: new Date(),
@@ -266,7 +264,7 @@ export async function recordHubSpotOAuthDenial(user: AuthenticatedUser, state: s
 }
 
 async function getAuthorizedConnection(user: AuthenticatedUser, id: string, activeClientAccountId?: string | null) {
-  const connection = await prisma.integrationConnection.findFirst({ where: { id, organizationId: user.organizationId }, include: { clientAccount: { select: { allowAgentIntegrationManagement: true } } } });
+  const connection = await prisma.integrationConnection.findFirst({ where: { id, organizationId: user.organizationId, removedAt: null }, include: { clientAccount: { select: { allowAgentIntegrationManagement: true } } } });
   if (!connection) throw new AppError("INTEGRATION_NOT_FOUND", 404, "Integration connection was not found.", "Choose an integration in your workspace.");
   if (connection.ownershipType === "CLIENT_ACCOUNT" && connection.clientAccountId) {
     await assertClientAccess(user, connection.clientAccountId);
@@ -287,12 +285,51 @@ export async function disconnectIntegration(user: AuthenticatedUser, id: string,
   const connection = await getAuthorizedConnection(user, id, activeClientAccountId);
   const ownUserConnection = connection.ownershipType === "USER" && connection.userId === user.id;
   if (!isAdminWorkspaceRole(user.role) && !ownUserConnection) throw new AppError("FORBIDDEN", 403, "Integration disconnect is not permitted.", "An Admin or Manager must disconnect this integration.");
+  if (connection.provider === "ZOHO" && connection.clientAccountId) {
+    const zohoClientAccountId = connection.clientAccountId;
+    await prisma.$transaction(async transaction => {
+      await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`zoho-client:${zohoClientAccountId}`}))`;
+      await transaction.integrationCredential.deleteMany({ where: { integrationConnectionId: connection.id } });
+      await transaction.integrationConnection.update({ where: { id: connection.id }, data: { status: "DISCONNECTED", connectedAt: null, lastError: null } });
+      await transaction.zohoConnectionRequest.updateMany({
+        where: { organizationId: user.organizationId, clientAccountId: zohoClientAccountId, status: { in: ["PENDING", "AUTHORIZING", "PROCESSING", "REVIEW"] } },
+        data: { status: "REVOKED", encryptedAccessToken: null, encryptedRefreshToken: null, browserHash: null },
+      });
+      await transaction.auditLog.create({ data: { organizationId: user.organizationId, clientAccountId: connection.clientAccountId, userId: user.id, action: "INTEGRATION_DISCONNECTED", entityType: "INTEGRATION_CONNECTION", entityId: connection.id, source: "ZOHO" } });
+    });
+    return;
+  }
   if (connection.provider === "HUBSPOT") await revokeHubSpotCredential(connection.id);
   await prisma.$transaction([
     prisma.integrationCredential.deleteMany({ where: { integrationConnectionId: connection.id } }),
     prisma.integrationConnection.update({ where: { id: connection.id }, data: { status: "DISCONNECTED", connectedAt: null, lastError: null } }),
     prisma.auditLog.create({ data: { organizationId: user.organizationId, clientAccountId: connection.clientAccountId, userId: user.id, action: "INTEGRATION_DISCONNECTED", entityType: "INTEGRATION_CONNECTION", entityId: connection.id, source: connection.provider, metadata: { provider: connection.provider, ownershipType: connection.ownershipType } } }),
   ]);
+}
+
+/** Remove from management without discarding CRM provenance or canonical data. */
+export async function removeIntegration(user: AuthenticatedUser, id: string, confirmedConnectionId: unknown) {
+  if (!isAdminWorkspaceRole(user.role)) throw new AppError("FORBIDDEN", 403, "Connection removal requires an elevated role.", "An Admin or Manager must remove this connection.");
+  const connection = await getAuthorizedConnection(user, id);
+  if (connection.provider !== "HUBSPOT" && connection.provider !== "ZOHO") throw new AppError("INVALID_REQUEST", 422, "Unsupported removal target.", "Only HubSpot and Zoho connections can be removed here.");
+  if (confirmedConnectionId !== id) throw new AppError("INVALID_REQUEST", 422, "Removal confirmation required.", "Confirm the connection you want to remove.");
+  await prisma.$transaction(async db => {
+    if (connection.provider === "ZOHO" && connection.clientAccountId) {
+      await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`zoho-client:${connection.clientAccountId}`}))`;
+    }
+    await db.$queryRaw`SELECT id FROM "CrmConnection" WHERE id=${id} FOR UPDATE`;
+    const current = await db.integrationConnection.findFirst({ where: { id, organizationId: user.organizationId, removedAt: null } });
+    if (!current) throw new AppError("INTEGRATION_NOT_FOUND", 404, "Connection already removed.", "Refresh the connections list.");
+    await db.integrationCredential.deleteMany({ where: { integrationConnectionId: id } });
+    await db.integrationConnection.update({ where: { id }, data: { removedAt: new Date(), status: "DISCONNECTED", connectedAt: null, lastError: null } });
+    if (connection.provider === "ZOHO" && connection.clientAccountId) {
+      await db.zohoConnectionRequest.updateMany({
+        where: { organizationId: user.organizationId, clientAccountId: connection.clientAccountId, status: { in: ["PENDING", "AUTHORIZING", "PROCESSING", "REVIEW"] } },
+        data: { status: "REVOKED", encryptedAccessToken: null, encryptedRefreshToken: null, browserHash: null },
+      });
+    }
+    await db.auditLog.create({ data: { organizationId: user.organizationId, clientAccountId: connection.clientAccountId, userId: user.id, action: "INTEGRATION_DISCONNECTED", entityType: "INTEGRATION_CONNECTION", entityId: id, source: connection.provider, metadata: { operation: "remove", recordsPreserved: true } } });
+  });
 }
 
 export async function runIntegrationSync(user: AuthenticatedUser, id: string, requestId: string, activeClientAccountId?: string | null, retry = false) {
@@ -337,7 +374,7 @@ export async function connectActiveCampaign(
         clientAccountId: clientId,
         providerAccountId: "activecampaign",
         providerAccountName: "ActiveCampaign CRM",
-        status: "CONNECTED",
+        status: "CONNECTED", removedAt: null,
         connectedByUserId: user.id,
         connectedAt: new Date(),
         lastError: null,
@@ -350,7 +387,7 @@ export async function connectActiveCampaign(
         provider: "ACTIVECAMPAIGN",
         providerAccountId: "activecampaign",
         providerAccountName: "ActiveCampaign CRM",
-        status: "CONNECTED",
+        status: "CONNECTED", removedAt: null,
         connectedByUserId: user.id,
         connectedAt: new Date(),
       },
@@ -394,156 +431,39 @@ export async function beginZohoOAuth(
   activeClientAccountId?: string | null,
 ) {
   const target = await resolveOwnershipTarget(user, input, activeClientAccountId);
+  if (target.ownershipType !== "CLIENT_ACCOUNT" || !target.clientAccountId) throw new AppError("INVALID_INTEGRATION_TARGET", 422, "Zoho must belong to a client.", "Select the client whose Zoho organization you are authorizing.");
   const state = randomBytes(32).toString("base64url");
-  const accountsUrl = typeof input.accountsUrl === "string" ? input.accountsUrl : undefined;
-  const redirectUri = typeof input.redirectUri === "string" ? input.redirectUri : undefined;
-  const authorizationUrl = buildZohoAuthorizationUrl(state, { accountsUrl, redirectUri });
-
-  await prisma.$transaction([
-    prisma.oAuthState.deleteMany({
-      where: { organizationId: user.organizationId, expiresAt: { lt: new Date() } },
-    }),
-    prisma.oAuthState.create({
-      data: {
-        stateHash: hashState(state),
-        provider: "ZOHO",
-        organizationId: user.organizationId,
-        ownershipType: target.ownershipType,
-        clientAccountId: target.clientAccountId,
-        userId: target.userId,
-        initiatedByUserId: user.id,
-        returnPath: target.returnPath,
-        expiresAt: new Date(Date.now() + OAUTH_STATE_TTL_MS),
-      },
-    }),
-  ]);
-
+  const authorizationUrl = buildZohoAuthorizationUrl(state, {
+    accountsUrl: typeof input.accountsUrl === "string" ? input.accountsUrl : undefined,
+  });
+  const { prepareDirectZohoRequest, expireZohoRequests } = await import("@/lib/integrations/zoho/connection-requests");
+  await expireZohoRequests(user.organizationId);
+  await prisma.$transaction(async transaction => {
+    await transaction.oAuthState.create({ data: {
+      stateHash: hashState(state), provider: "ZOHO", organizationId: user.organizationId,
+      ownershipType: "CLIENT_ACCOUNT", clientAccountId: target.clientAccountId, initiatedByUserId: user.id,
+      returnPath: target.returnPath, expiresAt: new Date(Date.now() + OAUTH_STATE_TTL_MS),
+    } });
+    await prepareDirectZohoRequest(user, target.clientAccountId, state, transaction);
+  });
   return { authorizationUrl };
 }
 
 export async function completeZohoOAuth(
-  user: AuthenticatedUser,
-  state: string,
-  code: string,
+  user: AuthenticatedUser, state: string, code: string,
   options?: { accountsServer?: string; redirectUri?: string },
 ) {
   const stored = await prisma.oAuthState.findUnique({ where: { stateHash: hashState(state) } });
-  if (
-    !stored ||
-    stored.provider !== "ZOHO" ||
-    stored.initiatedByUserId !== user.id ||
-    stored.organizationId !== user.organizationId
-  ) {
-    throw new AppError(
-      "INVALID_OAUTH_STATE",
-      400,
-      "OAuth state did not match the current session.",
-      "This Zoho connection request is invalid. Start again.",
-    );
+  if (!stored || stored.provider !== "ZOHO" || stored.initiatedByUserId !== user.id || stored.organizationId !== user.organizationId ||
+      stored.usedAt || stored.expiresAt <= new Date() || stored.ownershipType !== "CLIENT_ACCOUNT" || !stored.clientAccountId) {
+    throw new AppError("INVALID_OAUTH_STATE", 400, "OAuth state did not match the session.", "This Zoho request is invalid, expired or already used. Start again.");
   }
-  if (stored.usedAt || stored.expiresAt <= new Date()) {
-    throw new AppError(
-      "INVALID_OAUTH_STATE",
-      400,
-      "OAuth state is expired or already used.",
-      "This Zoho connection request expired. Start again.",
-    );
-  }
-
-  await resolveOwnershipTarget(
-    user,
-    { ownershipType: stored.ownershipType, clientAccountId: stored.clientAccountId ?? undefined },
-    stored.clientAccountId,
-  );
-  const consumed = await prisma.oAuthState.updateMany({
-    where: { id: stored.id, usedAt: null, expiresAt: { gt: new Date() } },
-    data: { usedAt: new Date() },
-  });
-  if (consumed.count !== 1) {
-    throw new AppError("INVALID_OAUTH_STATE", 400, "OAuth state could not be consumed.", "This Zoho connection request is no longer valid.");
-  }
-
-  try {
-    const tokens = await exchangeZohoAuthorizationCode(code, {
-      accountsUrl: options?.accountsServer,
-      redirectUri: options?.redirectUri,
-    });
-    const key = ownershipKey(stored.organizationId, stored.ownershipType, stored.clientAccountId, stored.userId);
-    const scopes = [...ZOHO_SCOPES];
-
-    const connection = await prisma.$transaction(async (transaction) => {
-      const saved = await transaction.integrationConnection.upsert({
-        where: { ownershipKey_provider: { ownershipKey: key, provider: "ZOHO" } },
-        update: {
-          organizationId: stored.organizationId,
-          ownershipType: stored.ownershipType,
-          clientAccountId: stored.clientAccountId,
-          userId: stored.userId,
-          providerAccountId: "zoho-crm",
-          providerAccountName: "Zoho CRM",
-          status: "CONNECTED",
-          scopes,
-          connectedByUserId: user.id,
-          connectedAt: new Date(),
-          lastError: null,
-        },
-        create: {
-          organizationId: stored.organizationId,
-          ownershipType: stored.ownershipType,
-          ownershipKey: key,
-          clientAccountId: stored.clientAccountId,
-          userId: stored.userId,
-          provider: "ZOHO",
-          providerAccountId: "zoho-crm",
-          providerAccountName: "Zoho CRM",
-          status: "CONNECTED",
-          scopes,
-          connectedByUserId: user.id,
-          connectedAt: new Date(),
-        },
-      });
-
-      await transaction.integrationCredential.upsert({
-        where: { integrationConnectionId: saved.id },
-        update: encryptedZohoCredentialData(tokens),
-        create: { integrationConnectionId: saved.id, ...encryptedZohoCredentialData(tokens) },
-      });
-
-      await transaction.auditLog.create({
-        data: {
-          organizationId: stored.organizationId,
-          clientAccountId: stored.clientAccountId,
-          userId: user.id,
-          action: "ZOHO_CONNECTED" as unknown as AuditAction,
-          entityType: "INTEGRATION_CONNECTION",
-          entityId: saved.id,
-          source: "ZOHO",
-          metadata: { provider: "ZOHO", ownershipType: stored.ownershipType },
-        },
-      });
-
-      return saved;
-    });
-
-    return { connection, returnPath: stored.returnPath };
-  } catch (error) {
-    await prisma.auditLog.create({
-      data: {
-        organizationId: stored.organizationId,
-        clientAccountId: stored.clientAccountId,
-        userId: user.id,
-        action: "INTEGRATION_OAUTH_FAILED",
-        entityType: "INTEGRATION_CONNECTION",
-        source: "ZOHO",
-        metadata: {
-          provider: "ZOHO",
-          ownershipType: stored.ownershipType,
-          error: error instanceof Error ? error.message : String(error),
-        },
-      },
-    });
-    throw error;
-  }
+  await resolveOwnershipTarget(user, { ownershipType: stored.ownershipType, clientAccountId: stored.clientAccountId }, stored.clientAccountId);
+  const consumed = await prisma.oAuthState.updateMany({ where: { id: stored.id, usedAt: null, expiresAt: { gt: new Date() } }, data: { usedAt: new Date() } });
+  if (consumed.count !== 1) throw new AppError("INVALID_OAUTH_STATE", 400, "OAuth state already used.", "Start a new Zoho request.");
+  const { stageZohoConsent } = await import("@/lib/integrations/zoho/connection-requests");
+  const result = await stageZohoConsent(state, code, { ...options, actor: user });
+  return { ...result, returnPath: stored.returnPath };
 }
 
 export async function recordZohoOAuthDenial(user: AuthenticatedUser, state: string) {
@@ -563,6 +483,10 @@ export async function recordZohoOAuthDenial(user: AuthenticatedUser, state: stri
   if (consumed.count !== 1) {
     throw new AppError("INVALID_OAUTH_STATE", 400, "OAuth state is expired or already used.", "This Zoho connection request expired. Start again.");
   }
+  await prisma.zohoConnectionRequest.updateMany({
+    where: { stateHash: hashState(state), createdById: user.id, organizationId: user.organizationId, status: "AUTHORIZING" },
+    data: { status: "FAILED", encryptedAccessToken: null, encryptedRefreshToken: null, browserHash: null },
+  });
   await prisma.auditLog.create({
     data: {
       organizationId: stored.organizationId,
@@ -589,6 +513,10 @@ export async function connectZoho(
   },
   activeClientAccountId?: string | null,
 ) {
+  // Fixture setup only. Real credentials must use verified OAuth and approval.
+  if (process.env.NODE_ENV === "production" || !input.accessToken || !/^(mock-|test-)/.test(input.accessToken)) {
+    throw new AppError("INVALID_REQUEST", 422, "Direct Zoho setup is restricted to test fixtures.", "Authorize Zoho through OAuth so the organization can be verified and approved.");
+  }
   const clientId = input.clientAccountId || activeClientAccountId;
   if (!clientId) {
     throw new AppError("CLIENT_CONTEXT_REQUIRED", 409, "A client integration target is required.", "Select a client account to connect Zoho CRM.");
@@ -611,7 +539,7 @@ export async function connectZoho(
         clientAccountId: clientId,
         providerAccountId: "zoho-crm",
         providerAccountName: "Zoho CRM",
-        status: "CONNECTED",
+        status: "CONNECTED", removedAt: null,
         scopes: [...ZOHO_SCOPES],
         connectedByUserId: user.id,
         connectedAt: new Date(),
@@ -625,7 +553,7 @@ export async function connectZoho(
         provider: "ZOHO",
         providerAccountId: "zoho-crm",
         providerAccountName: "Zoho CRM",
-        status: "CONNECTED",
+        status: "CONNECTED", removedAt: null,
         scopes: [...ZOHO_SCOPES],
         connectedByUserId: user.id,
         connectedAt: new Date(),
@@ -762,7 +690,7 @@ export async function completeClickUpOAuth(
         clientAccountId: null,
         providerAccountId: `clickup-user-${user.id}`,
         providerAccountName: "ClickUp Personal Workspace",
-        status: "CONNECTED",
+        status: "CONNECTED", removedAt: null,
         connectedByUserId: user.id,
         connectedAt: new Date(),
         lastError: null,
@@ -776,7 +704,7 @@ export async function completeClickUpOAuth(
         provider: "CLICKUP" as any,
         providerAccountId: `clickup-user-${user.id}`,
         providerAccountName: "ClickUp Personal Workspace",
-        status: "CONNECTED",
+        status: "CONNECTED", removedAt: null,
         connectedByUserId: user.id,
         connectedAt: new Date(),
       },
@@ -880,7 +808,7 @@ export async function connectClickUp(
         clientAccountId: null,
         providerAccountId: `clickup-user-${user.id}`,
         providerAccountName: destination.teamName || "ClickUp Personal Workspace",
-        status: "CONNECTED",
+        status: "CONNECTED", removedAt: null,
         connectedByUserId: user.id,
         connectedAt: new Date(),
         lastError: null,
@@ -894,7 +822,7 @@ export async function connectClickUp(
         provider: "CLICKUP" as any,
         providerAccountId: `clickup-user-${user.id}`,
         providerAccountName: destination.teamName || "ClickUp Personal Workspace",
-        status: "CONNECTED",
+        status: "CONNECTED", removedAt: null,
         connectedByUserId: user.id,
         connectedAt: new Date(),
       },

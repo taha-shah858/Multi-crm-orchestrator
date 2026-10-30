@@ -21,6 +21,7 @@ export function activeClientIntegrationWhere(
     ownershipType: "CLIENT_ACCOUNT",
     clientAccountId: context.activeClientAccountId,
     status: { in: [...SYNCABLE_CONNECTION_STATUSES] },
+    removedAt: null,
     ...(provider ? { provider } : {}),
   };
 }
@@ -41,6 +42,7 @@ export function clientIntegrationWhere(
     ownershipType: "CLIENT_ACCOUNT",
     clientAccountId,
     status: { in: [...SYNCABLE_CONNECTION_STATUSES] },
+    removedAt: null,
     ...(provider ? { provider } : {}),
   };
 }
@@ -59,6 +61,7 @@ export function agencyIntegrationWhere(
     organizationId,
     ownershipType: "COMPANY",
     status: { in: [...SYNCABLE_CONNECTION_STATUSES] },
+    removedAt: null,
     ...(provider ? { provider } : {}),
   };
 }
@@ -75,6 +78,7 @@ export function hubspotConnectionWhere(
     organizationId: context.user.organizationId,
     provider: "HUBSPOT",
     status: { in: [...SYNCABLE_CONNECTION_STATUSES] },
+    removedAt: null,
     OR: [
       { ownershipType: "COMPANY" },
       { ownershipType: "CLIENT_ACCOUNT", clientAccountId: context.activeClientAccountId },
@@ -98,6 +102,7 @@ export function userIntegrationWhere(
     ownershipType: "USER",
     userId,
     status: { in: [...SYNCABLE_CONNECTION_STATUSES] },
+    removedAt: null,
     ...(provider ? { provider } : {}),
   };
 }

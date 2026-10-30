@@ -1,16 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { FilePenLine, FileText, Plus, Save, Sparkles, UserRound } from "lucide-react";
 import { MultiCrmCard, MultiCrmTag } from "@/components/ui/MultiCrmCard";
 import { useClientAccount } from "@/context/ClientAccountContext";
 import { readApiJson } from "@/lib/http/client-api";
+import { generationLabel, generationMessage } from "@/lib/ai/content-provenance";
 
 type Channel = "CALL" | "SMS" | "EMAIL";
 interface Contact { id: string; firstName: string; lastName: string; company: string | null; }
-interface Analysis { id: string; leadScore: number; temperature: string; contact: { firstName: string; lastName: string } | null; }
+interface Analysis { contactId: string | null; id: string; leadScore: number; temperature: string; contact: { firstName: string; lastName: string } | null; }
 interface Template { key: string; name: string; channel: Channel; purpose: string; }
-interface Script { id: string; title: string; purpose: string; content: string; channel: Channel; source: "GENERATED" | "MANUAL" | "TEMPLATE"; isManualOverride: boolean; contact: { firstName: string; lastName: string; company: string | null } | null; }
+interface Script { id: string; title: string; purpose: string; content: string; channel: Channel; source: "GENERATED" | "MANUAL" | "TEMPLATE"; contextSnapshot?: unknown; isManualOverride: boolean; contact: { firstName: string; lastName: string; company: string | null } | null; }
 
 export default function ScriptsPage() {
   const { activeClientAccount, isClientAccountReady } = useClientAccount();
@@ -23,6 +24,7 @@ export default function ScriptsPage() {
   const [templateKey, setTemplateKey] = useState("FOLLOW_UP");
   const [channel, setChannel] = useState<Channel>("EMAIL");
   const [purpose, setPurpose] = useState("Follow up after a discovery conversation");
+  const [brief, setBrief] = useState("");
   const [selected, setSelected] = useState<Script | null>(null);
   const [draft, setDraft] = useState({ title: "", purpose: "", content: "", channel: "EMAIL" as Channel });
   const [isLoading, setIsLoading] = useState(false);
@@ -30,7 +32,7 @@ export default function ScriptsPage() {
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const clientRequestVersion = useRef(0);
   const currentClientAccountId = useRef(activeClientAccount.id);
-  currentClientAccountId.current = activeClientAccount.id;
+  useLayoutEffect(() => { currentClientAccountId.current = activeClientAccount.id; }, [activeClientAccount.id]);
 
   useEffect(() => {
     if (!isClientAccountReady) return;
@@ -38,6 +40,8 @@ export default function ScriptsPage() {
     const requestVersion = ++clientRequestVersion.current;
     const clientAccountId = activeClientAccount.id;
 
+    queueMicrotask(() => {
+    if (controller.signal.aborted) return;
     setIsLoading(true);
     setMessage(null);
     setContacts([]);
@@ -46,13 +50,15 @@ export default function ScriptsPage() {
     setScripts([]);
     setSelected(null);
     setContactId("");
+    setBrief("");
     setLeadAnalysisId("");
     setDraft({ title: "", purpose: "", content: "", channel: "EMAIL" });
+    });
 
     const load = async () => {
       try {
         const [contactsResponse, analysesResponse, scriptsResponse, templatesResponse] = await Promise.all([
-          fetch("/api/contacts", { cache: "no-store", signal: controller.signal }),
+          fetch("/api/ai/contacts", { cache: "no-store", signal: controller.signal }),
           fetch("/api/lead-analyses", { cache: "no-store", signal: controller.signal }),
           fetch("/api/scripts", { cache: "no-store", signal: controller.signal }),
           fetch("/api/scripts/templates", { cache: "no-store", signal: controller.signal }),
@@ -65,7 +71,7 @@ export default function ScriptsPage() {
         ]);
         if (controller.signal.aborted || requestVersion !== clientRequestVersion.current || currentClientAccountId.current !== clientAccountId) return;
         setContacts(contactsPayload.contacts);
-        setAnalyses(analysesPayload.analyses);
+        setAnalyses(analysesPayload.analyses.filter(item => !item.contactId || contactsPayload.contacts.some(contact => contact.id === item.contactId)));
         setScripts(scriptsPayload.scripts);
         setTemplates(templatesPayload.templates);
       } catch (error) {
@@ -82,7 +88,7 @@ export default function ScriptsPage() {
     return () => controller.abort();
   }, [activeClientAccount.id, isClientAccountReady]);
 
-  const useTemplate = (key: string) => {
+  const applyTemplate = (key: string) => {
     const template = templates.find((item) => item.key === key);
     setTemplateKey(key);
     if (template) {
@@ -105,14 +111,14 @@ export default function ScriptsPage() {
       const response = await fetch("/api/scripts/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contactId: contactId || undefined, leadAnalysisId: leadAnalysisId || undefined, templateKey, channel, purpose }),
+        body: JSON.stringify({ contactId: contactId || undefined, leadAnalysisId: leadAnalysisId || undefined, templateKey, channel, purpose, brief }),
       });
       const data = await readApiJson<{ success: true; script: Script }>(response);
       if (requestVersion !== clientRequestVersion.current || currentClientAccountId.current !== clientAccountId) return;
       const script = data.script;
       setScripts((current) => [script, ...current]);
       chooseScript(script);
-      setMessage({ tone: "success", text: "Generated script saved. Review and edit it before use." });
+      setMessage({ tone: "success", text: generationMessage(script) });
     } catch (error) {
       if (requestVersion !== clientRequestVersion.current || currentClientAccountId.current !== clientAccountId) return;
       setMessage({ tone: "error", text: error instanceof Error ? error.message : "The script could not be generated." });
@@ -181,7 +187,7 @@ export default function ScriptsPage() {
 
           <div className="space-y-1.5">
             <label className={labelCls}>Reusable template</label>
-            <select value={templateKey} onChange={(event) => useTemplate(event.target.value)} className={inputCls}>
+            <select value={templateKey} onChange={(event) => applyTemplate(event.target.value)} className={inputCls}>
               <option value="">Custom generation</option>
               {templates.map((template) => <option key={template.key} value={template.key}>{template.name}</option>)}
             </select>
@@ -225,6 +231,10 @@ export default function ScriptsPage() {
             <input value={purpose} onChange={(event) => setPurpose(event.target.value)} className={inputCls} placeholder="e.g. Discovery follow-up" />
           </div>
 
+          <label className="block space-y-1.5">
+            <span className={labelCls}>Writing brief (optional)</span>
+            <textarea value={brief} maxLength={4000} rows={4} onChange={event => setBrief(event.target.value)} className={inputCls} placeholder="Describe the service, desired tone, relevant facts and next step. Leave unknown facts for confirmation." />
+          </label>
           <button
             onClick={() => void generate()}
             disabled={isWorking}
@@ -241,7 +251,7 @@ export default function ScriptsPage() {
               <FileText className="w-4 h-4 text-blue-600" />
               <h2 className="text-base font-semibold text-slate-900">Full manual editor</h2>
             </div>
-            {selected && <MultiCrmTag variant={selected.isManualOverride ? "magenta" : "cyan"}>{selected.isManualOverride ? "EDITED" : selected.source}</MultiCrmTag>}
+            {selected && <MultiCrmTag variant={selected.isManualOverride ? "magenta" : "cyan"}>{selected.isManualOverride ? "EDITED" : generationLabel(selected)}</MultiCrmTag>}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -314,7 +324,7 @@ export default function ScriptsPage() {
               </div>
               <p className="mt-2 text-xs text-slate-600 line-clamp-2">{script.content}</p>
               <p className="mt-2 text-xs text-slate-400">
-                {script.contact ? `${script.contact.firstName} ${script.contact.lastName}` : "Account"} · {script.isManualOverride ? "Edited" : script.source}
+                {script.contact ? `${script.contact.firstName} ${script.contact.lastName}` : "Account"} · {script.isManualOverride ? "Edited" : generationLabel(script)}
               </p>
             </button>
           ))}

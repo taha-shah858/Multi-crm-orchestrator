@@ -62,13 +62,13 @@ export default function IntegrationsAppCenter() {
     if (!state) return;
     const provider = params.get("provider") === "zoho" ? "Zoho CRM" : "HubSpot";
     const text =
-      state === "connected"
+      state === "review" ? "Zoho organization verified and submitted for agency approval. Your administrator must confirm the organization before the connection changes." : state === "connected"
         ? `${provider} connected successfully.`
         : state === "denied"
         ? `${provider} authorization was cancelled.`
         : params.get("message") || `${provider} could not be connected.`;
     queueMicrotask(() => {
-      setMessage({ tone: state === "connected" ? "success" : state === "denied" ? "info" : "error", text });
+      setMessage({ tone: state === "connected" ? "success" : state === "denied" || state === "review" ? "info" : "error", text });
       window.history.replaceState({}, "", window.location.pathname);
     });
   }, []);

@@ -14,7 +14,8 @@ export function proxy(request: NextRequest) {
     pathname.startsWith("/signup") ||
     pathname.startsWith("/accept-invite") ||
     pathname.startsWith("/forgot-password") ||
-    pathname.startsWith("/reset-password");
+    pathname.startsWith("/reset-password") ||
+    pathname === "/connect-zoho";
 
   if (!sessionCookie && !isAuthPage) {
     return NextResponse.redirect(new URL("/login", request.url));

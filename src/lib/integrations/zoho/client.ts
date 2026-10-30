@@ -8,6 +8,7 @@ import {
   encryptIntegrationSecret,
 } from "@/lib/integrations/credential-crypto";
 import { refreshZohoToken, ZOHO_DEFAULT_API_DOMAIN } from "./oauth";
+import { accountsForApi } from "./identity";
 import type {
   ZohoClientRecord,
   ZohoHandoffPayload,
@@ -68,7 +69,7 @@ export async function resolveZohoCredentials(
     }
   }
 
-  const meta = credential.metadata as { apiDomain?: string } | null;
+  const meta = credential.metadata as { apiDomain?: string; accountsUrl?: string } | null;
   const apiDomain = meta?.apiDomain || process.env.ZOHO_API_DOMAIN || ZOHO_DEFAULT_API_DOMAIN;
   const isMock =
     accessToken.startsWith("mock") ||
@@ -86,7 +87,7 @@ export async function resolveZohoCredentials(
     refreshToken
   ) {
     try {
-      const refreshed = await refreshZohoToken(refreshToken);
+      const refreshed = await refreshZohoToken(refreshToken, { accountsUrl: meta?.accountsUrl || accountsForApi(apiDomain) });
       accessToken = refreshed.access_token;
       const newExpiresAt = new Date(now + refreshed.expires_in * 1000);
 
