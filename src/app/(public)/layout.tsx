@@ -19,6 +19,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           <span>MultiCRM Orchestrator</span>
           <div className="flex flex-wrap gap-6">
             <Link href="/privacy" className="underline underline-offset-4">Privacy policy</Link>
+            <Link href="/terms" className="underline underline-offset-4">Terms of Service</Link>
             <a href="mailto:shahtaha111@gmail.com" className="underline underline-offset-4">Contact support</a>
           </div>
         </div>

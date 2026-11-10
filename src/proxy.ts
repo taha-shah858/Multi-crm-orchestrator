@@ -12,7 +12,7 @@ const SESSION_COOKIE = "multi_crm_session";
 export function proxy(request: NextRequest) {
   const sessionCookie = request.cookies.get(SESSION_COOKIE);
   const pathname = request.nextUrl.pathname;
-  const isPublicPage = pathname === "/home" || pathname === "/privacy";
+  const isPublicPage = pathname === "/home" || pathname === "/privacy" || pathname === "/terms";
   if (!sessionCookie && pathname === "/") {
     return NextResponse.redirect(new URL("/home", request.url));
   }

@@ -6,6 +6,8 @@ Documentation consolidated on 2026-10-12 against the `realbranch` source and [PR
 
 ### Public OAuth information pages, 2026-11-10
 
+Public `/terms` adds testing-stage usage, authorized integration access, review responsibilities, privacy controls and support information. The public footer links to it, and the route-access regression covers both `/terms` and protected paths beneath it. Google approval remains a separate provider review.
+
 Public `/home` and `/privacy` pages describe the workspace, calendar access, providers, retention and support/deletion requests. Signed-out root visits redirect to `/home`; authenticated root visits retain the existing agent dashboard. Only exact public paths are exempt from the proxy cookie check, with server authorization unchanged. `scripts/public-page-access-test.cjs` checks public access and protected-route isolation. These pages support OAuth configuration; publication does not establish Google verification or completion of provider acceptance tests.
 
 ### Calendly OAuth PKCE, 2026-11-10
