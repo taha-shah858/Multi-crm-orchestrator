@@ -12,6 +12,10 @@ const SESSION_COOKIE = "multi_crm_session";
 export function proxy(request: NextRequest) {
   const sessionCookie = request.cookies.get(SESSION_COOKIE);
   const pathname = request.nextUrl.pathname;
+  const isPublicPage = pathname === "/home" || pathname === "/privacy";
+  if (!sessionCookie && pathname === "/") {
+    return NextResponse.redirect(new URL("/home", request.url));
+  }
   const isAuthPage =
     pathname.startsWith("/login") ||
     pathname.startsWith("/signup") ||
@@ -20,7 +24,7 @@ export function proxy(request: NextRequest) {
     pathname.startsWith("/reset-password") ||
     pathname === "/connect-zoho";
 
-  if (!sessionCookie && !isAuthPage) {
+  if (!sessionCookie && !isAuthPage && !isPublicPage) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
