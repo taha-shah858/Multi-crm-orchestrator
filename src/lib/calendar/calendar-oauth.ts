@@ -28,10 +28,8 @@ export function calendarAuthorizationUrl(provider: RemoteCalendarProvider, state
   const config = calendarOAuthConfig(provider);
   const url = new URL(config.authorize);
   for (const [key, value] of Object.entries({ client_id: config.clientId, redirect_uri: config.redirectUri, response_type: "code", state, scope: config.scopes.join(" ") })) url.searchParams.set(key, value);
-  if (provider !== "CALENDLY") {
-    url.searchParams.set("code_challenge", createHash("sha256").update(verifier).digest("base64url"));
-    url.searchParams.set("code_challenge_method", "S256");
-  }
+  url.searchParams.set("code_challenge", createHash("sha256").update(verifier).digest("base64url"));
+  url.searchParams.set("code_challenge_method", "S256");
   if (provider === "GOOGLE") { url.searchParams.set("access_type", "offline"); url.searchParams.set("prompt", "consent"); }
   return url.toString();
 }

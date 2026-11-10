@@ -4,6 +4,10 @@ Documentation consolidated on 2026-10-12 against the `realbranch` source and [PR
 
 ## Current baseline and verification
 
+### Calendly OAuth PKCE, 2026-11-10
+
+Calendly authorization now includes an S256 challenge, and the callback sends the existing encrypted state's verifier during code exchange. No schema migration is required. The focused `scripts/calendar-oauth-pkce-test.cjs` check uses in-memory state and intercepted HTTP to cover verifier round trip, agent ownership and replay rejection; it does not certify live Calendly consent. Deploy the updated source and begin a fresh connection before live verification.
+
 ### Gemini sales content, 2026-10-24
 
 AI contact selectors and server generation checks now share Client CRM's company/brand matching. Import storage under Axel no longer exposes every agency contact as Axel AI context, and Northstar-matched canonical leads can be selected for Northstar without copying contacts or changing the shared agency directory. Indirect interaction/analysis/deal context is checked against that same projection.
