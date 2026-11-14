@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Building2, PhoneCall, Search, ArrowUpRight, Delete, Headphones } from "lucide-react";
+import { Building2, PhoneCall, Search, Delete, Headphones } from "lucide-react";
 import { useClientAccount } from "@/context/ClientAccountContext";
 import { readApiJson } from "@/lib/http/client-api";
 import BrowserCallControls from "@/components/BrowserCallControls";
@@ -33,7 +33,6 @@ export default function SmartDialerPage() {
   const [contactSearch, setContactSearch] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isSending, setIsSending] = useState(false);
   const [feedback, setFeedback] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const requestVersion = useRef(0);
   const currentClientAccountId = useRef(activeClientAccount.id);
@@ -54,7 +53,6 @@ export default function SmartDialerPage() {
     setContactId("");
     setPhoneNumber("");
     setContactSearch("");
-    setIsSending(false);
 
     try {
       const [identityResponse, contactResponse] = await Promise.all([
@@ -108,40 +106,6 @@ export default function SmartDialerPage() {
         .some((value) => value.toLowerCase().includes(query)),
     );
   }, [contactSearch, contacts]);
-
-  const openPhoneApp = async () => {
-    if (!identityId || !/^\+[1-9]\d{6,14}$/.test(destination.replace(/[\s().-]/g, ""))) return;
-    const version = requestVersion.current;
-    const clientAccountId = activeClientAccount.id;
-    setIsSending(true);
-    setFeedback(null);
-
-    try {
-      const response = await fetch("/api/communications/dispatch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          kind: "CALL",
-          mode: "MANUAL",
-          identityId,
-          contactId: contactId || undefined,
-          phoneNumber: contactId ? undefined : phoneNumber,
-        }),
-      });
-      await readApiJson(response);
-      if (version !== requestVersion.current || currentClientAccountId.current !== clientAccountId) return;
-      window.location.href = `tel:${destination.replace(/[\s().-]/g, "")}`;
-      setFeedback({ tone: "success", text: "Phone-app launch requested and logged. This does not confirm a connected call." });
-    } catch (error) {
-      if (version !== requestVersion.current || currentClientAccountId.current !== clientAccountId) return;
-      setFeedback({
-        tone: "error",
-        text: error instanceof Error ? error.message : "The communication could not be completed.",
-      });
-    } finally {
-      if (version === requestVersion.current && currentClientAccountId.current === clientAccountId) setIsSending(false);
-    }
-  };
 
   const numberInput = useRef<HTMLInputElement>(null);
   const validDestination = /^\+[1-9]\d{6,14}$/.test(destination.replace(/[\s().-]/g, ""));
@@ -231,13 +195,8 @@ export default function SmartDialerPage() {
           </div>
           {phoneNumber && !validDestination && <p className="mb-3 text-xs text-amber-700">Enter a complete international number, starting with +.</p>}
           <BrowserCallControls key={`${activeClientAccount.id}:${identityId}`} input={{ clientAccountId: activeClientAccount.id, identityId, contactId: contactId || undefined, phoneNumber: contactId ? undefined : phoneNumber }} destination={destination}
-            disabled={isLoading || isSending || !isClientAccountReady || !identityId || !validDestination || selectedIdentity?.provider !== "TWILIO"} />
-          <details className="mt-5 border-t border-slate-100 pt-4 text-xs text-slate-500">
-            <summary className="cursor-pointer rounded font-medium focus-visible:ring-2 focus-visible:ring-blue-500">Need to use your phone instead?</summary>
-            <p className="mt-3 leading-relaxed">Opens an installed phone app and logs the attempt. It uses that app’s phone service and caller ID. The log does not confirm the call connected.</p>
-            <button type="button" onClick={() => void openPhoneApp()} disabled={isSending || !identityId || !validDestination}
-              className="mt-3 inline-flex items-center gap-1 rounded py-2 font-medium text-slate-700 hover:text-blue-600 focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50">{isSending ? "Opening…" : "Open phone app & log attempt"}<ArrowUpRight className="h-3 w-3" /></button>
-          </details>
+            disabled={isLoading || !isClientAccountReady || !identityId || !validDestination || selectedIdentity?.provider !== "TWILIO"} />
+
         </section>
       </div>
       {feedback && <p role="status" className={`rounded-xl px-4 py-3 text-sm ${feedback.tone === "success" ? "bg-blue-50 text-blue-800" : "bg-red-50 text-red-700"}`}>{feedback.text}</p>}

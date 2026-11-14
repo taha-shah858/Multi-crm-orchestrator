@@ -32,23 +32,26 @@ export async function prepareBrowserCall(context: RequestContext, input: Record<
   if (input.clientAccountId !== context.activeClientAccountId) {
     throw new AppError("CLIENT_ACCESS_DENIED", 409, "Client changed.", "The active client changed. Select the recipient again.");
   }
-  await assertClientAccess(context.user, context.activeClientAccountId);
   const config = browserVoiceConfiguration();
-  const session = await prisma.authSession.findFirst({ where: {
-    tokenHash: createHash("sha256").update(sessionToken).digest("hex"), userId: context.user.id,
-    expiresAt: { gt: new Date() }, user: { status: "ACTIVE" },
-  }, select: { id: true } });
-  if (!session) throw new AppError("UNAUTHENTICATED", 401, "Session expired.", "Sign in again before calling.");
-  const identity = await prisma.communicationIdentity.findFirst({ where: {
-    id: typeof input.identityId === "string" ? input.identityId : "",
-    organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId,
-    provider: "TWILIO", isEnabled: true,
-  } });
-  if (!identity) throw new AppError("COMMUNICATION_IDENTITY_NOT_FOUND", 404, "Invalid calling identity.", "Choose an enabled Twilio number for the active client.");
   const contactId = typeof input.contactId === "string" && input.contactId ? input.contactId : null;
-  const contact = contactId ? await prisma.contact.findFirst({ where: {
-    id: contactId, organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId,
-  }, select: { id: true, phone: true } }) : null;
+  // Independent authorization/lookups run together to avoid serial database latency.
+  const [, session, identity, contact] = await Promise.all([
+    assertClientAccess(context.user, context.activeClientAccountId),
+    prisma.authSession.findFirst({ where: {
+      tokenHash: createHash("sha256").update(sessionToken).digest("hex"), userId: context.user.id,
+      expiresAt: { gt: new Date() }, user: { status: "ACTIVE" },
+    }, select: { id: true } }),
+    prisma.communicationIdentity.findFirst({ where: {
+      id: typeof input.identityId === "string" ? input.identityId : "",
+      organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId,
+      provider: "TWILIO", isEnabled: true,
+    } }),
+    contactId ? prisma.contact.findFirst({ where: {
+      id: contactId, organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId,
+    }, select: { id: true, phone: true } }) : Promise.resolve(null),
+  ]);
+  if (!session) throw new AppError("UNAUTHENTICATED", 401, "Session expired.", "Sign in again before calling.");
+  if (!identity) throw new AppError("COMMUNICATION_IDENTITY_NOT_FOUND", 404, "Invalid calling identity.", "Choose an enabled Twilio number for the active client.");
   if (contactId && !contact) throw new AppError("CONTACT_NOT_FOUND", 404, "Contact outside active client.", "Choose a contact from the active client.");
   const to = normalizePhone(contact?.phone ?? (typeof input.phoneNumber === "string" ? input.phoneNumber : ""));
   if (!phone.test(to) || !phone.test(identity.phoneNumber)) throw new AppError("INVALID_COMMUNICATION_INPUT", 422, "Invalid phone number.", "Use an international number with country code, such as +923001234567.");
@@ -117,7 +120,7 @@ export async function browserCallTwiml(request: Request) {
   });
   if (!result) return new Response("Call expired, consumed, or unauthorized.", { status: 403 });
   const response = new twilio.twiml.VoiceResponse();
-  const dial = response.dial({ callerId: result.from, answerOnBridge: true, timeout: 30,
+  const dial = response.dial({ callerId: result.from, answerOnBridge: true, timeout: 60,
     action: twilioWebhookUrl(`status?interactionId=${result.id}`), method: "POST" });
   dial.number(result.to);
   return new Response(response.toString(), { headers: { "Content-Type": "text/xml", "Cache-Control": "no-store" } });

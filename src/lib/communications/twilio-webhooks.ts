@@ -54,7 +54,7 @@ export async function handleTwilioWebhook(kind: "sms" | "voice" | "status", para
       if ((interaction.type === "SMS") !== /^(SM|MM)/.test(sid)) return null;
       const expectedFrom = metadata.deliveryMode === "BROWSER" ? `client:${metadata.browserIdentity}` : metadata.from;
       if (params.From && expectedFrom !== params.From) return null;
-      if (metadata.clientLegComplete && !params.DialCallStatus) return null;
+      if (metadata.clientLegComplete && !params.DialCallStatus) return interaction;
       const updated = mergeTwilioStatus({ ...metadata, externalId: sid }, params);
       return tx.interaction.update({ where: { id: interaction.id }, data: { metadata: updated as never, ...(interaction.type === "CALL" ? { body: `Call outcome: ${updated.status ?? "unknown"}${updated.durationSeconds !== undefined ? `. Duration: ${updated.durationSeconds} seconds.` : "."}` } : {}) } });
     }

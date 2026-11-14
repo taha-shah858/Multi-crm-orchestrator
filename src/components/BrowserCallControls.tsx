@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Mic, MicOff, PhoneOff } from "lucide-react";
-import { BrowserCallController, type BrowserCallInput, type BrowserCallState } from "@/lib/communications/browser-call-controller";
+import { BrowserCallController, preloadBrowserVoice, type BrowserCallInput, type BrowserCallState } from "@/lib/communications/browser-call-controller";
 
 export default function BrowserCallControls({ input, destination, disabled }: { input: BrowserCallInput; destination: string; disabled: boolean }) {
   const controller = useRef<BrowserCallController | null>(null);
@@ -10,6 +10,7 @@ export default function BrowserCallControls({ input, destination, disabled }: { 
   const busy = ["preparing", "connecting", "ringing", "connected"].includes(state.phase);
 
   useEffect(() => {
+    void preloadBrowserVoice().catch(() => {});
     const instance = new BrowserCallController(setState);
     controller.current = instance;
     const unload = () => instance.hangUp();
@@ -28,7 +29,7 @@ export default function BrowserCallControls({ input, destination, disabled }: { 
     <div className="flex flex-wrap gap-3">
       {!busy ? <button type="button" onClick={() => void controller.current?.start(input)} disabled={disabled}
         className="flex-1 py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm disabled:opacity-50 cursor-pointer">
-        Call from laptop
+        Call
       </button> : <>
         <button type="button" onClick={() => controller.current?.toggleMute()} disabled={state.phase !== "connected"} aria-pressed={state.muted}
           className="flex items-center gap-2 py-2.5 px-4 rounded-lg border border-slate-300 text-sm disabled:opacity-50">
@@ -39,6 +40,5 @@ export default function BrowserCallControls({ input, destination, disabled }: { 
         </button>
       </>}
     </div>
-    <p className="text-xs text-slate-500">Keep this page open during the call. Changing the client or outgoing identity ends the laptop connection.</p>
   </div>;
 }

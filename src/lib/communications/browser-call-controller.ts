@@ -30,6 +30,29 @@ interface Dependencies {
   createDevice: (token: string) => Promise<Device>;
   cancel: (interactionId: string) => Promise<void>;
 }
+let sdkPromise: Promise<typeof import("@twilio/voice-sdk")> | undefined;
+export function preloadBrowserVoice() {
+  return sdkPromise ??= import("@twilio/voice-sdk").catch(error => { sdkPromise = undefined; throw error; });
+}
+
+export function browserVoiceError(error: unknown, sid?: string) {
+  const outer = error && typeof error === "object" ? error as Record<string, unknown> : {};
+  const detail = outer.twilioError && typeof outer.twilioError === "object" ? outer.twilioError as Record<string, unknown> : outer;
+  const code = typeof detail.code === "number" ? detail.code : typeof outer.code === "number" ? outer.code : undefined;
+  const hints: Record<number, string> = {
+    31401: "Microphone access was denied. Allow microphone access in your browser’s site settings.",
+    53405: "Audio connection failed. Check your network, VPN or firewall and try a different network.",
+    31003: "The voice connection timed out. Check your network and the Twilio call log.",
+    31005: "The voice connection closed unexpectedly. Check your network and the Twilio call log.",
+    53000: "The signaling connection failed. Check your network and Twilio call log.",
+    31204: "Voice authentication failed. Check the Twilio API key and account configuration.",
+    31205: "Voice authorization expired. Start a new call.",
+  };
+  const denied = outer.name === "NotAllowedError" || outer.name === "PermissionDeniedError";
+  const message = denied ? hints[31401] : code && hints[code] ? hints[code] :
+    typeof detail.message === "string" ? detail.message.slice(0, 300) : "The voice connection failed. Check the Twilio call log.";
+  return `${message}${code ? ` (Twilio ${code})` : ""}${sid && /^CA[a-fA-F0-9]{32}$/.test(sid) ? ` Call ID: ${sid}.` : ""}`;
+}
 const defaults: Dependencies = {
   async checkMicrophone() {
     if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) throw new Error("Laptop calling requires HTTPS (or localhost) and a browser with microphone support.");
@@ -42,7 +65,7 @@ const defaults: Dependencies = {
     }));
   },
   async createDevice(token) {
-    const { Device } = await import("@twilio/voice-sdk");
+    const { Device } = await preloadBrowserVoice();
     return new Device(token, { enableImprovedSignalingErrorPrecision: true });
   },
   async cancel(interactionId) {
@@ -98,7 +121,7 @@ export class BrowserCallController {
         this.release();
         this.publish({ phase, muted: false, message });
       };
-      device.on("error", () => finish("error", "The voice connection failed. Check microphone access, network and Twilio configuration. Check the timeline/provider outcome before retrying."));
+      device.on("error", error => finish("error", browserVoiceError(error, this.call?.parameters?.CallSid)));
       this.publish({ phase: "connecting", from: prepared.from, to: prepared.to, message: "Connecting from this laptop…" });
       const call = await device.connect({ params: { InteractionId: prepared.interactionId }, rtcConstraints: { audio: true } });
       if (!current()) { call.disconnect(); return; }
@@ -108,15 +131,14 @@ export class BrowserCallController {
       call.on("disconnect", () => finish("ended", "Call ended. Check the timeline for the provider outcome."));
       call.on("cancel", () => finish("ended", "Call canceled."));
       call.on("reject", () => finish("ended", "Call declined."));
-      call.on("error", () => finish("error", "The call could not continue. Check the timeline/provider outcome before retrying."));
+      call.on("error", error => finish("error", browserVoiceError(error, call.parameters?.CallSid)));
       // Avoid missing an accept/disconnect that occurred before connect() resolved.
       if (call.status() === "open") this.publish({ phase: "connected", message: "Connected — speak through your microphone/headset." });
       else if (call.status() === "closed") finish("ended", "Call ended. Check the timeline for the provider outcome.");
     } catch (error) {
       if (!current()) return;
       this.release();
-      const denied = error instanceof Error && ["NotAllowedError", "PermissionDeniedError"].includes(error.name);
-      this.publish({ phase: "error", muted: false, message: denied ? "Microphone access was denied. Allow microphone access in your browser’s site settings, then try again." : error instanceof Error ? error.message : "Could not start the laptop call." });
+      this.publish({ phase: "error", muted: false, message: browserVoiceError(error) });
     }
   }
   toggleMute() {

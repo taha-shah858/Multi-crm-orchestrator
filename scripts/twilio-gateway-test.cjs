@@ -110,6 +110,7 @@ async function main() {
     const twiml = await browserCallTwiml(request("browser", sdkCall));
     assert.equal(twiml.status, 200);
     const xml = await twiml.text();
+    assert.match(xml, /timeout="60"/);
     assert.match(xml, /callerId="\+15550009999"/); assert.match(xml, /<Number>\+923001234567<\/Number>/);
     assert.doesNotMatch(xml, /19999999999|record=|<Record|<Transcription/);
     assert.equal((await browserCallTwiml(request("browser", sdkCall))).status, 200); // same parent HTTP retry
@@ -120,6 +121,7 @@ async function main() {
     let browserSaved = await prisma.interaction.findUniqueOrThrow({ where: { id: prepared.interactionId } });
     assert.equal(browserSaved.metadata.status, "busy"); assert.equal(browserSaved.metadata.durationSeconds, 0);
     assert.equal(browserSaved.clientAccountId, client.id); assert.equal(browserSaved.userId, agent.id);
+    assert.equal((await twilioWebhookResponse(request("status", { ...sdkCall, CallStatus: "completed" }), "status")).status, 204);
     assert.equal((await browserCallTwiml(request("browser", sdkCall))).status, 403);
     const makePrepared = () => prepareBrowserCall(context, browserInput, sessionToken, marker);
     const forPrepared = value => ({ InteractionId: value.interactionId, CallSid: "CA" + "4".repeat(32), From: `client:${JSON.parse(Buffer.from(value.token.split(".")[1], "base64url")).grants.identity}` });

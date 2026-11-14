@@ -1,6 +1,6 @@
 # Twilio gateway (6.2 / 6.3)
 
-Admins assign an account-owned Twilio number to a client in Admin → Integrations → Twilio client numbers. Agents select the client identity in Smart Dialer. **Call from laptop** uses the laptop microphone and speakers/headset through Twilio's Voice JavaScript SDK. Manual phone/SMS links remain available. No recording, transcription or automatic call-to-AI pipeline is enabled.
+Admins assign an account-owned Twilio number to a client in Admin → Integrations → Twilio client numbers. Agents select the client identity in Smart Dialer. **Call** uses the laptop microphone and speakers/headset through Twilio's Voice JavaScript SDK. SMS and phone-app launch controls are removed from this screen; existing backend support and manual timeline logging remain. No recording, transcription or automatic call-to-AI pipeline is enabled.
 
 ## Outgoing laptop calls
 

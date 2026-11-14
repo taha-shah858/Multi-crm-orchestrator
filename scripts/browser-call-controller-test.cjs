@@ -4,7 +4,7 @@ const root = path.resolve(__dirname, "..");
 const resolve = Module._resolveFilename;
 Module._resolveFilename = function(name, parent, main, options) { return resolve.call(this, name.startsWith("@/") ? path.join(root, "src", name.slice(2)) : name, parent, main, options); };
 require.extensions[".ts"] = (mod, filename) => mod._compile(ts.transpileModule(fs.readFileSync(filename, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText, filename);
-const { BrowserCallController } = require("../src/lib/communications/browser-call-controller.ts");
+const { BrowserCallController, browserVoiceError } = require("../src/lib/communications/browser-call-controller.ts");
 const input = { clientAccountId: "client-a", identityId: "identity-a", phoneNumber: "+923001234567" };
 const prepared = { token: "test-only", interactionId: "intent-a", clientAccountId: "client-a", from: "+16592668229", to: input.phoneNumber };
 const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
@@ -24,6 +24,8 @@ function setup(overrides = {}) {
   return { controller, states, cancellations, counters, call, device, last: () => states.at(-1) };
 }
 async function main() {
+  assert.match(browserVoiceError({ twilioError: { code: 53405 } }), /Audio connection failed.*53405/);
+  assert.match(browserVoiceError({ code: 31005 }, "CA" + "a".repeat(32)), /31005.*Call ID: CA/);
   const success = setup();
   await success.controller.start(input);
   assert.equal(success.last().phase, "connecting");
@@ -70,6 +72,7 @@ async function main() {
 
   const error = setup(); await error.controller.start(input); error.call.emit("error", new Error("Network loss"));
   assert.equal(error.last().phase, "error"); assert.equal(error.counters.destroys, 1);
+  assert.match(error.last().message, /Network loss/);
   const completed = setup(); await completed.controller.start(input); completed.call.emit("disconnect");
   assert.equal(completed.last().phase, "ended"); assert.equal(completed.counters.destroys, 1);
   const connected = setup(); connected.call.status = () => "open"; await connected.controller.start(input);
