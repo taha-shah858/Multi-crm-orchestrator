@@ -36,7 +36,7 @@ export function mergeTwilioStatus(metadata: Record<string, unknown>, params: Rec
   if (terminal.has(previous) && !params.DialCallStatus) return metadata;
   const rank: Record<string, number> = { accepted: 0, queued: 0, scheduled: 0, initiated: 0, sending: 1, ringing: 1, sent: 2, "in-progress": 2 };
   if (!terminal.has(status) && (rank[status] ?? 0) < (rank[previous] ?? 0)) return metadata;
-  const duration = params.DialCallDuration ?? params.CallDuration;
+  const duration = params.DialCallDuration ?? (metadata.deliveryMode === "BROWSER" ? undefined : params.CallDuration);
   return { ...metadata, status, ...(duration && /^\d+$/.test(duration) ? { durationSeconds: Number(duration) } : {}), ...(params.ErrorCode && /^\d+$/.test(params.ErrorCode) ? { errorCode: params.ErrorCode } : {}), ...(params.DialCallStatus ? { clientLegComplete: true } : {}) };
 }
 
@@ -52,7 +52,8 @@ export async function handleTwilioWebhook(kind: "sms" | "voice" | "status", para
       const metadata = (interaction.metadata ?? {}) as Record<string, unknown>;
       if (metadata.externalId && metadata.externalId !== sid) return null;
       if ((interaction.type === "SMS") !== /^(SM|MM)/.test(sid)) return null;
-      if (params.From && metadata.from !== params.From) return null;
+      const expectedFrom = metadata.deliveryMode === "BROWSER" ? `client:${metadata.browserIdentity}` : metadata.from;
+      if (params.From && expectedFrom !== params.From) return null;
       if (metadata.clientLegComplete && !params.DialCallStatus) return null;
       const updated = mergeTwilioStatus({ ...metadata, externalId: sid }, params);
       return tx.interaction.update({ where: { id: interaction.id }, data: { metadata: updated as never, ...(interaction.type === "CALL" ? { body: `Call outcome: ${updated.status ?? "unknown"}${updated.durationSeconds !== undefined ? `. Duration: ${updated.durationSeconds} seconds.` : "."}` } : {}) } });

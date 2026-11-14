@@ -8,9 +8,11 @@ export default function TwilioSetup() {
   const [label, setLabel] = useState(""), [phoneNumber, setPhone] = useState("");
   const [message, setMessage] = useState(""), [busy, setBusy] = useState(false);
   const load = useCallback(async () => {
-    const data = await readApiJson<{ success: true; clients: typeof clients; identities: typeof identities; configured: boolean }>(await fetch("/api/admin/communications"));
+    const data = await readApiJson<{ success: true; clients: typeof clients; identities: typeof identities; configured: boolean; browserVoiceConfigured: boolean }>(await fetch("/api/admin/communications"));
     setClients(data.clients); setIdentities(data.identities);
     if (!data.configured) setMessage("Server setup required: Twilio account SID, auth token and public HTTPS URL.");
+    else if (!data.browserVoiceConfigured) setMessage("Laptop calling setup required: Twilio API key SID/secret and TwiML App SID. Configure the TwiML App Voice URL to /api/communications/twilio/browser on your public HTTPS address.");
+    else setMessage("Twilio server settings are present. Confirm the TwiML App webhooks and test a call before live use.");
   }, []);
   useEffect(() => { const timer = setTimeout(() => { void load().catch(error => setMessage(error.message)); }, 0); return () => clearTimeout(timer); }, [load]);
   return <section className="rounded border p-5 space-y-3 text-crm-text bg-crm-surface"><h2 className="text-lg font-semibold">Twilio client numbers</h2>

@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Building2, MessageSquare, PhoneCall, Search, ShieldCheck, User } from "lucide-react";
-import { MultiCrmCard, MultiCrmTag } from "@/components/ui/MultiCrmCard";
+import { Building2, PhoneCall, Search, ArrowUpRight, Delete, Headphones } from "lucide-react";
 import { useClientAccount } from "@/context/ClientAccountContext";
 import { readApiJson } from "@/lib/http/client-api";
+import BrowserCallControls from "@/components/BrowserCallControls";
 
 interface CommunicationIdentity {
   id: string;
@@ -32,8 +32,6 @@ export default function SmartDialerPage() {
   const [contactId, setContactId] = useState("");
   const [contactSearch, setContactSearch] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [smsBody, setSmsBody] = useState("");
-  const [agentPhone, setAgentPhone] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [feedback, setFeedback] = useState<{ tone: "success" | "error"; text: string } | null>(null);
@@ -111,8 +109,8 @@ export default function SmartDialerPage() {
     );
   }, [contactSearch, contacts]);
 
-  const dispatch = async (kind: "CALL" | "SMS", mode: "AUTOMATED" | "MANUAL") => {
-    if (!identityId || !destination || (kind === "SMS" && !smsBody.trim())) return;
+  const openPhoneApp = async () => {
+    if (!identityId || !/^\+[1-9]\d{6,14}$/.test(destination.replace(/[\s().-]/g, ""))) return;
     const version = requestVersion.current;
     const clientAccountId = activeClientAccount.id;
     setIsSending(true);
@@ -123,31 +121,17 @@ export default function SmartDialerPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          kind,
-          mode,
+          kind: "CALL",
+          mode: "MANUAL",
           identityId,
           contactId: contactId || undefined,
           phoneNumber: contactId ? undefined : phoneNumber,
-          body: smsBody,
-          agentPhone,
         }),
       });
-      const data = await readApiJson<{ success: true; delivery: { provider: string } }>(response);
+      await readApiJson(response);
       if (version !== requestVersion.current || currentClientAccountId.current !== clientAccountId) return;
-
-      if (kind === "CALL" && mode === "MANUAL") {
-        window.location.href = `tel:${destination}`;
-      }
-      if (kind === "SMS" && mode === "MANUAL") {
-        window.location.href = `sms:${destination}?body=${encodeURIComponent(smsBody)}`;
-      }
-      setFeedback({
-        tone: "success",
-        text: mode === "MANUAL"
-          ? `${kind === "CALL" ? "Manual dial" : "Manual SMS"} opened and the interaction was logged.`
-          : `${kind === "CALL" ? "Call" : "SMS"} dispatched through ${data.delivery.provider}; the interaction is in the unified timeline.`,
-      });
-      if (kind === "SMS") setSmsBody("");
+      window.location.href = `tel:${destination.replace(/[\s().-]/g, "")}`;
+      setFeedback({ tone: "success", text: "Phone-app launch requested and logged. This does not confirm a connected call." });
     } catch (error) {
       if (version !== requestVersion.current || currentClientAccountId.current !== clientAccountId) return;
       setFeedback({
@@ -159,181 +143,104 @@ export default function SmartDialerPage() {
     }
   };
 
-  const inputCls = "w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2 text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-2xs";
-  const labelCls = "block text-xs font-semibold uppercase tracking-wider text-slate-700";
+  const numberInput = useRef<HTMLInputElement>(null);
+  const validDestination = /^\+[1-9]\d{6,14}$/.test(destination.replace(/[\s().-]/g, ""));
+  const editNumber = (key: string) => {
+    const field = numberInput.current;
+    const start = field?.selectionStart ?? phoneNumber.length;
+    const end = field?.selectionEnd ?? start;
+    const left = key === "delete" && start === end ? Math.max(0, start - 1) : start;
+    const value = phoneNumber.slice(0, left) + (key === "delete" ? "" : key) + phoneNumber.slice(end);
+    setPhoneNumber(value);
+    setContactId("");
+    requestAnimationFrame(() => {
+      field?.focus();
+      field?.setSelectionRange(left + (key === "delete" ? 0 : key.length), left + (key === "delete" ? 0 : key.length));
+    });
+  };
+  const inputCls = "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:opacity-50";
+  const keyCls = "flex min-h-16 flex-col items-center justify-center rounded-2xl bg-slate-50 text-slate-900 transition hover:bg-blue-50 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500";
 
   return (
-    <div className="space-y-6 text-slate-900 font-sans">
-      <label className="block space-y-2"><span className={labelCls}>Your phone for live calls</span><input type="tel" value={agentPhone} onChange={event => setAgentPhone(event.target.value)} placeholder="+country code and number" className={inputCls} /><span className="block text-xs text-slate-500">Twilio rings your phone first, then connects the contact using the selected client identity.</span></label>
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+    <div className="mx-auto max-w-6xl space-y-6 text-slate-900">
+      <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <PhoneCall className="w-5 h-5 text-blue-600" />
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Smart Dialer</h1>
-          </div>
-          <p className="text-sm font-normal text-slate-600 mt-1">
-            Client-scoped calling and SMS with a visible, brand-safe outgoing identity.
-          </p>
+          <p className="mb-1 text-xs font-medium tracking-wide text-slate-500">{activeClientAccount.name}</p>
+          <h1 className="text-3xl font-semibold tracking-tight">Smart Dialer</h1>
+          <p className="mt-2 text-sm text-slate-500">Choose a contact or dial a number. Talk through your laptop.</p>
         </div>
-        <MultiCrmTag variant="cyan">
-          <Building2 className="w-3.5 h-3.5 mr-1" /> {activeClientAccount.name}
-        </MultiCrmTag>
-      </div>
+        <button type="button" onClick={() => void loadGateway()} disabled={isLoading}
+          className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50">
+          {isLoading ? "Loading…" : "Refresh contacts"}
+        </button>
+      </header>
 
-      <MultiCrmCard className="p-4 border-slate-200">
-        <div className="flex flex-col md:flex-row md:items-center gap-4">
-          <div className="p-2.5 rounded-lg bg-blue-50 border border-blue-200">
-            <ShieldCheck className="w-5 h-5 text-blue-600" />
-          </div>
-          <div className="flex-1">
-            <p className={labelCls}>Active client and brand</p>
-            <p className="text-sm font-semibold text-slate-900">{activeClientAccount.brandName} · {activeClientAccount.name}</p>
-            <p className="text-xs text-slate-500 mt-0.5">Confirm the outgoing identity below before communicating.</p>
-          </div>
-          <button
-            onClick={() => void loadGateway()}
-            disabled={isLoading}
-            className="px-4 py-2 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-medium text-sm shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
-          >
-            {isLoading ? "Loading…" : "Refresh gateway"}
-          </button>
-        </div>
-      </MultiCrmCard>
-
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-        <MultiCrmCard className="xl:col-span-5 space-y-5">
-          <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
-            <PhoneCall className="w-4 h-4 text-blue-600" />
-            <h2 className="text-base font-semibold text-slate-900">Communication identity</h2>
-          </div>
-          <div className="space-y-1.5">
-            <label className={labelCls}>Outgoing identity · manual override</label>
-            <select
-              value={identityId}
-              onChange={(event) => setIdentityId(event.target.value)}
-              disabled={isLoading || !identities.length}
-              className={`${inputCls} disabled:opacity-50`}
-            >
-              {identities.map((identity) => (
-                <option key={identity.id} value={identity.id}>{identity.label} · {identity.phoneNumber}</option>
-              ))}
-            </select>
-          </div>
-          {selectedIdentity ? (
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-2 text-xs">
-              <div className="flex items-center justify-between"><span className="text-slate-500">Brand</span><span className="font-semibold text-slate-900">{selectedIdentity.clientAccount.brandName}</span></div>
-              <div className="flex items-center justify-between"><span className="text-slate-500">Sending number</span><span className="text-blue-600 font-semibold">{selectedIdentity.phoneNumber}</span></div>
-              <div className="flex items-center justify-between"><span className="text-slate-500">Provider</span><MultiCrmTag variant={selectedIdentity.provider === "TWILIO" ? "cyan" : "neutral"}>{selectedIdentity.provider}</MultiCrmTag></div>
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,25rem)]">
+        <div className="space-y-6">
+          <section className="rounded-2xl border border-slate-200 bg-white p-6">
+            <div className="mb-5 flex items-center gap-3">
+              <span className="rounded-xl bg-blue-50 p-2.5 text-blue-600"><Building2 className="h-5 w-5" /></span>
+              <div><h2 className="font-semibold">Calling identity</h2><p className="text-xs text-slate-500">The client number used for your calls</p></div>
             </div>
-          ) : <p className="text-xs text-amber-600">No enabled identity is available for this client account.</p>}
-          <p className="text-xs leading-relaxed text-slate-500">Automatic dispatch uses Twilio only when that identity and its server-side credentials are configured. The manual options always remain available.</p>
-        </MultiCrmCard>
+            <label htmlFor="calling-identity" className="mb-2 block text-sm font-medium">Call on behalf of</label>
+            <select id="calling-identity" value={identityId} onChange={event => setIdentityId(event.target.value)} disabled={isLoading || !identities.length} className={inputCls}>
+              {!identities.length && <option value="">{isLoading ? "Loading identities…" : "No number assigned"}</option>}
+              {identities.map(identity => <option key={identity.id} value={identity.id}>{identity.label} · {identity.phoneNumber}</option>)}
+            </select>
+            {selectedIdentity ? <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm">
+              <span className="text-slate-500">{selectedIdentity.clientAccount.brandName}</span>
+              <span className="font-mono text-slate-700">{selectedIdentity.phoneNumber}</span>
+            </div> : !isLoading && <p className="mt-3 text-sm text-amber-700">Ask your admin to assign a Twilio number to this client.</p>}
+          </section>
 
-        <MultiCrmCard className="xl:col-span-7 space-y-5">
-          <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
-            <User className="w-4 h-4 text-blue-600" />
-            <h2 className="text-base font-semibold text-slate-900">Choose recipient</h2>
-          </div>
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              value={contactSearch}
-              onChange={(event) => setContactSearch(event.target.value)}
-              placeholder="Search active-client contacts by name, phone, email, or company…"
-              className={`${inputCls} pl-9`}
-            />
-          </div>
-          <div className="max-h-48 overflow-y-auto space-y-1 pr-1 scrollbar-thin">
-            {matchingContacts.map((contact) => (
-              <button
-                key={contact.id}
-                type="button"
+          <section className="rounded-2xl border border-slate-200 bg-white p-6">
+            <div className="mb-5 flex items-center justify-between"><h2 className="font-semibold">Contacts</h2><span className="text-xs text-slate-500">{matchingContacts.length} available</span></div>
+            <label htmlFor="contact-search" className="sr-only">Search contacts</label>
+            <div className="relative">
+              <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
+              <input id="contact-search" value={contactSearch} onChange={event => setContactSearch(event.target.value)} placeholder="Search name, company or phone" className={`${inputCls} pl-10`} />
+            </div>
+            <div className="mt-4 max-h-96 space-y-1 overflow-y-auto">
+              {matchingContacts.map(contact => <button key={contact.id} type="button" disabled={!contact.phone}
                 onClick={() => { setContactId(contact.id); setPhoneNumber(contact.phone ?? ""); }}
-                className={`w-full text-left p-3 rounded-lg border transition-all cursor-pointer ${
-                  contactId === contact.id
-                    ? "border-blue-500 bg-blue-50/50 shadow-xs ring-1 ring-blue-500"
-                    : "border-slate-200 bg-white hover:border-slate-300"
-                }`}
-              >
-                <span className="block text-xs font-semibold text-slate-900">{contact.firstName} {contact.lastName}</span>
-                <span className="block mt-0.5 text-xs text-slate-500">{[contact.phone, contact.email, contact.company].filter(Boolean).join(" · ") || "No phone on record"}</span>
-              </button>
-            ))}
-            {!isLoading && !matchingContacts.length && <p className="py-4 text-center text-xs text-slate-500">No contacts match this active client account.</p>}
-          </div>
-          <div className="space-y-1.5">
-            <label className={labelCls}>Or enter a number manually</label>
-            <input
-              value={phoneNumber}
-              onChange={(event) => { setPhoneNumber(event.target.value); setContactId(""); }}
-              placeholder="+1 555 010 1234"
-              className={inputCls}
-            />
-          </div>
-        </MultiCrmCard>
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <MultiCrmCard className="space-y-4">
-          <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
-            <PhoneCall className="w-4 h-4 text-blue-600" />
-            <h2 className="text-base font-semibold text-slate-900">Call</h2>
-          </div>
-          <p className="text-xs text-slate-500">Destination: <span className="text-slate-900 font-semibold">{destination || "Choose a contact or enter a number"}</span></p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <button
-              onClick={() => void dispatch("CALL", "AUTOMATED")}
-              disabled={isSending || !identityId || !destination}
-              className="py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
-            >
-              {isSending ? "Sending…" : "Call through gateway"}
-            </button>
-            <button
-              onClick={() => void dispatch("CALL", "MANUAL")}
-              disabled={isSending || !identityId || !destination}
-              className="py-2.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-medium text-sm shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
-            >
-              Dial manually & log
-            </button>
-          </div>
-        </MultiCrmCard>
-
-        <MultiCrmCard className="space-y-4">
-          <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
-            <MessageSquare className="w-4 h-4 text-blue-600" />
-            <h2 className="text-base font-semibold text-slate-900">SMS</h2>
-          </div>
-          <textarea
-            value={smsBody}
-            onChange={(event) => setSmsBody(event.target.value)}
-            rows={3}
-            placeholder="Write a client-approved message…"
-            className="w-full bg-white border border-slate-300 rounded-lg p-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-2xs"
-          />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <button
-              onClick={() => void dispatch("SMS", "AUTOMATED")}
-              disabled={isSending || !identityId || !destination || !smsBody.trim()}
-              className="py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
-            >
-              Send through gateway
-            </button>
-            <button
-              onClick={() => void dispatch("SMS", "MANUAL")}
-              disabled={isSending || !identityId || !destination || !smsBody.trim()}
-              className="py-2.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-medium text-sm shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
-            >
-              Open manual SMS & log
-            </button>
-          </div>
-        </MultiCrmCard>
-      </div>
-
-      {feedback && (
-        <div role="status" className={`rounded-lg border px-4 py-3 text-sm font-medium ${feedback.tone === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-700"}`}>
-          {feedback.text}
+                aria-pressed={contactId === contact.id}
+                className={`flex w-full items-center gap-3 rounded-xl p-3 text-left transition focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 ${contactId === contact.id ? "bg-blue-50 ring-1 ring-blue-200" : "hover:bg-slate-50"}`}>
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-medium text-slate-600">{contact.firstName[0]}{contact.lastName[0]}</span>
+                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{contact.firstName} {contact.lastName}</span><span className="block truncate text-xs text-slate-500">{contact.company || contact.email || "Contact"}</span></span>
+                <span className="text-xs tabular-nums text-slate-500">{contact.phone || "No phone"}</span>
+              </button>)}
+              {isLoading && <p className="py-10 text-center text-sm text-slate-500">Loading contacts…</p>}
+              {!isLoading && !matchingContacts.length && <div className="py-10 text-center"><p className="text-sm font-medium">{contactSearch ? "No matching contacts" : "No contacts available yet"}</p><p className="mt-1 text-xs text-slate-500">{contactSearch ? "Try another name or use the dialpad." : "You can still call a number using the dialpad."}</p></div>}
+            </div>
+          </section>
         </div>
-      )}
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 lg:sticky lg:top-6">
+          <div className="mb-5 flex items-center justify-between"><h2 className="flex items-center gap-2 font-semibold"><PhoneCall className="h-4 w-4 text-blue-600" /> Dialpad</h2><Headphones className="h-4 w-4 text-slate-400" /></div>
+          <label htmlFor="dial-number" className="sr-only">Phone number including country code</label>
+          <input ref={numberInput} id="dial-number" type="tel" autoComplete="tel" value={phoneNumber}
+            onChange={event => { setPhoneNumber(event.target.value); setContactId(""); }} placeholder="+92 300 1234567"
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-4 text-center text-2xl font-medium tracking-wide tabular-nums outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+          <div className="mb-4 mt-2 flex items-center justify-between gap-2 text-xs text-slate-500"><span>Include + and country code</span><button type="button" onClick={() => { setPhoneNumber(""); setContactId(""); numberInput.current?.focus(); }} className="rounded px-1 py-1 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-blue-500">Clear</button></div>
+          <div className="mb-5 grid grid-cols-3 gap-2" aria-label="Dialpad">
+            {[["1", ""], ["2", "ABC"], ["3", "DEF"], ["4", "GHI"], ["5", "JKL"], ["6", "MNO"], ["7", "PQRS"], ["8", "TUV"], ["9", "WXYZ"], ["+", ""], ["0", ""], ["delete", ""]].map(([key, letters]) =>
+              <button type="button" key={key} aria-label={key === "delete" ? "Delete previous digit" : key === "+" ? "Plus country code prefix" : key}
+                onMouseDown={event => event.preventDefault()} onClick={() => editNumber(key)} className={keyCls}>
+                {key === "delete" ? <Delete className="h-5 w-5" /> : <><span className="text-2xl font-medium">{key}</span><span aria-hidden="true" className="h-3 text-[9px] tracking-[0.2em] text-slate-400">{letters}</span></>}
+              </button>)}
+          </div>
+          {phoneNumber && !validDestination && <p className="mb-3 text-xs text-amber-700">Enter a complete international number, starting with +.</p>}
+          <BrowserCallControls key={`${activeClientAccount.id}:${identityId}`} input={{ clientAccountId: activeClientAccount.id, identityId, contactId: contactId || undefined, phoneNumber: contactId ? undefined : phoneNumber }} destination={destination}
+            disabled={isLoading || isSending || !isClientAccountReady || !identityId || !validDestination || selectedIdentity?.provider !== "TWILIO"} />
+          <details className="mt-5 border-t border-slate-100 pt-4 text-xs text-slate-500">
+            <summary className="cursor-pointer rounded font-medium focus-visible:ring-2 focus-visible:ring-blue-500">Need to use your phone instead?</summary>
+            <p className="mt-3 leading-relaxed">Opens an installed phone app and logs the attempt. It uses that app’s phone service and caller ID. The log does not confirm the call connected.</p>
+            <button type="button" onClick={() => void openPhoneApp()} disabled={isSending || !identityId || !validDestination}
+              className="mt-3 inline-flex items-center gap-1 rounded py-2 font-medium text-slate-700 hover:text-blue-600 focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50">{isSending ? "Opening…" : "Open phone app & log attempt"}<ArrowUpRight className="h-3 w-3" /></button>
+          </details>
+        </section>
+      </div>
+      {feedback && <p role="status" className={`rounded-xl px-4 py-3 text-sm ${feedback.tone === "success" ? "bg-blue-50 text-blue-800" : "bg-red-50 text-red-700"}`}>{feedback.text}</p>}
     </div>
   );
 }

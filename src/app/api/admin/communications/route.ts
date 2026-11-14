@@ -4,6 +4,7 @@ import { requireAuthenticatedUser } from "@/lib/auth/request-context";
 import { prisma } from "@/lib/db/prisma";
 import { AppError } from "@/lib/errors/app-error";
 import { success, withApiErrorHandling } from "@/lib/http/api-response";
+import { browserVoiceConfiguration } from "@/lib/communications/browser-call-service";
 
 async function admin(request: NextRequest) {
   const user = await requireAuthenticatedUser(request);
@@ -17,7 +18,9 @@ export async function GET(request: NextRequest) {
       prisma.communicationIdentity.findMany({ where: { organizationId: user.organizationId, provider: "TWILIO" }, include: { clientAccount: { select: { name: true } } } }),
       prisma.clientAccount.findMany({ where: { organizationId: user.organizationId }, select: { id: true, name: true } }),
     ]);
-    return success({ identities, clients, configured: Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PUBLIC_URL) }, requestId);
+    let browserVoiceConfigured = false;
+    try { browserVoiceConfiguration(); browserVoiceConfigured = true; } catch { /* Return readiness without exposing secrets. */ }
+    return success({ identities, clients, configured: Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PUBLIC_URL), browserVoiceConfigured }, requestId);
   });
 }
 export async function POST(request: NextRequest) {

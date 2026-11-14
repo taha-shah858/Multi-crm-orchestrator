@@ -17,6 +17,10 @@ The pasted table's `Client (HubSpot/Salesforce)` wording is superseded by the us
 
 ## Current implementation boundary
 
+On 2026-11-14, the user explicitly requested calling through the laptop microphone/headset in Smart Dialer. Implement browser voice with the selected client's Twilio number. Automatic call recording, transcription and feeding call audio into AI analysis are outside this request; manual transcript intake remains supported. Twilio credits/number rental and account configuration do not by themselves implement browser audio.
+
+The follow-up request removes SMS from the Smart Dialer interface and adds a clickable dialpad with keyboard number entry. Contact selection and direct number entry share laptop calling; a clearly explained off-platform phone fallback remains secondary. This does not request deletion of stored SMS or backend SMS integration.
+
 On 2026-10-07, the user requested a login-page Forgot password option that emails a reset link. Password recovery is authorized on the current development branch using the existing email dispatcher; it does not authorize merging deferred `email-setup`. Implement single-use expiring links and apply the shared new-password policy while preserving account role/client assignments.
 
 On 2026-10-07, the user requested current-branch email/password form improvements before any `email-setup` merge: password visibility controls, clearer duplicate-account errors, email format validation without sending a code, and a minimum of 7 characters with an uppercase letter, a number and a special character. Apply this policy to new passwords; retain existing-password login compatibility. Format validation does not establish email ownership. See [validation notes](password-email-validation.md). Current admin signup also requires OTP verification from the separate auth-validation integration; independent agent signup and Google authentication remain gaps.
