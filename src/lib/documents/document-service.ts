@@ -19,17 +19,24 @@ const status = (value: unknown, fallback: DocumentStatus = "DRAFT") => value ===
 
 async function documentContext(context: RequestContext, input: Input) {
   const contactId = text(input.contactId) || null; const leadAnalysisId = text(input.leadAnalysisId) || null; const dealId = text(input.dealId) || null;
-  const [account, requestedContact, leadAnalysis, deal] = await Promise.all([
+  const interactionId = text(input.interactionId) || null;
+  const [account, requestedContact, leadAnalysis, deal, requestedInteraction] = await Promise.all([
     prisma.clientAccount.findFirst({ where: { id: context.activeClientAccountId, organizationId: context.user.organizationId }, select: { name: true, brandName: true } }),
     contactId ? requireAiClientContact(context, contactId) : null,
-    leadAnalysisId ? prisma.leadAnalysis.findFirst({ where: { id: leadAnalysisId, organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId }, select: { id: true, contactId: true, summary: true, requirements: true, timeline: true, budget: true, leadScore: true } }) : null,
+    leadAnalysisId ? prisma.leadAnalysis.findFirst({ where: { id: leadAnalysisId, organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId }, select: { id: true, contactId: true, interactionId: true, transcript: true, summary: true, requirements: true, timeline: true, intent: true, objections: true, budget: true, leadScore: true } }) : null,
     dealId ? prisma.deal.findFirst({ where: { id: dealId, organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId }, select: { id: true, contactId: true, title: true, valueCents: true, currency: true, status: true } }) : null,
+    interactionId ? prisma.interaction.findFirst({ where: { id: interactionId, organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, type: "CALL" }, select: { id: true, contactId: true, type: true, body: true, subject: true, occurredAt: true } }) : null,
   ]);
+  if (interactionId && !requestedInteraction) throw new AppError("INVALID_DOCUMENT_INPUT", 404, "Call outside active client.", "Choose a call from the active client.");
+  if (interactionId && leadAnalysis?.interactionId && leadAnalysis.interactionId !== interactionId) throw new AppError("DOCUMENT_CONTEXT_LINK_MISMATCH", 422, "Analysis belongs to another call.", "Choose the analysis for the selected call or clear that analysis.");
+  const selectedInteractionId = interactionId ?? leadAnalysis?.interactionId ?? null;
+  const selectedInteraction = requestedInteraction ?? (selectedInteractionId ? await prisma.interaction.findFirst({ where: { id: selectedInteractionId, organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId }, select: { id: true, contactId: true, type: true, body: true, subject: true, occurredAt: true } }) : null);
+  if (selectedInteractionId && !selectedInteraction) throw new AppError("INVALID_DOCUMENT_INPUT", 404, "Call context unavailable.", "Choose an accessible call or analysis.");
   if (!account) throw new AppError("CLIENT_CONTEXT_REQUIRED", 404, "Active client account was not found.", "Select an active client account before creating a document.");
   if (contactId && !requestedContact) throw new AppError("CONTACT_NOT_FOUND", 404, "Contact is outside active client.", "Choose a contact from the active client account.");
   if (leadAnalysisId && !leadAnalysis) throw new AppError("LEAD_ANALYSIS_NOT_FOUND", 404, "Analysis is outside active client.", "Choose an analysis from the active client account.");
   if (dealId && !deal) throw new AppError("INVALID_DOCUMENT_INPUT", 404, "Deal is outside active client.", "Choose a deal from the active client account.");
-  const relatedContactIds = [leadAnalysis?.contactId, deal?.contactId].filter((id): id is string => Boolean(id));
+  const relatedContactIds = [leadAnalysis?.contactId, deal?.contactId, selectedInteraction?.contactId].filter((id): id is string => Boolean(id));
   const canonicalContactId = contactId ?? relatedContactIds[0] ?? null;
   if (relatedContactIds.some((id) => id !== canonicalContactId)) {
     throw new AppError("DOCUMENT_CONTEXT_LINK_MISMATCH", 422, "Selected document context is inconsistent.", "Use a contact, deal, and lead analysis that belong to the same lead.");
@@ -37,15 +44,15 @@ async function documentContext(context: RequestContext, input: Input) {
   const contact = requestedContact ?? (canonicalContactId
     ? await requireAiClientContact(context, canonicalContactId)
     : null);
-  const interactions = contact ? await prisma.interaction.findMany({ where: { organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, contactId: contact.id }, orderBy: { occurredAt: "desc" }, take: 5, select: { type: true, body: true, occurredAt: true } }) : [];
-  return { account, contact, leadAnalysis, deal, interactions, contactId: canonicalContactId, leadAnalysisId, dealId };
+  const interactions = selectedInteraction ? [selectedInteraction] : contact ? await prisma.interaction.findMany({ where: { organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, contactId: contact.id }, orderBy: { occurredAt: "desc" }, take: 5, select: { type: true, body: true, occurredAt: true } }) : [];
+  return { account, contact, leadAnalysis, deal, interactions, contactId: canonicalContactId, leadAnalysisId, dealId, selectedInteraction };
 }
 
 function generatedDocument(type: Exclude<DocumentKind, "MANUAL_NOTE" | "FILE_UPLOAD">, data: Awaited<ReturnType<typeof documentContext>>) {
   const recipient = data.contact ? `${data.contact.firstName} ${data.contact.lastName}` : "the client team";
   const requirements = data.leadAnalysis?.requirements ?? "[Requirements to confirm]"; const timeline = data.leadAnalysis?.timeline ?? "[Timeline to confirm]"; const budget = "[Price to be confirmed — prospect budget and deal value are not an approved quote]";
-  if (type === "FOLLOW_UP_EMAIL") return { title: `Follow-up · ${recipient}`, content: `Subject: Next steps with ${data.account.brandName}\n\nHi ${recipient},\n\nThank you for the conversation. Based on our discussion, ${data.account.brandName} can help with ${requirements}.\n\nI have outlined the next steps around ${timeline}. Please reply with any questions or a suitable time to review the proposal.\n\nBest,\n[Your name]\n${data.account.brandName}` };
-  if (type === "FOLLOW_UP_MESSAGE") return { title: `Follow-up message · ${recipient}`, content: `Hi ${recipient}, this is [Your name] from ${data.account.brandName}. I’m following up on ${requirements}. I’ve prepared the next steps for ${timeline}. Would you like me to send the proposal or set up a short review?` };
+  if (type === "FOLLOW_UP_EMAIL") return { title: `Follow-up · ${recipient}`, content: `Subject: Next steps with ${data.account.brandName}\n\nHi ${recipient},\n\nI am following up from ${data.account.brandName}.\n\n[Add a reviewed recap of the selected call or analysis. Preserve any declined offers and requested communication preferences.]\n\nRequirements for review: ${requirements}.\n\nTiming to confirm: ${timeline}.\n\n[Add one next step consistent with the reviewed outcome. Do not imply an appointment or proposal was agreed.]\n\nBest,\n[Your name]\n${data.account.brandName}` };
+  if (type === "FOLLOW_UP_MESSAGE") return { title: `Follow-up message · ${recipient}`, content: `Hi ${recipient}, this is [Your name] from ${data.account.brandName}. I’m following up on ${requirements}. [Add one next step consistent with the reviewed call outcome; confirm timing before proposing a date.]` };
   return { title: `${data.account.brandName} proposal · ${recipient}`, content: `# ${data.account.brandName} proposal\n\nPrepared for: ${recipient}\n\n## Executive summary\n${data.account.brandName} will support ${requirements} with a focused, measurable implementation plan.\n\n## Recommended approach\n1. Confirm the working requirements and stakeholders.\n2. Align the delivery plan with ${timeline}.\n3. Review progress and next steps with the client team.\n\n## Commercial context\nIndicative investment: ${budget}.\n\n## Next step\nPlease review this draft and confirm the preferred review time.\n\nPrepared by ${data.account.brandName}` };
 }
 
@@ -58,17 +65,21 @@ export async function listDocuments(context: RequestContext) {
 export async function generateDocument(context: RequestContext, input: Input, requestId: string) {
   await prepareActiveClientSync(context);
   const type = kind(input.type, ["PROPOSAL", "FOLLOW_UP_EMAIL", "FOLLOW_UP_MESSAGE"]) as "PROPOSAL" | "FOLLOW_UP_EMAIL" | "FOLLOW_UP_MESSAGE";
+  const engine = input.engine ?? "GEMINI";
+  if (engine !== "GEMINI" && engine !== "TEMPLATE") throw new AppError("INVALID_DOCUMENT_INPUT", 422, "Invalid generation engine.", "Choose Gemini or template.");
   const brief = writingBrief(input.brief);
   const data = await documentContext(context, input);
+  if (type !== "PROPOSAL" && !data.selectedInteraction && !data.leadAnalysis) throw new AppError("INVALID_DOCUMENT_INPUT", 422, "Call outcome required.", "Select a call or lead analysis for the follow-up draft.");
   const draft = generatedDocument(type, data);
-  const generated = await generateGeminiContent(type === "PROPOSAL" ? "PROPOSAL" : type === "FOLLOW_UP_EMAIL" ? "EMAIL" : "SMS", {
+  const generated = engine === "TEMPLATE" ? { content: null, generation: { provider: "TEMPLATE" as const, model: null, reason: "Template explicitly selected by the agent." } } : await generateGeminiContent(type === "PROPOSAL" ? "PROPOSAL" : type === "FOLLOW_UP_EMAIL" ? "EMAIL" : "SMS", {
     client: data.account, brief, prospect: data.contact ? { firstName: data.contact.firstName, lastName: data.contact.lastName, company: data.contact.company } : null,
-    analysis: data.leadAnalysis ? { summary: data.leadAnalysis.summary, requirements: data.leadAnalysis.requirements, timeline: data.leadAnalysis.timeline } : null,
+    analysis: data.leadAnalysis ? { summary: data.leadAnalysis.summary, requirements: data.leadAnalysis.requirements, timeline: data.leadAnalysis.timeline, intent: data.leadAnalysis.intent, objections: data.leadAnalysis.objections, transcript: data.leadAnalysis.transcript } : null,
     deal: data.deal ? { title: data.deal.title, status: data.deal.status } : null,
-    recentConversations: data.interactions.map(item => ({ ...item, body: item.body?.slice(0, 6000), excerpt: (item.body?.length ?? 0) > 6000 })),
-  });
+    selectedCall: data.selectedInteraction,
+    recentConversations: data.selectedInteraction ? [] : type === "PROPOSAL" ? data.interactions : [],
+  }, { strict: true });
   const content = generated.content ? generated.content + (type === "PROPOSAL" ? "\n\n## Commercial terms — review required\nPrice: [To confirm]\nPayment terms: [To confirm]\nDelivery dates: [To confirm]\nNo prospect budget or deal value has been treated as an approved quotation." : "") : draft.content;
-  const document = await prisma.document.create({ data: { organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, contactId: data.contactId, leadAnalysisId: data.leadAnalysisId, dealId: data.dealId, userId: context.user.id, type, source: "GENERATED", title: draft.title, content, contextSnapshot: { brand: data.account.brandName, contact: data.contact ? `${data.contact.firstName} ${data.contact.lastName}` : null, analysisScore: data.leadAnalysis?.leadScore ?? null, dealId: data.deal?.id ?? null, brief, generation: generated.generation } }, include: documentInclude });
+  const document = await prisma.document.create({ data: { organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, contactId: data.contactId, leadAnalysisId: data.leadAnalysisId, dealId: data.dealId, userId: context.user.id, type, source: "GENERATED", title: draft.title, content, contextSnapshot: { brand: data.account.brandName, contact: data.contact ? `${data.contact.firstName} ${data.contact.lastName}` : null, analysisScore: data.leadAnalysis?.leadScore ?? null, dealId: data.deal?.id ?? null, interactionId: data.selectedInteraction?.id ?? null, brief, generation: generated.generation } }, include: documentInclude });
   await recordAuditEvent(context, { action: "DOCUMENT_GENERATED", entityType: "DOCUMENT", entityId: document.id, requestId, source: "PLATFORM", metadata: { type, provider: generated.generation.provider } });
   return document;
 }
@@ -82,7 +93,7 @@ export async function updateDocument(context: RequestContext, id: string, input:
 }
 
 export async function uploadPdfDocument(context: RequestContext, input: { file: File; title?: string; contactId?: string; leadAnalysisId?: string; dealId?: string }, requestId: string) {
-  await prepareActiveClientSync(context); const file = input.file; if (file.type !== "application/pdf" || file.size === 0 || file.size > 5 * 1024 * 1024) throw new AppError("DOCUMENT_FILE_INVALID", 422, "Invalid PDF file.", "Upload a non-empty PDF smaller than 5 MB."); const data = await documentContext(context, input); const document = await prisma.document.create({ data: { organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, contactId: data.contactId, leadAnalysisId: data.leadAnalysisId, dealId: data.dealId, userId: context.user.id, type: "FILE_UPLOAD", source: "UPLOADED", status: "FINAL", title: text(input.title) || file.name, fileName: file.name, mimeType: file.type, fileData: Buffer.from(await file.arrayBuffer()), contextSnapshot: { brand: data.account.brandName, uploadedFile: file.name } }, include: documentInclude }); await recordAuditEvent(context, { action: "DOCUMENT_UPLOADED", entityType: "DOCUMENT", entityId: document.id, requestId, source: "PLATFORM", metadata: { type: document.type, bytes: file.size } }); return document;
+  await prepareActiveClientSync(context); const file = input.file; if (file.type !== "application/pdf" || file.size === 0 || file.size > 5 * 1024 * 1024) throw new AppError("DOCUMENT_FILE_INVALID", 422, "Invalid PDF file.", "Upload a non-empty PDF smaller than 5 MB."); const fileBytes = Buffer.from(await file.arrayBuffer()); if (!fileBytes.subarray(0, 1024).includes(Buffer.from("%PDF-"))) throw new AppError("DOCUMENT_FILE_INVALID", 422, "Invalid PDF contents.", "Choose a valid PDF file, not a renamed text or image file."); const data = await documentContext(context, input); const document = await prisma.document.create({ data: { organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId, contactId: data.contactId, leadAnalysisId: data.leadAnalysisId, dealId: data.dealId, userId: context.user.id, type: "FILE_UPLOAD", source: "UPLOADED", status: "FINAL", title: text(input.title) || file.name, fileName: file.name, mimeType: file.type, fileData: fileBytes, contextSnapshot: { brand: data.account.brandName, uploadedFile: file.name } }, include: documentInclude }); await recordAuditEvent(context, { action: "DOCUMENT_UPLOADED", entityType: "DOCUMENT", entityId: document.id, requestId, source: "PLATFORM", metadata: { type: document.type, bytes: file.size } }); return document;
 }
 
 export async function downloadDocument(context: RequestContext, id: string) { await prepareActiveClientSync(context); const document = await prisma.document.findFirst({ where: { id, organizationId: context.user.organizationId, clientAccountId: context.activeClientAccountId }, select: { fileData: true, fileName: true, mimeType: true } }); if (!document || !document.fileData) throw new AppError("DOCUMENT_NOT_FOUND", 404, "Document is outside active client.", "Choose an uploaded document from the active client account."); return document; }

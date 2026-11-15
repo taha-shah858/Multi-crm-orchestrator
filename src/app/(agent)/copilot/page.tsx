@@ -81,8 +81,8 @@ export default function CopilotPage() {
       const allowed = new Set((cd.contacts as Contact[]).map(contact => contact.id));
       const visibleAnalyses = (ad.analyses as Analysis[]).filter(item => !item.contactId || allowed.has(item.contactId));
       setContacts(cd.contacts); setInteractions(id.interactions.filter((item: Interaction) => !item.contact?.id || allowed.has(item.contact.id))); setAnalyses(visibleAnalyses);
-      const first = visibleAnalyses[0];
-      setSelectedAnalysis(first ?? null); setEdit(first ? editableFrom(first) : null);
+      // Loading history must not open a previous assessment automatically.
+      // Only a new successful analysis or an explicit history selection opens it.
     } catch (error) {
       if (version === requestVersion.current && currentClientAccountId.current === clientAccountId)
         setMessage({ tone: "error", text: error instanceof Error ? error.message : "AI workspace data could not be loaded." });

@@ -22,6 +22,16 @@ Copilot now sends the complete transcript up to an explicit 100,000-character li
 
 ## Verification and remaining work
 
+### Document scope fixes — 2026-11-15
+
+Documents & Proposals now offers Gemini or an explicitly selected basic template. Gemini failures retain the open form and report an error without saving a substitute. The historical automatic fallback described above still applies to Sales Script Architect. Strict document validation rejects incomplete drafts and unapproved commercial output.
+
+Follow-ups target a selected active-client call or lead analysis. Selected calls exclude unrelated conversations; mismatched call/analysis/contact links and other clients' calls are rejected before provider access. A call status alone does not describe the conversation: supply reviewed outcomes in the brief or selected analysis. The call selector covers calls among the latest 100 timeline interactions; analysis-linked older context remains accessible through the analysis selector.
+
+The shared Gemini budget is now 15 seconds including a bounded capacity retry, replacing the historical 60-second writing timeout below. Document browser requests stop after 28 seconds and safely handle incomplete or non-JSON responses. Client switches cancel pending browser requests. A server save may finish after browser cancellation; check the library before retrying an ambiguous result. PDF uploads check the header in addition to the existing MIME and 5 MB limits; this is not full PDF parsing. Manual text editing and PDF download remain available. Emails remain drafts for review.
+
+Current verification: mocked content and Copilot regression suites, TypeScript and changed-file lint passed. Synthetic live strict generation with `gemini-3.5-flash-lite` returned a 600-word proposal in 4.5 seconds and a 113-word email in 1.4 seconds. These used invented data without saving or sending client documents. Deployed Netlify acceptance and the factual quality of every draft remain subject to review.
+
 `npm run test:gemini-content` uses disposable local PostgreSQL fixtures and mocked Gemini responses. It checks all writing types, relevant conversation context, account-only isolation, authorization before provider calls, malformed/truncated/short/commercial output, missing-key fallback and preservation of saved edits. `npm run test:gemini` additionally checks full-transcript processing, explicit length limits and strict Copilot output validation.
 
 On 2026-10-24 the content and Copilot regression suites, changed-file lint, TypeScript and production build passed. Synthetic live writing checks using the existing configured `gemini-3.8-flash` returned template fallbacks; a diagnostic request reported provider HTTP 504 (`DEADLINE_EXCEEDED`). Low thinking for Gemini 3/4 writing and a 60-second timeout were added, but the follow-up live check still fell back. Successful live generation and writing quality are not certified by the mocked tests. No actual prospect data was used for these live checks.

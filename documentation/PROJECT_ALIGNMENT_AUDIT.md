@@ -6,6 +6,8 @@ Documentation consolidated on 2026-10-12 against the `realbranch` source and [PR
 
 ### Copilot Gemini failures and loading, 2026-11-15
 
+Copilot now opens with no assessment selected on entry, reload or client change. Saved analyses still load into history, but are opened only by clicking a saved item or successfully generating a new result. This prevents old fields and provider labels from appearing to belong to a fresh analysis request.
+
 Current correction after deployment evidence: the user supplied an invocation duration of exactly 30,000 ms for the failing request. This strongly indicates a 30-second runtime cutoff; the earlier 35-second generation budget was incompatible with that deployment. Copilot POST now returns normal complete JSON again, with a hard 15-second shared generation/retry budget and a 28-second browser deadline, leaving room for authentication, database work and cold starts. No streaming option is used, including by older clients sending the old opt-in header. SDK errors remain explicit; this prevents waiting beyond the generation budget but cannot guarantee success during sustained model overload. Deployment verification remains required. Longer AI work requires genuine background processing rather than extending a request past its hosting limit.
 
 The user's Network screenshots subsequently show an HTTP 200 body containing only whitespace heartbeats, confirming that no final JSON envelope reached the browser. Exact termination cause still requires runtime logs. Stream initialization now returns/awaits the generation promise instead of launching a detached task, and JSON parsing reports interrupted/incomplete responses with saved-result recovery guidance. Focused local streaming tests cover early bytes, eventual result/error, cancellation and a whitespace-only truncated body. The lifecycle adjustment is not yet verified on Netlify and must not be reported as confirmed resolution of the deployed truncation.
@@ -95,6 +97,8 @@ Password recovery records one hashed random expiring token per user, serializes 
 See [architecture](architecture.md) and the [feature guides](README.md) for source locations and limitations. Dated [persistence](database-persistence-audit.md) and [database catalogue](database-reference.md) snapshots describe their inspected database, not all current deployments.
 
 ## Completion discipline
+
+Documents & Proposals scope correction (2026-11-15): follow-ups now select a specific active-client call or analysis and reject mismatched links before generation. Gemini document failures no longer silently save templates; basic templates require explicit selection. Generation has a 15-second shared budget, bounded browser requests and errors visible inside the retained form. PDF uploads check their header as well as size/MIME. Mocked content/Copilot regression checks, TypeScript and changed-file lint passed; synthetic live strict proposal/email generation succeeded with `gemini-3.5-flash-lite`. Deployed Netlify acceptance remains to be checked after deployment. These changes supersede the document fallback description in the historical module table above.
 
 Preserve HubSpot agency / Zoho client / ClickUp agent ownership and working manual fallbacks. Continue with scoped implementation and relevant acceptance checks. Priorities are recoverable synchronization, reviewed/grounded intelligence, unresolved authentication/account ownership requirements, and live two-client verification of existing provider paths.
 
