@@ -135,7 +135,7 @@ export default function CopilotPage() {
     const clientAccountId = activeClientAccount.id;
     const controller = new AbortController();
     analysisAbort.current = controller;
-    const timer = setTimeout(() => controller.abort(), 45000);
+    const timer = setTimeout(() => controller.abort(), 55000);
     setIsAnalyzing(true); setMessage(null);
     try {
       const response = await fetch("/api/lead-analyses", { method: "POST", headers: { "Content-Type": "application/json" }, signal: controller.signal, body: JSON.stringify({ engine, transcript, contactId: contactId || undefined, interactionId: interactionId || undefined }) });

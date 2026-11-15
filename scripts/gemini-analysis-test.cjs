@@ -2,13 +2,13 @@ const fs = require("node:fs"), path = require("node:path"), Module = require("no
 const root = path.resolve(__dirname, "..");
 require("dotenv").config({ path: path.join(root, ".env.local"), quiet: true });
 const resolve = Module._resolveFilename, load = Module._load;
-let calls = 0, responseText = "", fail = false, lastPrompt = "";
+let calls = 0, responseText = "", fail = false, lastPrompt = "", temporaryFailures = 0;
 const valid = { summary: "Qualified prospect", budget: "$5,000", timeline: "next month", requirements: "CRM integration", intent: "proposal", objections: "None", leadScore: 82, temperature: "Hot", dealProbability: 74 };
-const sdk = { GoogleGenAI: class { constructor(options) { assert.equal(options.apiKey, "fake-gemini-test-key"); assert.equal(options.httpOptions.timeout, 20000); assert.equal(options.httpOptions.retryOptions.attempts, 1); this.models = { generateContent: async options => { calls++; lastPrompt = options.contents; assert.equal(options.config.responseMimeType, "application/json"); assert.ok(options.config.responseJsonSchema); assert.ok(options.contents.includes("Transcript:")); if (fail) throw Error("Provider unavailable"); return { text: responseText }; } }; } } };
+const sdk = { GoogleGenAI: class { constructor(options) { assert.equal(options.apiKey, "fake-gemini-test-key"); assert.equal(options.httpOptions.timeout, 35000); assert.equal(options.httpOptions.retryOptions.attempts, 1); this.models = { generateContent: async options => { calls++; lastPrompt = options.contents; assert.equal(options.config.responseMimeType, "application/json"); assert.ok(options.config.responseJsonSchema); assert.ok(options.contents.includes("Transcript:")); if (temporaryFailures > 0) { temporaryFailures--; throw Object.assign(new Error("Temporary capacity"), {status:503}); } if (fail) throw Error("Provider unavailable"); return { text: responseText }; } }; } } };
 Module._resolveFilename = function(name, parent, main, options) { return resolve.call(this, name.startsWith("@/") ? path.join(root, "src", name.slice(2)) : name, parent, main, options); };
 Module._load = function(name, parent, main) { return name === "server-only" ? {} : name === "@google/genai" ? sdk : name === "@/lib/sync/contact-sync-service" ? { prepareActiveClientSync: async () => {}, getUnifiedLeads: async () => [] } : load.call(this, name, parent, main); };
 require.extensions[".ts"] = (mod, filename) => mod._compile(ts.transpileModule(fs.readFileSync(filename, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText, filename);
-const { prisma } = require("../src/lib/db/prisma.ts"), { createLeadAnalysis, updateLeadAnalysis, leadAnalysisFailure } = require("../src/lib/ai/lead-analysis-service.ts");
+const { prisma } = require("../src/lib/db/prisma.ts"), { createLeadAnalysis, updateLeadAnalysis, leadAnalysisFailure, withGeminiCapacityRetry } = require("../src/lib/ai/lead-analysis-service.ts");
 global.fetch = async () => { throw Error("Live network is forbidden in this test."); };
 console.info = () => {};
 const marker = `gemini-${Date.now()}`;
@@ -18,6 +18,27 @@ async function main() {
   assert.match(leadAnalysisFailure({ status: 403 }).safeMessage, /API key/);
   assert.match(leadAnalysisFailure({ status: 404 }).safeMessage, /model is unavailable/);
   assert.doesNotMatch(leadAnalysisFailure(new Error("private-provider-body")).safeMessage, /private-provider-body/);
+  let nonRetryableCalls = 0;
+  await assert.rejects(withGeminiCapacityRetry(async () => { nonRetryableCalls++; throw { status: 429 }; }));
+  assert.equal(nonRetryableCalls, 1);
+  let exhaustedCalls = 0;
+  await assert.rejects(withGeminiCapacityRetry(async () => { exhaustedCalls++; throw { status: 503 }; }));
+  assert.equal(exhaustedCalls, 2);
+  let sharedSignal, recoveredCalls = 0;
+  assert.equal(await withGeminiCapacityRetry(async signal => {
+    recoveredCalls++;
+    if (!sharedSignal) { sharedSignal = signal; throw { status: 503 }; }
+    assert.equal(signal, sharedSignal);
+    return "recovered";
+  }), "recovered");
+  assert.equal(recoveredCalls, 2);
+  const realNow = Date.now;
+  let timeReads = 0, lateCalls = 0;
+  try {
+    Date.now = () => timeReads++ === 0 ? 0 : 32000;
+    await assert.rejects(withGeminiCapacityRetry(async () => { lateCalls++; throw { status: 503 }; }));
+    assert.equal(lateCalls, 1);
+  } finally { Date.now = realNow; }
   try {
     const org = await prisma.organization.create({ data: { id: marker, name: marker } });
     const client = await prisma.clientAccount.create({ data: { organizationId: org.id, name: marker, brandName: marker } });
@@ -28,7 +49,11 @@ async function main() {
     const baseline = await createLeadAnalysis(context, { ...input, engine: "RULES_ENGINE" }, marker);
     assert.equal(baseline.provider, "RULES_ENGINE"); assert.equal(calls, 0);
     process.env.GEMINI_API_KEY = "fake-gemini-test-key"; responseText = JSON.stringify(valid);
+    temporaryFailures = 1;
+    const beforeRetry = calls;
     const ai = await createLeadAnalysis(context, input, marker);
+    assert.equal(calls - beforeRetry, 2);
+    assert.equal(await prisma.leadAnalysis.count({ where: { organizationId: org.id, provider: "GEMINI" } }), 1);
     assert.equal(ai.provider, "GEMINI"); assert.equal(ai.leadScore, 82); assert.equal(ai.summary, valid.summary);
     await createLeadAnalysis(context, { transcript: "Opening discussion. ".repeat(900) + "END_OF_CALL_BUDGET_WITHDRAWN" }, marker);
     assert.ok(lastPrompt.includes("END_OF_CALL_BUDGET_WITHDRAWN"));
