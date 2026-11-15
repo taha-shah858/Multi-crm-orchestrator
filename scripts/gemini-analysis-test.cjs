@@ -39,6 +39,14 @@ async function main() {
     await assert.rejects(withGeminiCapacityRetry(async () => { lateCalls++; throw { status: 503 }; }));
     assert.equal(lateCalls, 1);
   } finally { Date.now = realNow; }
+  // A stalled SDK that ignores AbortSignal must not hold the request open.
+  const realSetTimeout = global.setTimeout;
+  let stalledSignal;
+  try {
+    global.setTimeout = (callback, delay, ...args) => realSetTimeout(callback, delay === 35000 ? 1 : delay, ...args);
+    await assert.rejects(withGeminiCapacityRetry(signal => { stalledSignal = signal; return new Promise(() => {}); }), /timed out/);
+    assert.equal(stalledSignal.aborted, true);
+  } finally { global.setTimeout = realSetTimeout; }
   try {
     const org = await prisma.organization.create({ data: { id: marker, name: marker } });
     const client = await prisma.clientAccount.create({ data: { organizationId: org.id, name: marker, brandName: marker } });

@@ -18,6 +18,7 @@
     "test:crm-safety": "node scripts/crm-boundary-safety-test.cjs",
     "test:zoho-onboarding": "node scripts/zoho-onboarding-test.cjs",
     "test:gemini": "node scripts/gemini-analysis-test.cjs",
+    "test:copilot-stream": "node scripts/copilot-stream-test.cjs",
     "test:gemini-content": "node scripts/gemini-content-test.cjs",
     "test:auth-credentials": "node scripts/auth-credentials-test.cjs",
     "test:password-reset": "node scripts/password-reset-test.cjs",

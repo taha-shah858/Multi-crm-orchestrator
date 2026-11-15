@@ -138,7 +138,7 @@ export default function CopilotPage() {
     const timer = setTimeout(() => controller.abort(), 55000);
     setIsAnalyzing(true); setMessage(null);
     try {
-      const response = await fetch("/api/lead-analyses", { method: "POST", headers: { "Content-Type": "application/json" }, signal: controller.signal, body: JSON.stringify({ engine, transcript, contactId: contactId || undefined, interactionId: interactionId || undefined }) });
+      const response = await fetch("/api/lead-analyses", { method: "POST", headers: { "Content-Type": "application/json", "x-copilot-stream": "1" }, signal: controller.signal, body: JSON.stringify({ engine, transcript, contactId: contactId || undefined, interactionId: interactionId || undefined }) });
       const data = await readApiJson<{ success: true; analysis: Analysis }>(response);
       if (version !== requestVersion.current || currentClientAccountId.current !== clientAccountId) return;
       const created = data.analysis as Analysis;
