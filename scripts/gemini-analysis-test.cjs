@@ -4,7 +4,7 @@ require("dotenv").config({ path: path.join(root, ".env.local"), quiet: true });
 const resolve = Module._resolveFilename, load = Module._load;
 let calls = 0, responseText = "", fail = false, lastPrompt = "", temporaryFailures = 0;
 const valid = { summary: "Qualified prospect", budget: "$5,000", timeline: "next month", requirements: "CRM integration", intent: "proposal", objections: "None", leadScore: 82, temperature: "Hot", dealProbability: 74 };
-const sdk = { GoogleGenAI: class { constructor(options) { assert.equal(options.apiKey, "fake-gemini-test-key"); assert.equal(options.httpOptions.timeout, 35000); assert.equal(options.httpOptions.retryOptions.attempts, 1); this.models = { generateContent: async options => { calls++; lastPrompt = options.contents; assert.equal(options.config.responseMimeType, "application/json"); assert.ok(options.config.responseJsonSchema); assert.ok(options.contents.includes("Transcript:")); if (temporaryFailures > 0) { temporaryFailures--; throw Object.assign(new Error("Temporary capacity"), {status:503}); } if (fail) throw Error("Provider unavailable"); return { text: responseText }; } }; } } };
+const sdk = { GoogleGenAI: class { constructor(options) { assert.equal(options.apiKey, "fake-gemini-test-key"); assert.equal(options.httpOptions.timeout, 15000); assert.equal(options.httpOptions.retryOptions.attempts, 1); this.models = { generateContent: async options => { calls++; lastPrompt = options.contents; assert.equal(options.config.responseMimeType, "application/json"); assert.ok(options.config.responseJsonSchema); assert.ok(options.contents.includes("Transcript:")); if (temporaryFailures > 0) { temporaryFailures--; throw Object.assign(new Error("Temporary capacity"), {status:503}); } if (fail) throw Error("Provider unavailable"); return { text: responseText }; } }; } } };
 Module._resolveFilename = function(name, parent, main, options) { return resolve.call(this, name.startsWith("@/") ? path.join(root, "src", name.slice(2)) : name, parent, main, options); };
 Module._load = function(name, parent, main) { return name === "server-only" ? {} : name === "@google/genai" ? sdk : name === "@/lib/sync/contact-sync-service" ? { prepareActiveClientSync: async () => {}, getUnifiedLeads: async () => [] } : load.call(this, name, parent, main); };
 require.extensions[".ts"] = (mod, filename) => mod._compile(ts.transpileModule(fs.readFileSync(filename, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText, filename);
@@ -35,7 +35,7 @@ async function main() {
   const realNow = Date.now;
   let timeReads = 0, lateCalls = 0;
   try {
-    Date.now = () => timeReads++ === 0 ? 0 : 32000;
+    Date.now = () => timeReads++ === 0 ? 0 : 12000;
     await assert.rejects(withGeminiCapacityRetry(async () => { lateCalls++; throw { status: 503 }; }));
     assert.equal(lateCalls, 1);
   } finally { Date.now = realNow; }
@@ -43,7 +43,7 @@ async function main() {
   const realSetTimeout = global.setTimeout;
   let stalledSignal;
   try {
-    global.setTimeout = (callback, delay, ...args) => realSetTimeout(callback, delay === 35000 ? 1 : delay, ...args);
+    global.setTimeout = (callback, delay, ...args) => realSetTimeout(callback, delay === 15000 ? 1 : delay, ...args);
     await assert.rejects(withGeminiCapacityRetry(signal => { stalledSignal = signal; return new Promise(() => {}); }), /timed out/);
     assert.equal(stalledSignal.aborted, true);
   } finally { global.setTimeout = realSetTimeout; }
