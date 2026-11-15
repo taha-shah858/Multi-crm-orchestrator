@@ -7,10 +7,11 @@ export function streamJsonResponse(operation: () => Promise<Response>) {
   let closed = false;
   let heartbeat: ReturnType<typeof setInterval> | undefined;
   const stream = new ReadableStream<Uint8Array>({
-    start(controller) {
+    async start(controller) {
       controller.enqueue(encoder.encode("\n"));
       heartbeat = setInterval(() => { if (!closed) controller.enqueue(encoder.encode("\n")); }, 5000);
-      void (async () => {
+      // Return the generation promise as part of stream initialization instead
+      // of detaching it from the request lifecycle in serverless runtimes.
         try {
           const response = await operation();
           const body = await response.text();
@@ -21,7 +22,6 @@ export function streamJsonResponse(operation: () => Promise<Response>) {
           clearInterval(heartbeat);
           if (!closed) { closed = true; controller.close(); }
         }
-      })();
     },
     cancel() { closed = true; clearInterval(heartbeat); },
   });

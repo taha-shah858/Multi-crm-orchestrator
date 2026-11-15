@@ -16,6 +16,7 @@ async function main() {
   assert.equal(JSON.parse(body).analysis.summary, "日本語");
   const failure = streamJsonResponse(async () => Response.json({ success: false, error: { message: "Gemini timed out." } }, { status: 504 }));
   await assert.rejects(readApiJson(failure), /Gemini timed out/);
+  await assert.rejects(readApiJson(new Response("\n\n", { headers: { "Content-Type": "application/json" } })), /ended before a complete result/);
   const unexpected = streamJsonResponse(async () => { throw Error("private-provider-details"); });
   const error = await unexpected.json();
   assert.equal(error.success, false); assert.doesNotMatch(JSON.stringify(error), /private-provider-details/);
