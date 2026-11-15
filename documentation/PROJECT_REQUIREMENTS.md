@@ -17,6 +17,8 @@ The pasted table's `Client (HubSpot/Salesforce)` wording is superseded by the us
 
 ## Current implementation boundary
 
+On 2026-11-15, Copilot feedback reported a rule-based result after a long wait that needed a reload. Prioritize explicit Gemini failures, a user-selected basic analysis fallback, bounded loading and recovery without losing the pasted transcript. Preserve existing saved analysis/manual edits and client isolation.
+
 On 2026-11-14, the user explicitly requested calling through the laptop microphone/headset in Smart Dialer. Implement browser voice with the selected client's Twilio number. Automatic call recording, transcription and feeding call audio into AI analysis are outside this request; manual transcript intake remains supported. Twilio credits/number rental and account configuration do not by themselves implement browser audio.
 
 The follow-up request removes SMS from the Smart Dialer interface and adds a clickable dialpad with keyboard number entry. Contact selection and direct number entry share laptop calling; a clearly explained off-platform phone fallback remains secondary. This does not request deletion of stored SMS or backend SMS integration.

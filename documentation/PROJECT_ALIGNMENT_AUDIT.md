@@ -4,6 +4,14 @@ Documentation consolidated on 2026-10-12 against the `realbranch` source and [PR
 
 ## Current baseline and verification
 
+### Copilot Gemini failures and loading, 2026-11-15
+
+Copilot now requests Gemini by default and reports categorized missing-key, access, model, quota, timeout and invalid-output failures instead of silently saving rule-based substitutes. Basic keyword analysis remains an explicit user choice through `engine=RULES_ENGINE`; existing saved basic results retain their truthful labels. Gemini analysis uses a 20-second SDK deadline, one total SDK attempt and low thinking for Gemini 3/4 models, preventing hidden SDK retries from multiplying the wait. Model fallback defaults to Gemini 3.8 Flash; `GEMINI_MODEL` still takes precedence. This change is limited to lead analysis; scheduling and writing services retain their separate policies.
+
+The browser bounds analysis requests at 45 seconds and workspace reads at 20 seconds, preserves intake text on failure, resets busy state and aborts stale requests on client changes, and hides the previous result's provider badge while analyzing. Refresh saved analyses reloads results without clearing the current transcript; a browser timeout warns that the server might still finish, so users should check saved records before retrying. This is not durable background processing or globally idempotent generation. The exact provider failure behind the previously saved rule-based result was not retained by the old code and remains unverified.
+
+The focused Gemini suite passes with disposable PostgreSQL fixtures and mocked provider calls, covering explicit basic selection, missing key, provider/invalid-output failures without saved substitutes, safe error classification, full transcript intake, manual corrections and contact/interaction boundaries. TypeScript and production build pass. No live Gemini generation or deployed-browser verification was performed in these checks.
+
 ### Outgoing laptop voice, 2026-11-14
 
 Follow-up live feedback: the primary button is now Call, and the requested phone-app launcher/log feedback and keep-page-open copy are removed. The SDK bundle preloads on dialer mount and independent preparation authorization/lookups run concurrently. The unanswered Dial timeout is extended from 30 to 60 seconds. Error handlers now show the SDK error code and available Call SID, including media/signaling/authentication hints. Late parent callbacks after a final recipient outcome are acknowledged without overwriting that outcome, correcting an observed 404/15003 callback warning.

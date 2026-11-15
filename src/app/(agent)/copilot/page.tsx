@@ -12,6 +12,7 @@ import {
   Upload,
 } from "lucide-react";
 import { MultiCrmCard, MultiCrmInnerPanel, MultiCrmTag } from "@/components/ui/MultiCrmCard";
+import { readApiJson } from "@/lib/http/client-api";
 import { useClientAccount } from "@/context/ClientAccountContext";
 
 interface Contact { id: string; firstName: string; lastName: string; company: string | null; }
@@ -53,22 +54,26 @@ export default function CopilotPage() {
   const [isSaving,    setIsSaving]    = useState(false);
   const [message,     setMessage]     = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const fileInputRef  = useRef<HTMLInputElement>(null);
+  const analysisAbort = useRef<AbortController | null>(null);
   const requestVersion          = useRef(0);
   const currentClientAccountId = useRef(activeClientAccount.id);
 
   useLayoutEffect(() => { currentClientAccountId.current = activeClientAccount.id; }, [activeClientAccount.id]);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (preserveDraft = false) => {
     if (!isClientAccountReady) return;
+    analysisAbort.current?.abort();
+    setIsAnalyzing(false); setIsSaving(false);
     const version = ++requestVersion.current;
     const clientAccountId = activeClientAccount.id;
     setIsLoading(true);
-    setContacts([]); setInteractions([]); setAnalyses([]); setContactId(""); setInteractionId(""); setTranscript(""); setSelectedAnalysis(null); setEdit(null); setMessage(null);
+    if (!preserveDraft) { setContactId(""); setInteractionId(""); setTranscript(""); }
+    setContacts([]); setInteractions([]); setAnalyses([]); setSelectedAnalysis(null); setEdit(null); setMessage(null);
     try {
       const [cr, ir, ar] = await Promise.all([
-        fetch("/api/ai/contacts", { cache: "no-store" }),
-        fetch("/api/interactions", { cache: "no-store" }),
-        fetch("/api/lead-analyses", { cache: "no-store" }),
+        fetch("/api/ai/contacts", { cache: "no-store", signal: AbortSignal.timeout(20000) }),
+        fetch("/api/interactions", { cache: "no-store", signal: AbortSignal.timeout(20000) }),
+        fetch("/api/lead-analyses", { cache: "no-store", signal: AbortSignal.timeout(20000) }),
       ]);
       const [cd, id, ad] = await Promise.all([cr.json(), ir.json(), ar.json()]);
       if (version !== requestVersion.current || currentClientAccountId.current !== clientAccountId) return;
@@ -89,7 +94,7 @@ export default function CopilotPage() {
   useEffect(() => {
     let cancelled = false;
     queueMicrotask(() => { if (!cancelled) void load(); });
-    return () => { cancelled = true; };
+    return () => { cancelled = true; analysisAbort.current?.abort(); };
   }, [load]);
 
   const selectInteraction = (id: string) => {
@@ -124,23 +129,27 @@ export default function CopilotPage() {
     event.target.value = "";
   };
 
-  const analyze = async () => {
-    if (!transcript.trim()) return;
+  const analyze = async (engine: "GEMINI" | "RULES_ENGINE" = "GEMINI") => {
+    if (!transcript.trim() || isAnalyzing || isLoading || !isClientAccountReady) return;
     const version = requestVersion.current;
     const clientAccountId = activeClientAccount.id;
+    const controller = new AbortController();
+    analysisAbort.current = controller;
+    const timer = setTimeout(() => controller.abort(), 45000);
     setIsAnalyzing(true); setMessage(null);
     try {
-      const response = await fetch("/api/lead-analyses", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ transcript, contactId: contactId || undefined, interactionId: interactionId || undefined }) });
-      const data = await response.json();
+      const response = await fetch("/api/lead-analyses", { method: "POST", headers: { "Content-Type": "application/json" }, signal: controller.signal, body: JSON.stringify({ engine, transcript, contactId: contactId || undefined, interactionId: interactionId || undefined }) });
+      const data = await readApiJson<{ success: true; analysis: Analysis }>(response);
       if (version !== requestVersion.current || currentClientAccountId.current !== clientAccountId) return;
-      if (!response.ok || !data.success) throw new Error(data?.error?.message ?? "The transcript could not be analyzed.");
       const created = data.analysis as Analysis;
       setAnalyses((c) => [created, ...c]); setSelectedAnalysis(created); setEdit(editableFrom(created));
-      setMessage({ tone: "success", text: "Analysis complete. Review and adjust the extracted fields before saving." });
+      setMessage({ tone: "success", text: created.provider === "GEMINI" ? "Gemini analysis saved. Review the extracted fields." : "Basic rule-based analysis saved at your request. Review its limitations before use." });
     } catch (error) {
       if (version === requestVersion.current && currentClientAccountId.current === clientAccountId)
-        setMessage({ tone: "error", text: error instanceof Error ? error.message : "The transcript could not be analyzed." });
+        setMessage({ tone: "error", text: controller.signal.aborted ? "The request timed out. Your text is retained. Refresh saved analyses before retrying: the server may still finish this request." : error instanceof Error ? error.message : "The transcript could not be analyzed." });
     } finally {
+      clearTimeout(timer);
+      if (analysisAbort.current === controller) analysisAbort.current = null;
       if (version === requestVersion.current && currentClientAccountId.current === clientAccountId) setIsAnalyzing(false);
     }
   };
@@ -241,13 +250,14 @@ export default function CopilotPage() {
 
           <button
             onClick={() => void analyze()}
-            disabled={isAnalyzing || !transcript.trim()}
+            disabled={isLoading || !isClientAccountReady || isAnalyzing || !transcript.trim()}
             className="w-full py-2.5 rounded-md bg-blue-600 hover:bg-blue-700 disabled:opacity-50 font-semibold text-sm text-white flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-sm"
           >
             <Sparkles className={`w-4 h-4 ${isAnalyzing ? "animate-spin" : ""}`} />
-            {isAnalyzing ? "Analyzing…" : "Run lead analysis"}
+            {isAnalyzing ? "Analyzing…" : "Analyze with Gemini"}
           </button>
-          <p className="text-xs text-slate-500">Uses Gemini when configured and available; otherwise uses rule-based analysis. All fields remain editable.</p>
+          <button type="button" onClick={() => void analyze("RULES_ENGINE")} disabled={isLoading || !isClientAccountReady || isAnalyzing || !transcript.trim()} className="text-sm text-slate-600 underline disabled:opacity-50">Use basic analysis instead</button>
+          <p className="text-xs text-slate-500">Gemini failures are shown explicitly. Basic analysis uses keyword rules and runs only when you choose it.</p>
         </MultiCrmCard>
 
         {/* RIGHT — Qualification Assessment */}
@@ -257,7 +267,7 @@ export default function CopilotPage() {
               <Target className="w-4 h-4 text-blue-600" />
               <h2 className="text-sm font-semibold text-slate-800">Qualification assessment</h2>
             </div>
-            {selectedAnalysis && (
+            {!isAnalyzing && selectedAnalysis && (
               <MultiCrmTag variant={selectedAnalysis.isManualOverride ? "magenta" : "cyan"}>
                 {selectedAnalysis.isManualOverride ? "MANUALLY CORRECTED" : selectedAnalysis.provider === "GEMINI" ? "GEMINI AI" : "RULE-BASED"}
               </MultiCrmTag>
